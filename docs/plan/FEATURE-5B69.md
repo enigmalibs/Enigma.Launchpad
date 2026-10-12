@@ -145,7 +145,7 @@ Acceptance criteria:
 
 ### PHASE03 — Category pages & groups UI
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `ILaunchpadSession` (load at startup, per-category snapshot save, InfoBar on load recovery / save failure).
