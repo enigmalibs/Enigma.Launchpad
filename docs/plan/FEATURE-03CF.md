@@ -1,6 +1,6 @@
 # FEATURE-03CF — Program icons on application tiles
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-03cf-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-app-list-icons
@@ -87,7 +87,7 @@ Acceptance criteria:
 
 ### PHASE02 — Tiles show program icons
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `CategoryPageViewModel.GetProgramIconAsync` hook; `ApplicationsPageViewModel` override and constructor
