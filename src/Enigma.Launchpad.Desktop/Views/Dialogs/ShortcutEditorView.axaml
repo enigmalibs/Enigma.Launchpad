@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.ShortcutEditorView"
+             x:DataType="vm:ShortcutEditorViewModel"
+             MinWidth="460">
+  <StackPanel Spacing="14">
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Name" Classes="fieldLabel" />
+      <TextBox x:Name="NameBox"
+               Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               MaxLength="200"
+               AutomationProperties.Name="Name" />
+      <TextBlock Text="{Binding VisibleNameError}"
+                 IsVisible="{Binding VisibleNameError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="{Binding TargetLabel}" Classes="fieldLabel" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBox Grid.Column="0"
+                 x:Name="TargetBox"
+                 Text="{Binding Target, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 PlaceholderText="{Binding TargetPlaceholder}"
+                 AutomationProperties.Name="{Binding TargetLabel}" />
+        <Button Grid.Column="1"
+                Command="{Binding BrowseCommand}"
+                IsVisible="{Binding CanBrowse}"
+                ToolTip.Tip="Pick it instead of typing it"
+                AutomationProperties.Name="Browse">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ei:Icon Kind="FolderOpen" Classes="toolbar" VerticalAlignment="Center" />
+            <TextBlock Text="Browse…" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+      <TextBlock Text="{Binding VisibleTargetError}"
+                 IsVisible="{Binding VisibleTargetError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding HasArguments}">
+      <TextBlock Text="Arguments (optional)" Classes="fieldLabel" />
+      <TextBox Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               PlaceholderText="--new-window"
+               AutomationProperties.Name="Arguments" />
+      <TextBlock Text="Passed to the program as typed. It starts in its own folder."
+                 Classes="fieldHint" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>
