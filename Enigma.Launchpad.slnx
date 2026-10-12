@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Enigma.Launchpad.Core/Enigma.Launchpad.Core.csproj" />
+    <Project Path="src/Enigma.Launchpad.Desktop/Enigma.Launchpad.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Enigma.Launchpad.Core.UnitTests/Enigma.Launchpad.Core.UnitTests.csproj" />
+    <Project Path="tests/Enigma.Launchpad.Desktop.UnitTests/Enigma.Launchpad.Desktop.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,6 +1,6 @@
 # FEATURE-5B69 — Launchpad shortcut manager
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-5b69-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-launchpad-shortcut-manager
@@ -103,7 +103,7 @@ Root files: `.gitignore`, `.gitattributes`, `.editorconfig` (full C#), `Director
 
 ### PHASE01 — Solution scaffold & app shell
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Root files from the house templates: `.gitignore`, `.gitattributes`, `.editorconfig` (full C#),
