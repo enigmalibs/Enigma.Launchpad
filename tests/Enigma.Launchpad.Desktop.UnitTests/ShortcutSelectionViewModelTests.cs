@@ -25,13 +25,12 @@ public sealed class ShortcutSelectionViewModelTests
     private SelectionNodeViewModel Urls => _dialog.Categories[1];
 
     [Fact]
-    public void Starts_WithTheCategoriesThatHaveGroups_EverythingChecked_CategoriesOpen_GroupsFolded()
+    public void Starts_WithTheCategoriesThatHaveGroups_EverythingChecked_AndEverythingOpen()
     {
         Assert.Equal("Choose what to export.", _dialog.Message);
         Assert.Equal(["Applications", "URLs"], _dialog.Categories.Select(category => category.Title));
         Assert.All(Lines(), line => Assert.True(line.IsChecked));
-        Assert.All(_dialog.Categories, category => Assert.True(category.IsExpanded));
-        Assert.All(_dialog.Categories.SelectMany(category => category.Children), group => Assert.False(group.IsExpanded));
+        Assert.All(Lines(), line => Assert.True(line.IsExpanded));
         Assert.True(_dialog.HasSelection);
         Assert.Equal("3 groups · 3 shortcuts selected", _dialog.Summary);
     }

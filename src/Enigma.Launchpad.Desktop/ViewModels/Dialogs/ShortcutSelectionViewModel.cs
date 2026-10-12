@@ -13,8 +13,8 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Dialogs;
 /// the categories, their groups, and the groups' shortcuts.
 /// </summary>
 /// <remarks>
-/// Everything starts chosen, since taking it all is the common case. The categories start open and their groups
-/// folded; a long tree scrolls. A category with no group is not shown.
+/// Everything starts chosen, since taking it all is the common case, and open, so every shortcut is in view without
+/// unfolding anything; a long tree scrolls. A category with no group is not shown.
 /// </remarks>
 public sealed class ShortcutSelectionViewModel : ObservableObject
 {
