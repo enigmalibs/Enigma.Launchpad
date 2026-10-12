@@ -1,6 +1,6 @@
 # FEATURE-2B54 — Profile import / export
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-2b54-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-profile-import-export
@@ -120,7 +120,7 @@ shortcuts — to a **JSON** file, and import such a file into a profile. Both di
 
 ### PHASE01 — Export format, merge & import
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Enigma.Launchpad.Core.Exchange`: the format records, `IShortcutExchange` / `ShortcutExchange` (export, read,
