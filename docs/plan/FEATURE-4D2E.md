@@ -1,6 +1,6 @@
 # FEATURE-4D2E — Profiles
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-4d2e-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-settings-and-profiles
@@ -74,7 +74,7 @@ restarts; existing data becomes the first profile.
 
 ### PHASE01 — Profile document model
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Profile` record; `LaunchpadData` v2 with the profile operations; `Empty` as one "Default" profile.
