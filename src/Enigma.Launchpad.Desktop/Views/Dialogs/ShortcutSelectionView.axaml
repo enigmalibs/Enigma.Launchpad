@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.ShortcutSelectionView"
+             x:DataType="vm:ShortcutSelectionViewModel"
+             MinWidth="460">
+  <StackPanel Spacing="10">
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+
+    <!-- Capped so the dialog stays inside the window: a long list scrolls in the tree. -->
+    <Border Classes="selectionTree">
+      <TreeView x:Name="SelectionTree"
+                ItemsSource="{Binding Categories}"
+                MaxHeight="340"
+                AutomationProperties.Name="What to include">
+        <TreeView.Styles>
+          <Style Selector="TreeViewItem" x:DataType="vm:SelectionNodeViewModel">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+          </Style>
+        </TreeView.Styles>
+        <TreeView.ItemTemplate>
+          <TreeDataTemplate x:DataType="vm:SelectionNodeViewModel" ItemsSource="{Binding Children}">
+            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                      IsThreeState="False"
+                      AutomationProperties.Name="{Binding Title}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <ei:Icon Kind="{Binding Icon}" Classes="row" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" MaxWidth="240" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Detail}"
+                           Classes="selectionDetail"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </StackPanel>
+            </CheckBox>
+          </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+      </TreeView>
+    </Border>
+
+    <TextBlock x:Name="SelectionSummary" Text="{Binding Summary}" Classes="fieldHint" />
+  </StackPanel>
+</UserControl>
