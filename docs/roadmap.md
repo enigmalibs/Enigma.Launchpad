@@ -20,3 +20,6 @@
 | - PHASE02    | Shortcut selection dialog           | DONE   | (in FEATURE-2B54.md)      |
 | - PHASE03    | Profiles page export & import       | DONE   | (in FEATURE-2B54.md)      |
 | FEATURE-4111 | Expand all selection tree items     | DONE   | docs/plan/FEATURE-4111.md |
+| FEATURE-03CF | Program icons on application tiles  | TODO   | docs/plan/FEATURE-03CF.md |
+| - PHASE01    | Windows program icon service        | TODO   | (in FEATURE-03CF.md)      |
+| - PHASE02    | Tiles show program icons            | TODO   | (in FEATURE-03CF.md)      |
