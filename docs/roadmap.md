@@ -19,3 +19,4 @@
 | - PHASE01    | Export format, merge & import       | DONE   | (in FEATURE-2B54.md)      |
 | - PHASE02    | Shortcut selection dialog           | DONE   | (in FEATURE-2B54.md)      |
 | - PHASE03    | Profiles page export & import       | DONE   | (in FEATURE-2B54.md)      |
+| FEATURE-4111 | Expand all selection tree items     | TODO   | docs/plan/FEATURE-4111.md |
