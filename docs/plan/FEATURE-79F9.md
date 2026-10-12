@@ -1,6 +1,6 @@
 # FEATURE-79F9 — Repository dotfiles
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-79f9-repo-dotfiles`
 **Run:** feature/2026-10-12-repo-dotfiles
