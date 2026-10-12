@@ -128,7 +128,7 @@ Acceptance criteria:
 
 ### PHASE02 — Core model, persistence & launcher
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Model records (`ShortcutKind`, `Shortcut`, `ShortcutGroup`, `LaunchpadData`).
