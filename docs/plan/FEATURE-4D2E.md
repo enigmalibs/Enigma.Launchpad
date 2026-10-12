@@ -1,6 +1,6 @@
 # FEATURE-4D2E — Profiles
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-4d2e-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-settings-and-profiles
@@ -112,7 +112,7 @@ Acceptance criteria:
 
 ### PHASE03 — Profiles management page
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `ProfilesPageViewModel` / `ProfileItemViewModel` / `ProfilesPageView`; footer item "Profiles" before
