@@ -1,6 +1,6 @@
 # FEATURE-068D — Settings page & theme
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-068d-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-settings-and-profiles
@@ -60,7 +60,7 @@ their own `settings.json`.
 
 ### PHASE01 — Settings service & live theme
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Core: `ThemePreference`, `AppSettings`, `SettingsChangedEventArgs`, `ISettingsService` / `SettingsService`;
