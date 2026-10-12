@@ -23,3 +23,7 @@
 | FEATURE-03CF | Program icons on application tiles  | DONE   | docs/plan/FEATURE-03CF.md |
 | - PHASE01    | Windows program icon service        | DONE   | (in FEATURE-03CF.md)      |
 | - PHASE02    | Tiles show program icons            | DONE   | (in FEATURE-03CF.md)      |
+| FEATURE-1178 | Website icons on URL tiles          | TODO   | docs/plan/FEATURE-1178.md |
+| - PHASE01    | Favicon fetcher                     | TODO   | (in FEATURE-1178.md)      |
+| - PHASE02    | URL tiles show website icons        | TODO   | (in FEATURE-1178.md)      |
+| - PHASE03    | Website icon disk cache             | TODO   | (in FEATURE-1178.md)      |
