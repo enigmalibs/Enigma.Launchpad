@@ -164,7 +164,7 @@ Acceptance criteria:
 
 ### PHASE04 — Shortcut tiles, editing & launching
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `ShortcutViewModel`; tiles in each group card (wrap layout; Phosphor icon per kind; name; target subtitle;

@@ -5,7 +5,9 @@ A cross-platform desktop launcher for your **applications**, **directories** and
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
 Each of the three categories is a page in the navigation rail, where your shortcuts are arranged in
-groups you create, rename, fold, reorder and delete.
+groups you create, rename, fold, reorder and delete. Add a shortcut with a group's **+** (Browse… picks a
+program or a folder); click its tile, or press Enter, to open it; right-click it to edit it, copy its target,
+show it in its folder, move it or delete it.
 
 ## Your data
 
