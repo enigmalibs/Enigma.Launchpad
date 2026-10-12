@@ -1,0 +1,21 @@
+<Project>
+
+  <!-- Shared settings for every project in the solution. Package versions are
+       centralized separately in Directory.Packages.props (Central Package Management). -->
+  <PropertyGroup>
+    <Authors>Josué Clément</Authors>
+    <Copyright>Copyright © 2026 Josué Clément</Copyright>
+    <!-- The product version, for the whole solution: Core and Desktop ship as one application,
+         so they never carry separate numbers. -->
+    <Version>0.1.0</Version>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <!-- Explicit usings everywhere: every file declares its own using directives. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- Warnings are treated as errors across the whole solution (library, Desktop, tests). -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Enforce the .editorconfig code-style rules (the warning-level subset) at build time. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>
