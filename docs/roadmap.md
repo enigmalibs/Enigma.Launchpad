@@ -8,3 +8,10 @@
 | - PHASE03    | Category pages & groups UI          | DONE   | (in FEATURE-5B69.md)      |
 | - PHASE04    | Shortcut tiles, editing & launching | DONE   | (in FEATURE-5B69.md)      |
 | - PHASE05    | Drag-and-drop reordering            | DONE   | (in FEATURE-5B69.md)      |
+| FEATURE-068D | Settings page & theme               | TODO   | docs/plan/FEATURE-068D.md |
+| - PHASE01    | Settings service & live theme       | TODO   | (in FEATURE-068D.md)      |
+| - PHASE02    | Settings page                       | TODO   | (in FEATURE-068D.md)      |
+| FEATURE-4D2E | Profiles                            | TODO   | docs/plan/FEATURE-4D2E.md |
+| - PHASE01    | Profile document model              | TODO   | (in FEATURE-4D2E.md)      |
+| - PHASE02    | Session profiles & switcher         | TODO   | (in FEATURE-4D2E.md)      |
+| - PHASE03    | Profiles management page            | TODO   | (in FEATURE-4D2E.md)      |
