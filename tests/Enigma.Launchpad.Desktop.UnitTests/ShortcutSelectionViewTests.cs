@@ -44,13 +44,13 @@ public sealed class ShortcutSelectionViewTests
             Assert.Equal("Export “Work”", harness.Window.HostDialog.Title);
             Assert.True(harness.Window.HostDialog.IsPrimaryButtonEnabled);
 
-            // The categories are open and their groups folded.
+            // Everything is open, so every category, group and shortcut is on screen without unfolding anything.
             CheckBox[] boxes = VisibleBoxes(tree);
-            Assert.Equal(["Applications", "Dev tools", "URLs", "Docs"], boxes.Select(Title));
+            Assert.Equal(["Applications", "Dev tools", "Code", "Shell", "URLs", "Docs", "Avalonia"], boxes.Select(Title));
             Assert.All(boxes, box => Assert.True(box.IsChecked));
 
             // As a click would: the box tells the line, which passes it on.
-            boxes[2].IsChecked = false;
+            boxes[4].IsChecked = false;
             Assert.False(model.Categories[1].Children[0].IsChecked);
             Assert.Equal("1 group · 2 shortcuts selected", view.FindControl<TextBlock>("SelectionSummary")?.Text);
 
@@ -60,10 +60,10 @@ public sealed class ShortcutSelectionViewTests
             boxes[1].IsChecked = true;
             Assert.True(harness.Window.HostDialog.IsPrimaryButtonEnabled);
 
-            // A group unfolds to show its shortcuts.
-            model.Categories[0].Children[0].IsExpanded = true;
+            // Open is where it starts, not a lock: a group still folds.
+            model.Categories[0].Children[0].IsExpanded = false;
             harness.Window.UpdateLayout();
-            Assert.Equal(["Applications", "Dev tools", "Code", "Shell", "URLs", "Docs"], VisibleBoxes(tree).Select(Title));
+            Assert.Equal(["Applications", "Dev tools", "URLs", "Docs", "Avalonia"], VisibleBoxes(tree).Select(Title));
 
             Button confirm = harness.Window.HostDialog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "PART_PrimaryButton");
             confirm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

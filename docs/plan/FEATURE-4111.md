@@ -1,6 +1,6 @@
 # FEATURE-4111 — Expand all selection tree items
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-4111-expand-selection-tree`
 **Run:** vibe/2026-10-12-expand-selection-tree

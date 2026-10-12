@@ -47,7 +47,7 @@ public interface ILaunchpadDialogs
 
     /// <summary>
     /// Asks which of a profile's groups and shortcuts to take, as a tree of checkboxes where everything starts
-    /// checked; the confirm button is enabled only while something is checked.
+    /// checked and open; the confirm button is enabled only while something is checked.
     /// </summary>
     /// <param name="title">The dialog's title.</param>
     /// <param name="message">What the dialog says above the tree.</param>

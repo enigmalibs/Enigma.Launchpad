@@ -63,10 +63,10 @@ public sealed class SelectionNodeViewModel : ObservableObject
     public IReadOnlyList<SelectionNodeViewModel> Children => _children;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the lines under this one are shown. Categories start open and groups
-    /// folded, so the dialog opens on a short list; the user unfolds a group to see its shortcuts.
+    /// Gets or sets a value indicating whether the lines under this one are shown. Every line starts open, so the
+    /// whole tree is in view when the dialog opens; the user may still fold a line while it is open.
     /// </summary>
-    public bool IsExpanded { get; set => SetProperty(ref field, value); }
+    public bool IsExpanded { get; set => SetProperty(ref field, value); } = true;
 
     /// <summary>
     /// Gets or sets whether the line is chosen: <see langword="true"/>, <see langword="false"/>, or
@@ -115,7 +115,7 @@ public sealed class SelectionNodeViewModel : ObservableObject
     private bool? State { get; set => SetProperty(ref field, value, nameof(IsChecked)); } = true;
 
     /// <summary>
-    /// Builds a category's line, open, with a line for each of its groups and their shortcuts, everything chosen.
+    /// Builds a category's line, with a line for each of its groups and their shortcuts, everything chosen and open.
     /// </summary>
     /// <param name="kind">The category.</param>
     /// <param name="title">What the category is called.</param>
@@ -130,10 +130,7 @@ public sealed class SelectionNodeViewModel : ObservableObject
         IReadOnlyList<ShortcutGroup> groups,
         Action selectionChanged)
     {
-        SelectionNodeViewModel category = new(title, null, icon, kind, null, selectionChanged)
-        {
-            IsExpanded = true,
-        };
+        SelectionNodeViewModel category = new(title, null, icon, kind, null, selectionChanged);
 
         foreach (ShortcutGroup group in groups)
         {
