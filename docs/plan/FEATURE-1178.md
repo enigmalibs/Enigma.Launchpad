@@ -1,6 +1,6 @@
 # FEATURE-1178 — Website icons on URL tiles
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-1178-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-url-favicons
@@ -110,7 +110,7 @@ Acceptance criteria:
 
 ### PHASE03 — Website icon disk cache
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `AtomicFile.WriteAllBytesAsync` (Core) + test.
