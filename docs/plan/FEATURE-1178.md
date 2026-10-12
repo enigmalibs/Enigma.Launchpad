@@ -1,6 +1,6 @@
 # FEATURE-1178 — Website icons on URL tiles
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-1178-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-url-favicons
@@ -69,7 +69,7 @@ keeps the glyph. This mirrors what FEATURE-03CF did for application tiles.
 
 ### PHASE01 — Favicon fetcher
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Services/FaviconLinks.cs` (internal static parser + ranking).
