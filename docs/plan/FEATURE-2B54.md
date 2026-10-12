@@ -1,6 +1,6 @@
 # FEATURE-2B54 — Profile import / export
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-2b54-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-profile-import-export
@@ -158,7 +158,7 @@ Acceptance criteria:
 
 ### PHASE03 — Profiles page export & import
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `IPathPicker` JSON open/save; `IUserNotifications.ShowSuccess`; fakes updated.
