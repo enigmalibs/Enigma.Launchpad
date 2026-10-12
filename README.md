@@ -10,6 +10,10 @@ program or a folder); click its tile, or press Enter, to open it; right-click it
 show it in its folder, move it or delete it. Drag a group by its grip, or a tile, to reorder them; drop a
 tile on another group of the same category to move it there.
 
+**Settings**, at the foot of the rail, chooses the theme — light, dark, or following the system — and whether
+the launchpad minimizes itself once a shortcut is opened; it also shows where your data lives and opens that
+folder.
+
 ## Your data
 
 Everything is saved after every change to `launchpad.json`, a readable JSON file in your per-user
@@ -23,6 +27,9 @@ application-data folder:
 
 The file is written atomically. If it ever cannot be read, it is kept as
 `launchpad.corrupt-<timestamp>.json` beside the original, and the launchpad starts empty; nothing is overwritten.
+
+Your preferences are kept beside it in `settings.json`. An unreadable settings file is likewise kept as
+`settings.corrupt-<timestamp>.json`, and the defaults are used.
 
 ## Requirements
 

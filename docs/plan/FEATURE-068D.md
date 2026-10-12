@@ -1,6 +1,6 @@
 # FEATURE-068D — Settings page & theme
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-068d-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-settings-and-profiles
@@ -80,7 +80,7 @@ Acceptance criteria:
 
 ### PHASE02 — Settings page
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `IMainWindow` seam (minimize the main window); `IShortcutActions.Open` minimizes after a successful launch
