@@ -10,6 +10,11 @@ program or a folder); click its tile, or press Enter, to open it; right-click it
 show it in its folder, move it or delete it. Drag a group by its grip, or a tile, to reorder them; drop a
 tile on another group of the same category to move it there.
 
+**Profiles** keep separate sets of shortcuts — say *Work* and *Home* — each with its own applications,
+directories and URLs. Choose the profile in use from the **Profile** list at the top of the window; create,
+duplicate, rename, reorder, use or delete profiles on the **Profiles** page, at the foot of the rail or from the
+button beside the list.
+
 **Settings**, at the foot of the rail, chooses the theme — light, dark, or following the system — and whether
 the launchpad minimizes itself once a shortcut is opened; it also shows where your data lives and opens that
 folder.
@@ -24,6 +29,9 @@ application-data folder:
 | Windows  | `%APPDATA%\Enigma.Launchpad\launchpad.json`                                           |
 | Linux    | `$XDG_CONFIG_HOME/Enigma.Launchpad/launchpad.json` (`~/.config` by default)           |
 | macOS    | `Enigma.Launchpad/launchpad.json` under the folder .NET resolves as `ApplicationData` |
+
+It holds every profile and remembers the one in use. A file written before profiles existed is read into a
+single *Default* profile, and saved in the current format on the next change.
 
 The file is written atomically. If it ever cannot be read, it is kept as
 `launchpad.corrupt-<timestamp>.json` beside the original, and the launchpad starts empty; nothing is overwritten.
