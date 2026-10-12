@@ -52,8 +52,7 @@ Modified:
 - The site is reached over the system proxy (the handler's default). A proxy that requires authentication isn't
   supported — no credentials are ever sent — and such sites keep the globe.
 - Documentation sweep: nothing changed. Nothing visible changes in this phase.
-- Line endings: the new files show CRLF in the working tree; `.gitattributes` commits them as LF. Recommendation
-  only: run `git add --renormalize .` if mixed endings ever show up in diffs.
+- Line endings: every touched file is LF, per `.gitattributes`.
 
 ## Decisions taken at build time
 

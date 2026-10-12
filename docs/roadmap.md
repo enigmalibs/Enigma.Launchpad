@@ -25,5 +25,5 @@
 | - PHASE02    | Tiles show program icons            | DONE        | (in FEATURE-03CF.md)      |
 | FEATURE-1178 | Website icons on URL tiles          | IN PROGRESS | docs/plan/FEATURE-1178.md |
 | - PHASE01    | Favicon fetcher                     | DONE        | (in FEATURE-1178.md)      |
-| - PHASE02    | URL tiles show website icons        | TODO        | (in FEATURE-1178.md)      |
+| - PHASE02    | URL tiles show website icons        | DONE        | (in FEATURE-1178.md)      |
 | - PHASE03    | Website icon disk cache             | TODO        | (in FEATURE-1178.md)      |

@@ -90,7 +90,7 @@ Acceptance criteria:
 
 ### PHASE02 — URL tiles show website icons
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Services/WebsiteIcons.cs`: `IWebsiteIcons`, `WebsiteIcons` (policy, cache, decode, downscale, logging);
