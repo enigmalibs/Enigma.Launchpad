@@ -13,5 +13,5 @@
 | - PHASE02    | Settings page                       | DONE        | (in FEATURE-068D.md)      |
 | FEATURE-4D2E | Profiles                            | IN PROGRESS | docs/plan/FEATURE-4D2E.md |
 | - PHASE01    | Profile document model              | DONE        | (in FEATURE-4D2E.md)      |
-| - PHASE02    | Session profiles & switcher         | TODO        | (in FEATURE-4D2E.md)      |
+| - PHASE02    | Session profiles & switcher         | DONE        | (in FEATURE-4D2E.md)      |
 | - PHASE03    | Profiles management page            | TODO        | (in FEATURE-4D2E.md)      |

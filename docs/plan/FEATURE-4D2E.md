@@ -93,7 +93,7 @@ Acceptance criteria:
 
 ### PHASE02 — Session profiles & switcher
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Session profile API and events; saves through the existing chain.
