@@ -140,7 +140,7 @@ Acceptance criteria:
 
 ### PHASE02 — Shortcut selection dialog
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `ShortcutSelectionViewModel` + node ViewModel (three-state cascade up and down, defaults, summary,
