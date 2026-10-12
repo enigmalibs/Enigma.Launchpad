@@ -1,6 +1,6 @@
 # FEATURE-5B69 — Launchpad shortcut manager
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-5b69-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-launchpad-shortcut-manager
@@ -182,7 +182,7 @@ Acceptance criteria:
 
 ### PHASE05 — Drag-and-drop reordering
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `DropPlacement` pure calculator (before / after from pointer position and target bounds, horizontal for tiles,
