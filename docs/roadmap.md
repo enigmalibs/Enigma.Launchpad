@@ -27,4 +27,4 @@
 | - PHASE01    | Favicon fetcher                     | DONE   | (in FEATURE-1178.md)      |
 | - PHASE02    | URL tiles show website icons        | DONE   | (in FEATURE-1178.md)      |
 | - PHASE03    | Website icon disk cache             | DONE   | (in FEATURE-1178.md)      |
-| FEATURE-79F9 | Repository dotfiles                 | TODO   | docs/plan/FEATURE-79F9.md |
+| FEATURE-79F9 | Repository dotfiles                 | DONE   | docs/plan/FEATURE-79F9.md |
