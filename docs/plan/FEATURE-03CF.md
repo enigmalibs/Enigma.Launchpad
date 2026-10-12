@@ -1,6 +1,6 @@
 # FEATURE-03CF — Program icons on application tiles
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-03cf-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-12-app-list-icons
@@ -67,7 +67,7 @@ as today.
 
 ### PHASE01 — Windows program icon service
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Services/ProgramIconPixels.cs`, `Services/IProgramIconReader.cs` + `ShellProgramIconReader` (interop as above).
