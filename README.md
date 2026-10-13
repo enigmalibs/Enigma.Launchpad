@@ -4,6 +4,10 @@ A cross-platform desktop launcher for your **applications**, **directories** and
 [Avalonia 12](https://avaloniaui.net/), [Enigma.Avalonia.Desktop](https://www.nuget.org/packages/Enigma.Avalonia.Desktop)
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
+> **What's new in 1.0** — the first release: your applications, folders and websites in groups, per profile, with
+> their icons, tile actions, export and import — and, on Linux, a one-command installer. See
+> [RELEASENOTES.md](RELEASENOTES.md).
+
 Each of the three categories is a page in the navigation rail, where your shortcuts are arranged in
 groups you create, rename, fold, reorder and delete. Add a shortcut with a group's **+** (Browse… picks a
 program or a folder); click its tile, or press Enter, to open it; right-click it to edit it, try to get its
@@ -126,7 +130,7 @@ profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
 | `tests/Enigma.Launchpad.Core.UnitTests`    | xUnit v3 tests for the core library                                |
 | `tests/Enigma.Launchpad.Desktop.UnitTests` | xUnit v3 tests for the app, including headless Avalonia tests      |
 | `packaging/linux`                          | The Linux installer and uninstaller, the desktop entry, the icons  |
-| `docs/`                                    | Roadmap, plans and completion records                              |
+| `docs/`                                    | Roadmap, plans, completion records and the release runbook         |
 
 ## License
 

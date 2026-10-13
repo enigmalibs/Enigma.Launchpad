@@ -1,6 +1,6 @@
 # FEATURE-10CE — Release 1.0.0
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-10ce-release-1-0-0`
 **Run:** vibe/2026-10-13-linux-installer-release
