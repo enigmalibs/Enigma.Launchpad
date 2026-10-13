@@ -41,3 +41,5 @@
 | - PHASE01    | Action strip & copy buttons         | DONE   | (in FEATURE-2DA2.md)      |
 | - PHASE02    | Run with arguments                  | DONE   | (in FEATURE-2DA2.md)      |
 | - PHASE03    | Open in terminal                    | DONE   | (in FEATURE-2DA2.md)      |
+| FEATURE-200F | Linux installer                     | TODO   | docs/plan/FEATURE-200F.md |
+| FEATURE-10CE | Release 1.0.0                       | TODO   | docs/plan/FEATURE-10CE.md |
