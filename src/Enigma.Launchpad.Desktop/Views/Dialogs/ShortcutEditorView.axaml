@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.ShortcutEditorView"
+             x:DataType="vm:ShortcutEditorViewModel"
+             MinWidth="460">
+  <StackPanel Spacing="14">
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Name" Classes="fieldLabel" />
+      <TextBox x:Name="NameBox"
+               Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               MaxLength="200"
+               AutomationProperties.Name="Name" />
+      <TextBlock Text="{Binding VisibleNameError}"
+                 IsVisible="{Binding VisibleNameError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="{Binding TargetLabel}" Classes="fieldLabel" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBox Grid.Column="0"
+                 x:Name="TargetBox"
+                 Text="{Binding Target, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 PlaceholderText="{Binding TargetPlaceholder}"
+                 AutomationProperties.Name="{Binding TargetLabel}" />
+        <Button Grid.Column="1"
+                Command="{Binding BrowseCommand}"
+                IsVisible="{Binding CanBrowse}"
+                ToolTip.Tip="Pick it instead of typing it"
+                AutomationProperties.Name="Browse">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ei:Icon Kind="FolderOpen" Classes="toolbar" VerticalAlignment="Center" />
+            <TextBlock Text="Browse…" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+      <TextBlock Text="{Binding VisibleTargetError}"
+                 IsVisible="{Binding VisibleTargetError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding HasArguments}">
+      <TextBlock Text="Default arguments (optional)" Classes="fieldLabel" />
+      <TextBox Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               PlaceholderText="--new-window"
+               AutomationProperties.Name="Default arguments" />
+      <TextBlock Text="Passed as typed when the tile is clicked; Run with arguments… starts from them and can change them for one run. The program starts in its own folder."
+                 Classes="fieldHint" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Description (optional)" Classes="fieldLabel" />
+      <TextBox x:Name="DescriptionBox"
+               Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               TextWrapping="Wrap"
+               MaxLength="400"
+               PlaceholderText="What it is for"
+               AutomationProperties.Name="Description" />
+      <TextBlock Text="{Binding VisibleDescriptionError}"
+                 IsVisible="{Binding VisibleDescriptionError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+      <TextBlock Text="Shown on the tile, under its name."
+                 Classes="fieldHint" />
+    </StackPanel>
+
+    <!-- The icon as the tile will show it: an image chosen here, one found from the target, or the kind's glyph. -->
+    <StackPanel Spacing="4">
+      <TextBlock Text="Icon" Classes="fieldLabel" />
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+        <Border Grid.Column="0" Classes="tileIcon" VerticalAlignment="Center">
+          <Panel>
+            <ei:Icon x:Name="IconGlyph" Kind="{Binding KindGlyph}" Classes="tileIcon" IsVisible="{Binding !HasIconPreview}" />
+            <Image x:Name="IconImage"
+                   Source="{Binding IconPreview}"
+                   Classes="tileIcon"
+                   IsVisible="{Binding HasIconPreview}"
+                   RenderOptions.BitmapInterpolationMode="HighQuality" />
+          </Panel>
+        </Border>
+        <TextBlock Grid.Column="1"
+                   Text="{Binding IconHint}"
+                   Classes="fieldHint"
+                   VerticalAlignment="Center" />
+        <Button Grid.Column="2"
+                x:Name="ChooseIconButton"
+                VerticalAlignment="Center"
+                Command="{Binding ChooseIconCommand}"
+                ToolTip.Tip="Use an image file (PNG, JPEG, GIF, BMP, WebP or ICO) as the icon"
+                AutomationProperties.Name="Choose an icon">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ei:Icon Kind="Image" Classes="toolbar" VerticalAlignment="Center" />
+            <TextBlock Text="Choose…" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3"
+                VerticalAlignment="Center"
+                Command="{Binding ResetIconCommand}"
+                IsVisible="{Binding CanResetIcon}"
+                Content="{Binding ResetIconLabel}"
+                AutomationProperties.Name="{Binding ResetIconLabel}" />
+      </Grid>
+      <TextBlock Text="{Binding IconError}"
+                 IsVisible="{Binding IconError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.NameDialogView"
+             x:DataType="vm:NameDialogViewModel"
+             MinWidth="360">
+  <StackPanel Spacing="4">
+    <TextBlock Text="{Binding Label}" Classes="fieldLabel" />
+    <TextBox x:Name="NameBox"
+             Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+             MaxLength="200"
+             AutomationProperties.Name="{Binding Label}" />
+    <TextBlock Text="{Binding VisibleError}"
+               IsVisible="{Binding VisibleError, Converter={x:Static ObjectConverters.IsNotNull}}"
+               Classes="fieldError" />
+  </StackPanel>
+</UserControl>

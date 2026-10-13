@@ -1,0 +1,457 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+        xmlns:contentDialog="using:Enigma.Avalonia.Desktop.Controls.ContentDialog">
+
+  <!-- Application-wide styles. Merged after FluentTheme so these win, and written against the
+       Enigma* brushes so they follow the theme variant. -->
+
+  <!--
+    The icon scale: an icon takes its size from the role it plays, so the application has one scale
+    rather than a number per icon.
+
+      pageIcon  the category's icon in a page header
+      header    a title's icon, beside the name of a group
+      toolbar   an icon-only button, or the icon of a text button
+      row       an icon on a line or in a tile
+      menu      beside a context menu item
+  -->
+  <Style Selector="ei|Icon.pageIcon">
+    <Setter Property="Size" Value="24" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaAccentBrush}" />
+  </Style>
+
+  <Style Selector="ei|Icon.header">
+    <Setter Property="Size" Value="18" />
+  </Style>
+
+  <Style Selector="ei|Icon.toolbar">
+    <Setter Property="Size" Value="16" />
+  </Style>
+
+  <Style Selector="ei|Icon.row">
+    <Setter Property="Size" Value="16" />
+  </Style>
+
+  <Style Selector="ei|Icon.menu">
+    <Setter Property="Size" Value="16" />
+  </Style>
+
+  <!-- Page header. -->
+  <Style Selector="Border.pageIcon">
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.pageIcon > ei|Icon">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.pageTitle">
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.pageDescription">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!-- The strip above every page holding the profile list. -->
+  <Style Selector="Border.appBar">
+    <Setter Property="Padding" Value="32,14,32,0" />
+  </Style>
+
+  <Style Selector="TextBlock.appBarLabel">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!-- Profile cards: a group card's look, framed in the accent colour for the profile in use. -->
+  <Style Selector="Border.profileCard">
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+
+  <Style Selector="Border.profileCard.active">
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.activeBadge">
+    <Setter Property="Padding" Value="7,1" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaAccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.activeBadge > TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- A section's title on the settings page, above its cards. -->
+  <Style Selector="TextBlock.sectionHeader">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="2,12,0,4" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!-- Empty states. -->
+  <Style Selector="Border.emptyIcon">
+    <Setter Property="Width" Value="64" />
+    <Setter Property="Height" Value="64" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="TextBlock.emptyTitle">
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.emptyState">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!-- Group cards. -->
+  <Style Selector="Border.groupCard">
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="10,8,10,10" />
+  </Style>
+
+  <Style Selector="TextBlock.groupName">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.groupEmpty">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Margin" Value="32,0,0,4" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundTertiaryBrush}" />
+  </Style>
+
+  <Style Selector="Border.countBadge">
+    <Setter Property="MinWidth" Value="22" />
+    <Setter Property="Padding" Value="7,1" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSelectionBrush}" />
+  </Style>
+
+  <Style Selector="Border.countBadge > TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!--
+    The fold toggle that is a group's header. FluentTheme paints a checked toggle in the accent colour;
+    an expanded group is the normal state, not a highlighted one, so every state is restated flat here.
+  -->
+  <Style Selector="ToggleButton.groupHeader">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.groupHeader /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.groupHeader:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.groupHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="ToggleButton.groupHeader:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaPressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!-- A ghost button: an icon on the card, framed only while hovered. -->
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaPressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!--
+    Shortcut tiles: a fixed width so a group reads as a grid, a soft plate one step above the card, and an
+    accent frame on hover so the tile under the pointer is unmistakable. A tile grows downwards only for its
+    description; its content sits at the top, padded so a tile without one keeps its icon row centred in 62 px,
+    and every tile of a row stretches to the tallest, so the icon rows stay aligned.
+  -->
+  <Style Selector="Panel.tileSlot">
+    <Setter Property="Margin" Value="0,0,8,8" />
+  </Style>
+
+  <Style Selector="Button.tile">
+    <Setter Property="Width" Value="248" />
+    <Setter Property="MinHeight" Value="62" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="10,12" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceHighBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.tile /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceHighBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+  </Style>
+
+  <Style Selector="Button.tile:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.tile:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Border.tileIcon">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSelectionBrush}" />
+  </Style>
+
+  <Style Selector="ei|Icon.tileIcon">
+    <Setter Property="Size" Value="20" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!-- Read at 48 px, drawn at 24: sharp up to 200 % scaling. The view sets the high-quality scaling that keeps
+       it smooth below that, since render options cannot be styled. -->
+  <Style Selector="Image.tileIcon">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBlock.tileName">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="TextBlock.tileSubtitle">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!--
+    A tile's quick actions: small buttons over the end of its text, shown only while the tile is hovered or holds
+    the keyboard focus, so the text keeps the tile's width the rest of the time and nothing reflows. The strip
+    wears the hover colour, so it covers the text cleanly.
+  -->
+  <Style Selector="StackPanel.tileActions">
+    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.tile:pointerover StackPanel.tileActions, Button.tile:focus-within StackPanel.tileActions">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+
+  <Style Selector="Button.tileAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="5" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.tileAction /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Button.tileAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaPressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.tileAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaSelectionBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!-- Two lines at most; the tooltip has the rest. -->
+  <Style Selector="TextBlock.tileDescription">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Margin" Value="0,8,0,0" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!--
+    Drag and drop. The item being dragged fades; the accent bar shows where a drop lands, between
+    two cards or two tiles; a group receiving a shortcut at its end is framed in the accent colour.
+    The grip is the handle groups are dragged by.
+  -->
+  <Style Selector="Border.grip">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="4,8" />
+    <Setter Property="Margin" Value="0,0,2,0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="SizeAll" />
+  </Style>
+
+  <Style Selector="Border.grip:pointerover">
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+  </Style>
+
+  <Style Selector="Border.grip > ei|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundTertiaryBrush}" />
+  </Style>
+
+  <Style Selector="Border.grip:pointerover > ei|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Border.dropBar">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaAccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.dropBar.horizontal">
+    <Setter Property="Height" Value="3" />
+  </Style>
+
+  <Style Selector="Border.dropBar.vertical">
+    <Setter Property="Width" Value="3" />
+  </Style>
+
+  <Style Selector="Border.groupCard.dropInside">
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+  </Style>
+
+  <Style Selector="Border.groupCard.dragging, Button.tile.dragging">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!-- Dialog forms. -->
+  <Style Selector="TextBlock.fieldHint">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundTertiaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.fieldLabel">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.fieldError">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaErrorBrush}" />
+  </Style>
+
+  <!--
+    The checkbox tree choosing what to export or import: framed like a field, the detail of a line dimmed and kept
+    to one line — a checkbox's template wraps its text otherwise.
+  -->
+  <Style Selector="Border.selectionTree">
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.selectionDetail">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="MaxWidth" Value="220" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!--
+    A question asked as plain text wraps instead of running past the card's edge. Only the text block the
+    dialog's presenter makes for a string is styled: a view given as content keeps its own layout.
+  -->
+  <Style Selector="contentDialog|ContentDialog /template/ ContentPresenter > TextBlock">
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextTrimming" Value="None" />
+  </Style>
+
+  <!-- A question whose answer deletes something confirms in red (LaunchpadDialogs.DangerClass). -->
+  <Style Selector="contentDialog|ContentDialog.danger /template/ Button#PART_PrimaryButton">
+    <Setter Property="Background" Value="{DynamicResource EnigmaErrorBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <Style Selector="contentDialog|ContentDialog.danger /template/ Button#PART_PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaErrorBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <Style Selector="contentDialog|ContentDialog.danger /template/ Button#PART_PrimaryButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaErrorBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+</Styles>

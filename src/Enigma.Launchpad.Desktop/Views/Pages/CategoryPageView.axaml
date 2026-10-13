@@ -1,0 +1,311 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+             xmlns:pages="using:Enigma.Launchpad.Desktop.ViewModels.Pages"
+             x:Class="Enigma.Launchpad.Desktop.Views.Pages.CategoryPageView"
+             x:DataType="pages:CategoryPageViewModel"
+             DragDrop.AllowDrop="True">
+
+  <DockPanel>
+    <!-- Page header: the category's icon, title and what it holds, and the way to add a group. -->
+    <Grid DockPanel.Dock="Top"
+          ColumnDefinitions="Auto,*,Auto"
+          Margin="32,28,32,16">
+      <Border Grid.Column="0" Classes="pageIcon" VerticalAlignment="Center">
+        <ei:Icon Kind="{Binding Icon}" Classes="pageIcon" />
+      </Border>
+      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2" Margin="14,0,0,0">
+        <TextBlock Text="{Binding Title}" Classes="pageTitle" />
+        <TextBlock Text="{Binding Description}" Classes="pageDescription" />
+      </StackPanel>
+      <Button x:Name="NewGroupButton"
+              Grid.Column="2"
+              Classes="accent"
+              VerticalAlignment="Center"
+              Command="{Binding NewGroupCommand}"
+              IsVisible="{Binding !IsEmpty}"
+              ToolTip.Tip="Create a group in this category"
+              AutomationProperties.Name="New group">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ei:Icon Kind="Plus" Classes="toolbar" VerticalAlignment="Center" />
+          <TextBlock Text="New group" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+    </Grid>
+
+    <Panel>
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl x:Name="GroupList"
+                      ItemsSource="{Binding Groups}"
+                      Margin="32,4,32,32">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="12" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="pages:GroupViewModel">
+              <!-- The card, and the accent bars that show where a dragged group would land. -->
+              <Panel>
+              <Border Classes="groupCard"
+                      Classes.dropInside="{Binding IsDropInside}"
+                      Classes.dragging="{Binding IsDragging}">
+                <DockPanel>
+                  <!-- Header: fold toggle with the name and the count, then the group's actions. -->
+                  <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto">
+                    <!-- The handle a group is dragged by: an explicit affordance, so a click on the
+                         header always folds and never starts a drag. -->
+                    <Border Grid.Column="0"
+                            Classes="grip"
+                            ToolTip.Tip="Drag to reorder the groups">
+                      <ei:Icon Kind="DotsSixVertical" Classes="row" />
+                    </Border>
+
+                    <ToggleButton Grid.Column="1"
+                                  Classes="groupHeader"
+                                  IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                  ToolTip.Tip="Show or hide the group's shortcuts"
+                                  AutomationProperties.Name="{Binding Name}">
+                      <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Panel Width="16" VerticalAlignment="Center">
+                          <ei:Icon Kind="CaretDown" Classes="row" IsVisible="{Binding IsExpanded}" />
+                          <ei:Icon Kind="CaretRight" Classes="row" IsVisible="{Binding !IsExpanded}" />
+                        </Panel>
+                        <TextBlock Text="{Binding Name}" Classes="groupName" VerticalAlignment="Center" />
+                        <Border Classes="countBadge" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Count}" />
+                        </Border>
+                      </StackPanel>
+                    </ToggleButton>
+
+                    <Button Grid.Column="2"
+                            Classes="ghost"
+                            VerticalAlignment="Center"
+                            Command="{Binding AddShortcutCommand}"
+                            ToolTip.Tip="Add a shortcut to this group"
+                            AutomationProperties.Name="Add a shortcut">
+                      <ei:Icon Kind="Plus" Classes="toolbar" />
+                    </Button>
+
+                    <Button Grid.Column="3"
+                            Classes="ghost"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Group actions"
+                            AutomationProperties.Name="Group actions">
+                      <ei:Icon Kind="DotsThreeOutline" Classes="toolbar" />
+                      <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                          <MenuItem Header="Rename…" Command="{Binding RenameCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="PencilSimple" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <MenuItem Header="Move up" Command="{Binding MoveUpCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="ArrowUp" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <MenuItem Header="Move down" Command="{Binding MoveDownCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="ArrowDown" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <Separator />
+                          <MenuItem Header="Delete…" Command="{Binding DeleteCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="Trash" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                        </MenuFlyout>
+                      </Button.Flyout>
+                    </Button>
+                  </Grid>
+
+                  <!-- Body: the shortcuts, or a word on how the group fills up. -->
+                  <Panel IsVisible="{Binding IsExpanded}" Margin="0,10,0,2">
+                    <TextBlock Text="No shortcuts in this group yet. Add one with +."
+                               Classes="groupEmpty"
+                               IsVisible="{Binding !HasShortcuts}" />
+                    <ItemsControl Classes="tiles"
+                                  ItemsSource="{Binding Shortcuts}"
+                                  IsVisible="{Binding HasShortcuts}"
+                                  Margin="6,0,0,0">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="pages:ShortcutViewModel">
+                          <!-- A tile: click or Enter opens it; the context menu (right-click, Shift+F10) does the rest. -->
+                          <Panel Classes="tileSlot">
+                          <Button Classes="tile"
+                                  Classes.dragging="{Binding IsDragging}"
+                                  Command="{Binding OpenCommand}"
+                                  ToolTip.Tip="{Binding ToolTip}"
+                                  AutomationProperties.Name="{Binding Name}">
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+                              <!-- The target's own icon — a program's, a website's — when there is one, else the category's glyph. -->
+                              <Border Grid.Column="0" Classes="tileIcon">
+                                <Panel>
+                                  <ei:Icon Kind="{Binding Icon}" Classes="tileIcon" IsVisible="{Binding !HasTargetIcon}" />
+                                  <Image Source="{Binding TargetIcon}"
+                                         Classes="tileIcon"
+                                         IsVisible="{Binding HasTargetIcon}"
+                                         RenderOptions.BitmapInterpolationMode="HighQuality" />
+                                </Panel>
+                              </Border>
+                              <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                <TextBlock Text="{Binding Name}" Classes="tileName" />
+                                <TextBlock Text="{Binding Subtitle}" Classes="tileSubtitle" />
+                              </StackPanel>
+                              <!-- The tile's quick actions, over the end of its text while it is hovered or focused. -->
+                              <StackPanel Grid.Column="1" Classes="tileActions">
+                                <Button Classes="tileAction"
+                                        Command="{Binding RunWithArgumentsCommand}"
+                                        IsVisible="{Binding CanRunWithArguments}"
+                                        ToolTip.Tip="Run with arguments…"
+                                        AutomationProperties.Name="Run with arguments">
+                                  <ei:Icon Kind="PlayCircle" Classes="row" />
+                                </Button>
+                                <Button Classes="tileAction"
+                                        Command="{Binding OpenInTerminalCommand}"
+                                        IsVisible="{Binding CanOpenInTerminal}"
+                                        ToolTip.Tip="Open in terminal"
+                                        AutomationProperties.Name="Open in terminal">
+                                  <ei:Icon Kind="TerminalWindow" Classes="row" />
+                                </Button>
+                                <Button Classes="tileAction"
+                                        Command="{Binding CopyTargetCommand}"
+                                        IsVisible="{Binding CanCopyFromTile}"
+                                        ToolTip.Tip="{Binding CopyTargetLabel}"
+                                        AutomationProperties.Name="{Binding CopyTargetLabel}">
+                                  <ei:Icon Kind="Copy" Classes="row" />
+                                </Button>
+                              </StackPanel>
+                              <!-- Under the icon row, across the tile: the description, when the shortcut has one. -->
+                              <TextBlock Grid.Row="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding Description}"
+                                         Classes="tileDescription"
+                                         IsVisible="{Binding HasDescription}" />
+                            </Grid>
+                            <Button.ContextMenu>
+                              <ContextMenu>
+                                <MenuItem Header="Open" Command="{Binding OpenCommand}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="ArrowSquareOut" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Run with arguments…"
+                                          Command="{Binding RunWithArgumentsCommand}"
+                                          IsVisible="{Binding CanRunWithArguments}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="PlayCircle" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Open in terminal"
+                                          Command="{Binding OpenInTerminalCommand}"
+                                          IsVisible="{Binding CanOpenInTerminal}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="TerminalWindow" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Edit…" Command="{Binding EditCommand}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="PencilSimple" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Try to get icon"
+                                          Command="{Binding FindIconCommand}"
+                                          IsVisible="{Binding CanFindIcon}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="ArrowsClockwise" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Copy target" Command="{Binding CopyTargetCommand}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="Copy" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Show in folder"
+                                          Command="{Binding RevealCommand}"
+                                          IsVisible="{Binding CanReveal}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="FolderOpen" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Header="Move earlier" Command="{Binding MoveUpCommand}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="ArrowLeft" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Move later" Command="{Binding MoveDownCommand}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="ArrowRight" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Header="Delete…" Command="{Binding DeleteCommand}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="Trash" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                              </ContextMenu>
+                            </Button.ContextMenu>
+                          </Button>
+                          <!-- Where a dragged tile would land: in the gap before or after this one. -->
+                          <Border Classes="dropBar vertical" HorizontalAlignment="Left" Margin="-5.5,6,0,6"
+                                  IsVisible="{Binding IsDropBefore}" />
+                          <Border Classes="dropBar vertical" HorizontalAlignment="Right" Margin="0,6,-5.5,6"
+                                  IsVisible="{Binding IsDropAfter}" />
+                          </Panel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Panel>
+                </DockPanel>
+              </Border>
+              <Border Classes="dropBar horizontal" VerticalAlignment="Top" Margin="8,-7.5,8,0"
+                      IsVisible="{Binding IsDropBefore}" />
+              <Border Classes="dropBar horizontal" VerticalAlignment="Bottom" Margin="8,0,8,-7.5"
+                      IsVisible="{Binding IsDropAfter}" />
+              </Panel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- Empty category: an invitation rather than a blank page. -->
+      <StackPanel x:Name="EmptyState"
+                  IsVisible="{Binding IsEmpty}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="12"
+                  Margin="32,0,32,64"
+                  MaxWidth="420">
+        <Border Classes="emptyIcon" HorizontalAlignment="Center">
+          <ei:Icon Kind="SquaresFour" Size="32" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+        </Border>
+        <TextBlock Text="No groups yet" Classes="emptyTitle" HorizontalAlignment="Center" />
+        <TextBlock Text="Groups keep related shortcuts together. Create one to start filling this category."
+                   Classes="emptyState"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap" />
+        <Button Classes="accent"
+                HorizontalAlignment="Center"
+                Margin="0,8,0,0"
+                Command="{Binding NewGroupCommand}"
+                AutomationProperties.Name="Create a group">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ei:Icon Kind="Plus" Classes="toolbar" VerticalAlignment="Center" />
+            <TextBlock Text="Create a group" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </Panel>
+  </DockPanel>
+</UserControl>
