@@ -1,6 +1,3 @@
-using System;
-using System.Threading.Tasks;
-using Avalonia.Media;
 using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
@@ -13,8 +10,6 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 /// </summary>
 public sealed class UrlsPageViewModel : CategoryPageViewModel
 {
-    private readonly IWebsiteIcons _websiteIcons;
-
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
@@ -22,13 +17,13 @@ public sealed class UrlsPageViewModel : CategoryPageViewModel
     /// <param name="validator">The rules names and targets must meet.</param>
     /// <param name="dialogs">The questions asked of the user.</param>
     /// <param name="actions">Opens shortcuts, shows them in their folder, copies their targets.</param>
-    /// <param name="websiteIcons">The icons of the websites, for the tiles.</param>
+    /// <param name="icons">The icons of the tiles: kept with the shortcuts, or the websites' own.</param>
     public UrlsPageViewModel(
         ILaunchpadSession session,
         IShortcutValidator validator,
         ILaunchpadDialogs dialogs,
         IShortcutActions actions,
-        IWebsiteIcons websiteIcons)
+        IShortcutIcons icons)
         : base(
             ShortcutKind.Url,
             "URLs",
@@ -37,13 +32,8 @@ public sealed class UrlsPageViewModel : CategoryPageViewModel
             session,
             validator,
             dialogs,
-            actions)
+            actions,
+            icons)
     {
-        ArgumentNullException.ThrowIfNull(websiteIcons);
-
-        _websiteIcons = websiteIcons;
     }
-
-    /// <inheritdoc />
-    internal override Task<IImage?> GetTargetIconAsync(string target) => _websiteIcons.GetAsync(target);
 }

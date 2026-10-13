@@ -31,7 +31,7 @@
 | FEATURE-059B | Shortcut descriptions               | DONE        | docs/plan/FEATURE-059B.md |
 | FEATURE-3349 | Icons stored with shortcuts         | IN PROGRESS | docs/plan/FEATURE-3349.md |
 | - PHASE01    | Icon in the shortcut model          | DONE        | (in FEATURE-3349.md)      |
-| - PHASE02    | Tiles keep found icons              | TODO        | (in FEATURE-3349.md)      |
+| - PHASE02    | Tiles keep found icons              | DONE        | (in FEATURE-3349.md)      |
 | - PHASE03    | Icon field in the forms             | TODO        | (in FEATURE-3349.md)      |
 | - PHASE04    | Try to get icon                     | TODO        | (in FEATURE-3349.md)      |
 | BUG-3079     | Unreliable automatic icons          | TODO        | docs/plan/BUG-3079.md     |

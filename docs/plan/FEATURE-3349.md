@@ -95,7 +95,7 @@ Acceptance criteria:
 
 ### PHASE02 — Tiles keep found icons
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Services/IconPng.cs`; `ProgramIcons` / `WebsiteIcons` return normalized PNG bytes.

@@ -193,6 +193,39 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AnIconFoundFromTheOldTarget_IsDropped_WhenTheTargetChanges()
+    {
+        Shortcut existing = new(Guid.NewGuid(), "Temp", _temp.Path, Icon: new ShortcutIcon("iVBORw0KGgo="));
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, existing);
+
+        form.Target = Directory.CreateDirectory(_temp.Combine("Other")).FullName;
+
+        Assert.Null(form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public void AChosenIcon_IsKept_WhenTheTargetChanges()
+    {
+        ShortcutIcon chosen = new("iVBORw0KGgo=", IsCustom: true);
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: chosen));
+
+        form.Target = Directory.CreateDirectory(_temp.Combine("Other")).FullName;
+
+        Assert.Equal(chosen, form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public void AnIconFoundFromTheTarget_IsKept_WhenTheTargetIsRetypedUnchanged()
+    {
+        ShortcutIcon found = new("iVBORw0KGgo=");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: found));
+
+        form.Target = $"  {_temp.Path}  ";
+
+        Assert.Equal(found, form.ToShortcut().Icon);
+    }
+
+    [Fact]
     public async Task Browse_FillsTheTarget_AndTheNameWhenItIsEmpty()
     {
         string program = Path.Combine(_temp.Path, "Editor.exe");

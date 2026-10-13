@@ -16,6 +16,10 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Dialogs;
 /// The fields depend on the kind: an application has arguments, an application or a folder can be picked
 /// with Browse…, a link has neither. An error appears under a field only once that field has been edited,
 /// so a new, empty form does not open with complaints; the confirm button still waits for a valid form.
+/// <para>
+/// An application's or a link's icon can be found from its target; such an icon belongs to that target, so it is
+/// dropped when the target is changed, and the tile finds the new target's icon once the form is saved.
+/// </para>
 /// </remarks>
 public sealed class ShortcutEditorViewModel : ObservableObject
 {
@@ -23,6 +27,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     private readonly IPathPicker _picker;
     private readonly Guid _id;
     private readonly ShortcutIcon? _icon;
+    private readonly string? _originalTarget;
 
     /// <summary>
     /// Initialises a new instance.
@@ -41,6 +46,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         _picker = picker;
         _id = existing?.Id ?? Guid.NewGuid();
         _icon = existing?.Icon;
+        _originalTarget = existing?.Target;
         IsNew = existing is null;
 
         Name = existing?.Name ?? string.Empty;
@@ -262,7 +268,8 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     /// <summary>
     /// Builds the shortcut the form describes.
     /// </summary>
-    /// <returns>The shortcut, keeping the identity and the icon of the one edited.</returns>
+    /// <returns>The shortcut, keeping the identity and the icon of the one edited — but not an icon found from a
+    /// target it no longer has.</returns>
     /// <exception cref="InvalidOperationException">The form is not valid.</exception>
     public Shortcut ToShortcut()
     {
@@ -276,7 +283,10 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         string? arguments = HasArguments && !string.IsNullOrWhiteSpace(Arguments) ? Arguments.Trim() : null;
         string? description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
 
-        return new Shortcut(_id, Name.Trim(), normalized, arguments, description, _icon);
+        // An icon found from the old target belongs to it; the tile finds the new target's icon once saved.
+        ShortcutIcon? icon = (_icon is { IsCustom: false }) && (normalized != _originalTarget) ? null : _icon;
+
+        return new Shortcut(_id, Name.Trim(), normalized, arguments, description, icon);
     }
 
     private void Revalidate()

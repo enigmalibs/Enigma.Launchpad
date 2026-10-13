@@ -1,11 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Enigma.Launchpad.Core.Validation;
 using Microsoft.Extensions.Logging;
 
@@ -21,8 +17,9 @@ public interface IWebsiteIcons
     /// </summary>
     /// <param name="url">The address.</param>
     /// <param name="cancellationToken">Stops this wait only: the icon is still fetched for whoever asks next.</param>
-    /// <returns>The icon, or <see langword="null"/> when there is none to show.</returns>
-    Task<IImage?> GetAsync(string url, CancellationToken cancellationToken = default);
+    /// <returns>The icon as a PNG file no larger than <see cref="IconPng.MaxSize"/>, or <see langword="null"/> when
+    /// there is none to show.</returns>
+    Task<byte[]?> GetAsync(string url, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -42,18 +39,13 @@ public interface IWebsiteIcons
 /// </remarks>
 public sealed class WebsiteIcons : IWebsiteIcons
 {
-    /// <summary>
-    /// The largest icon kept, in pixels: twice the tile's 24, so it stays sharp up to 200 % scaling.
-    /// </summary>
-    internal const int IconSize = 48;
-
-    private static readonly Task<IImage?> NoIcon = Task.FromResult<IImage?>(null);
+    private static readonly Task<byte[]?> NoIcon = Task.FromResult<byte[]?>(null);
 
     private readonly IWebsiteIconFetcher _fetcher;
     private readonly IWebsiteIconStore _store;
     private readonly ILogger<WebsiteIcons> _logger;
     private readonly object _sync = new();
-    private readonly Dictionary<Uri, Task<IImage?>> _icons = [];
+    private readonly Dictionary<Uri, Task<byte[]?>> _icons = [];
 
     /// <summary>
     /// Initialises a new instance.
@@ -73,7 +65,7 @@ public sealed class WebsiteIcons : IWebsiteIcons
     }
 
     /// <inheritdoc />
-    public Task<IImage?> GetAsync(string url, CancellationToken cancellationToken = default)
+    public Task<byte[]?> GetAsync(string url, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(url);
 
@@ -84,7 +76,7 @@ public sealed class WebsiteIcons : IWebsiteIcons
 
         lock (_sync)
         {
-            if (!_icons.TryGetValue(site, out Task<IImage?>? icon))
+            if (!_icons.TryGetValue(site, out Task<byte[]?>? icon))
             {
                 // The fetch is shared by every caller, so no caller's token may cancel it.
                 icon = Task.Run(() => LoadAsync(site), CancellationToken.None);
@@ -106,49 +98,19 @@ public sealed class WebsiteIcons : IWebsiteIcons
             ? new UriBuilder(address.Scheme, address.IdnHost, address.Port).Uri
             : null;
 
-    /// <summary>
-    /// Decodes an icon file, scaled down to fit <see cref="IconSize"/> when it is larger.
-    /// </summary>
-    /// <param name="bytes">The file's bytes.</param>
-    /// <returns>The icon.</returns>
-    internal static Bitmap Decode(byte[] bytes)
-    {
-        ArgumentNullException.ThrowIfNull(bytes);
-
-        using MemoryStream stream = new(bytes, writable: false);
-        Bitmap decoded = new(stream);
-        PixelSize size = decoded.PixelSize;
-
-        if ((size.Width <= IconSize) && (size.Height <= IconSize))
-        {
-            return decoded;
-        }
-
-        using (decoded)
-        {
-            double scale = (double)IconSize / Math.Max(size.Width, size.Height);
-            PixelSize scaled = new(
-                Math.Max(1, (int)Math.Round(size.Width * scale)),
-                Math.Max(1, (int)Math.Round(size.Height * scale)));
-
-            return decoded.CreateScaledBitmap(scaled, BitmapInterpolationMode.HighQuality);
-        }
-    }
-
     // An icon is decoration: whatever goes wrong at any step, the tile keeps its glyph, so no step throws.
-    private async Task<IImage?> LoadAsync(Uri site)
+    private async Task<byte[]?> LoadAsync(Uri site)
     {
         StoredWebsiteIcon? stored = await ReadStoredAsync(site);
-        Bitmap? previous = (stored is null) ? null : TryDecode(stored.Bytes, site, LogLevel.Debug);
+        byte[]? previous = (stored is null) ? null : TryNormalize(stored.Bytes, site, LogLevel.Debug);
 
         if ((stored is { IsFresh: true }) && (previous is not null))
         {
             return previous;
         }
 
-        if ((await FetchAsync(site) is { } fetched) && (TryDecode(fetched, site, LogLevel.Warning) is { } icon))
+        if ((await FetchAsync(site) is { } fetched) && (TryNormalize(fetched, site, LogLevel.Warning) is { } icon))
         {
-            previous?.Dispose();
             await StoreAsync(site, fetched);
             return icon;
         }
@@ -195,11 +157,11 @@ public sealed class WebsiteIcons : IWebsiteIcons
         }
     }
 
-    private Bitmap? TryDecode(byte[] bytes, Uri site, LogLevel failureLevel)
+    private byte[]? TryNormalize(byte[] bytes, Uri site, LogLevel failureLevel)
     {
         try
         {
-            return Decode(bytes);
+            return IconPng.Normalize(bytes);
         }
         catch (Exception exception)
         {

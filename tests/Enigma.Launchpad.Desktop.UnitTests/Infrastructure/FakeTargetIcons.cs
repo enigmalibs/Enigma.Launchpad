@@ -14,9 +14,9 @@ namespace Enigma.Launchpad.Desktop.UnitTests.Infrastructure;
 /// </summary>
 internal sealed class FakeTargetIcons : IProgramIcons, IWebsiteIcons
 {
-    private readonly List<(string Path, TaskCompletionSource<IImage?> Answer)> _held = [];
+    private readonly List<(string Path, TaskCompletionSource<byte[]?> Answer)> _held = [];
 
-    public Func<string, IImage?> Answer { get; set; } = _ => null;
+    public Func<string, byte[]?> Answer { get; set; } = _ => null;
 
     /// <summary>
     /// When set, requests stay unanswered until <see cref="Release"/>.
@@ -25,7 +25,7 @@ internal sealed class FakeTargetIcons : IProgramIcons, IWebsiteIcons
 
     public List<string> Requests { get; } = [];
 
-    public Task<IImage?> GetAsync(string path, CancellationToken cancellationToken = default)
+    public Task<byte[]?> GetAsync(string path, CancellationToken cancellationToken = default)
     {
         Requests.Add(path);
 
@@ -34,7 +34,7 @@ internal sealed class FakeTargetIcons : IProgramIcons, IWebsiteIcons
             return Task.FromResult(Answer(path));
         }
 
-        TaskCompletionSource<IImage?> answer = new();
+        TaskCompletionSource<byte[]?> answer = new();
         _held.Add((path, answer));
         return answer.Task;
     }
@@ -42,9 +42,9 @@ internal sealed class FakeTargetIcons : IProgramIcons, IWebsiteIcons
     /// <summary>
     /// Answers every held request for a path.
     /// </summary>
-    public void Release(string path, IImage? icon)
+    public void Release(string path, byte[]? icon)
     {
-        foreach ((string heldPath, TaskCompletionSource<IImage?> answer) in _held)
+        foreach ((string heldPath, TaskCompletionSource<byte[]?> answer) in _held)
         {
             if (heldPath == path)
             {
