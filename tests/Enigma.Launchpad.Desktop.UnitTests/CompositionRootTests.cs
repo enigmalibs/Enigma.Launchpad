@@ -88,6 +88,7 @@ public sealed class CompositionRootTests
     [InlineData(typeof(IProgramIcons))]
     [InlineData(typeof(IWebsiteIconFetcher))]
     [InlineData(typeof(IWebsiteIcons))]
+    [InlineData(typeof(IShortcutIcons))]
     [InlineData(typeof(ISettingsService))]
     [InlineData(typeof(ThemeApplier))]
     [InlineData(typeof(IMainWindowService))]

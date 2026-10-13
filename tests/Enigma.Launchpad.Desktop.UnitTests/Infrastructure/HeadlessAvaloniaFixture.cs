@@ -103,7 +103,10 @@ public sealed class HeadlessAvaloniaFixture : IDisposable
         ArgumentNullException.ThrowIfNull(function);
 
         TResult result = default!;
-        Run(() => result = function());
+
+        // A block body, so the lambda is an Action: an expression body would return the result and pick this
+        // overload again, recursing until the stack overflows.
+        Run(() => { result = function(); });
         return result;
     }
 

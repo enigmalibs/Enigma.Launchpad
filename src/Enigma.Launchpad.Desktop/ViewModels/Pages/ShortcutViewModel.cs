@@ -7,6 +7,7 @@ using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
 using Enigma.Launchpad.Desktop.DragAndDrop;
+using Enigma.Launchpad.Desktop.Services;
 
 namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 
@@ -45,7 +46,7 @@ public sealed class ShortcutViewModel : ObservableObject
         MoveUpCommand = new RelayCommand(() => _page.MoveShortcut(this, -1), () => _page.CanMoveShortcut(this, -1));
         MoveDownCommand = new RelayCommand(() => _page.MoveShortcut(this, 1), () => _page.CanMoveShortcut(this, 1));
 
-        // The tile shows its glyph straight away; the icon replaces it once read, which a cached one already is.
+        // The tile shows the icon its shortcut keeps straight away; one still to be found replaces the glyph once it is.
         _ = LoadTargetIconAsync();
     }
 
@@ -100,8 +101,8 @@ public sealed class ShortcutViewModel : ObservableObject
     };
 
     /// <summary>
-    /// Gets the icon of the shortcut's target — a program's, a website's — which the tile shows instead of
-    /// <see cref="Icon"/>; <see langword="null"/> until it has been read, and when there is none.
+    /// Gets the shortcut's own icon — the one it keeps, or a program's or a website's once found — which the tile
+    /// shows instead of <see cref="Icon"/>; <see langword="null"/> until it has been found, and when there is none.
     /// </summary>
     public IImage? TargetIcon
     {
@@ -237,12 +238,12 @@ public sealed class ShortcutViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        bool retargeted = model.Target != Model.Target;
+        bool iconChanged = (model.Target != Model.Target) || (model.Icon != Model.Icon);
         Model = model;
 
-        if (retargeted)
+        if (iconChanged)
         {
-            // The old target's icon would be wrong while the new one is read.
+            // The old icon would be wrong while the new one is shown or found.
             TargetIcon = null;
             _ = LoadTargetIconAsync();
         }
@@ -257,16 +258,34 @@ public sealed class ShortcutViewModel : ObservableObject
         MoveDownCommand.NotifyCanExecuteChanged();
     }
 
-    // Never faults: the page answers null for any target whose icon cannot be had.
+    // Never faults: the page answers null for any icon that cannot be shown or found.
     private async Task LoadTargetIconAsync()
     {
-        string target = Target;
-        IImage? icon = await _page.GetTargetIconAsync(target);
+        ShortcutIcon? kept = Model.Icon;
 
-        // An edit may have pointed the shortcut elsewhere while this icon was read.
-        if (target == Target)
+        if ((kept is not null) && (_page.ShowIcon(kept) is { } shown))
         {
-            TargetIcon = icon;
+            TargetIcon = shown;
+            return;
         }
+
+        // An icon the user chose is never replaced behind their back, even one that no longer shows.
+        if ((kept is { IsCustom: true }) || !_page.CanFindIcons)
+        {
+            return;
+        }
+
+        string target = Target;
+        IconImage? found = await _page.FindIconAsync(target);
+
+        // An edit may have pointed the shortcut elsewhere, or given it an icon, while this one was looked up.
+        if ((found is null) || (target != Target) || (Model.Icon != kept))
+        {
+            return;
+        }
+
+        TargetIcon = found.Image;
+        Model = Model with { Icon = found.Icon };
+        _page.KeepFoundIcon(this);
     }
 }

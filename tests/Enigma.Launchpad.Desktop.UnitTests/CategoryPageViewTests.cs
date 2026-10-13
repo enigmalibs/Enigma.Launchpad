@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
@@ -185,12 +186,11 @@ public sealed class CategoryPageViewTests
             Assert.True(codeGlyph.IsEffectivelyVisible);
             Assert.False(codeImage.IsEffectivelyVisible);
 
-            Bitmap icon = ProgramIcons.ToBitmap(FakeProgramIconReader.Opaque(ProgramIcons.IconSize));
-            programIcons.Release(@"C:\Tools\code.exe", icon);
+            programIcons.Release(@"C:\Tools\code.exe", TestImages.Png(ProgramIcons.IconSize, ProgramIcons.IconSize));
             programIcons.Release(@"C:\Tools\git.exe", null);
             await WindowHarness.WaitUntilAsync(() => codeImage.IsEffectivelyVisible);
 
-            Assert.Same(icon, codeImage.Source);
+            Assert.Equal(new PixelSize(ProgramIcons.IconSize, ProgramIcons.IconSize), Assert.IsType<Bitmap>(codeImage.Source).PixelSize);
             Assert.False(codeGlyph.IsEffectivelyVisible);
             Assert.True(gitGlyph.IsEffectivelyVisible);
             Assert.False(gitImage.IsEffectivelyVisible);

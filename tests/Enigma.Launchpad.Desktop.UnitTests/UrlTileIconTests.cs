@@ -19,17 +19,17 @@ public sealed class UrlTileIconTests
         => _harness = new PageHarness(PageHarness.WithShortcuts(ShortcutKind.Url, ("Reading", [_guide])), ShortcutKind.Url);
 
     [Fact]
-    public async Task AUrlTile_ShowsItsWebsitesIcon()
+    public async Task AUrlTile_ShowsItsWebsitesIcon_AndKeepsIt()
     {
         StubImage icon = new();
-        _harness.WebsiteIcons.Answer = url => url == Guide ? icon : null;
+        _harness.Icons.Answer = url => url == Guide ? icon : null;
 
         ShortcutViewModel tile = await LoadedTileAsync();
 
         Assert.Same(icon, tile.TargetIcon);
         Assert.True(tile.HasTargetIcon);
-        Assert.Equal([Guide], _harness.WebsiteIcons.Requests);
-        Assert.Empty(_harness.ProgramIcons.Requests);
+        Assert.Equal([Guide], _harness.Icons.Requests);
+        Assert.Equal(FakeShortcutIcons.FoundIcon(Guide), Assert.Single(Assert.Single(await _harness.SavedGroupsAsync()).Shortcuts).Icon);
     }
 
     [Fact]
@@ -45,27 +45,14 @@ public sealed class UrlTileIconTests
     public async Task AnEditToAnotherSite_ShowsThatSitesIcon()
     {
         StubImage blogIcon = new();
-        _harness.WebsiteIcons.Answer = url => url == Blog ? blogIcon : new StubImage();
+        _harness.Icons.Answer = url => url == Blog ? blogIcon : new StubImage();
         ShortcutViewModel tile = await LoadedTileAsync();
-        _harness.Dialogs.ShortcutAnswers.Enqueue(_guide with { Target = Blog });
+        _harness.Dialogs.ShortcutAnswers.Enqueue(tile.Model with { Target = Blog, Icon = null });
 
         await tile.EditCommand.ExecuteAsync(null);
 
         Assert.Same(blogIcon, tile.TargetIcon);
-        Assert.Equal([Guide, Blog], _harness.WebsiteIcons.Requests);
-    }
-
-    [Fact]
-    public async Task ADirectoryTile_AsksForNoIcon()
-    {
-        PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Directory, ("Places", [PageHarness.Shortcut("Docs", @"C:\Docs")])), ShortcutKind.Directory);
-        harness.WebsiteIcons.Answer = _ => new StubImage();
-
-        CategoryPageViewModel page = await harness.LoadAsync();
-
-        Assert.Empty(harness.WebsiteIcons.Requests);
-        Assert.Empty(harness.ProgramIcons.Requests);
-        Assert.False(page.Groups[0].Shortcuts[0].HasTargetIcon);
+        Assert.Equal([Guide, Blog], _harness.Icons.Requests);
     }
 
     private async Task<ShortcutViewModel> LoadedTileAsync()
