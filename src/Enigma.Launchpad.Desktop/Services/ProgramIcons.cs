@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Microsoft.Extensions.Logging;
@@ -22,8 +21,19 @@ public interface IProgramIcons
     /// </summary>
     /// <param name="path">The program's path.</param>
     /// <param name="cancellationToken">Stops this wait only: the icon is still read for whoever asks next.</param>
-    /// <returns>The icon, or <see langword="null"/> when there is none to show.</returns>
-    Task<IImage?> GetAsync(string path, CancellationToken cancellationToken = default);
+    /// <returns>The icon as a PNG file no larger than <see cref="IconPng.MaxSize"/>, or <see langword="null"/> when
+    /// there is none to show.</returns>
+    Task<byte[]?> GetAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the icon of a program again, rather than answering what was read earlier in the session; a read
+    /// already underway is shared rather than started twice.
+    /// </summary>
+    /// <param name="path">The program's path.</param>
+    /// <param name="cancellationToken">Stops this wait only: the icon is still read for whoever asks next.</param>
+    /// <returns>The icon as a PNG file no larger than <see cref="IconPng.MaxSize"/>, or <see langword="null"/> when
+    /// there is none to show.</returns>
+    Task<byte[]?> RefreshAsync(string path, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -38,18 +48,18 @@ public interface IProgramIcons
 public sealed class ProgramIcons : IProgramIcons
 {
     /// <summary>
-    /// The size icons are read at, in pixels: twice the tile's 24, so they stay sharp up to 200 % scaling.
+    /// The size icons are read at, in pixels: the size icons are kept at.
     /// </summary>
-    internal const int IconSize = 48;
+    internal const int IconSize = IconPng.MaxSize;
 
-    private static readonly Task<IImage?> NoIcon = Task.FromResult<IImage?>(null);
+    private static readonly Task<byte[]?> NoIcon = Task.FromResult<byte[]?>(null);
 
     private readonly IProgramIconReader _reader;
     private readonly ILogger<ProgramIcons> _logger;
     private readonly object _sync = new();
 
     // Windows paths ignore case, so one program reached under two spellings is read once.
-    private readonly Dictionary<string, Task<IImage?>> _icons
+    private readonly Dictionary<string, Task<byte[]?>> _icons
         = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
     /// <summary>
@@ -67,17 +77,24 @@ public sealed class ProgramIcons : IProgramIcons
     }
 
     /// <inheritdoc />
-    public Task<IImage?> GetAsync(string path, CancellationToken cancellationToken = default)
+    public Task<byte[]?> GetAsync(string path, CancellationToken cancellationToken = default)
+        => Get(path, refresh: false, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<byte[]?> RefreshAsync(string path, CancellationToken cancellationToken = default)
+        => Get(path, refresh: true, cancellationToken);
+
+    private Task<byte[]?> Get(string path, bool refresh, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         lock (_sync)
         {
-            if (!_icons.TryGetValue(path, out Task<IImage?>? icon))
+            if (!_icons.TryGetValue(path, out Task<byte[]?>? icon) || (refresh && icon.IsCompleted))
             {
                 // The read is shared by every caller, so no caller's token may cancel it.
                 icon = IsNetworkPath(path) ? NoIcon : Task.Run(() => Read(path), CancellationToken.None);
-                _icons.Add(path, icon);
+                _icons[path] = icon;
             }
 
             return icon.WaitAsync(cancellationToken);
@@ -120,7 +137,7 @@ public sealed class ProgramIcons : IProgramIcons
     private static bool IsNetworkPath(string path)
         => (path.Length >= 2) && (path[0] is '\\' or '/') && (path[1] is '\\' or '/');
 
-    private IImage? Read(string path)
+    private byte[]? Read(string path)
     {
         try
         {
@@ -129,9 +146,13 @@ public sealed class ProgramIcons : IProgramIcons
                 return null;
             }
 
-            ProgramIconPixels? pixels = _reader.Read(path, IconSize);
+            if (_reader.Read(path, IconSize) is not { } pixels)
+            {
+                return null;
+            }
 
-            return pixels is null ? null : ToBitmap(pixels);
+            using Bitmap bitmap = ToBitmap(pixels);
+            return IconPng.Encode(bitmap);
         }
         catch (Exception exception)
         {

@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IWebsiteIconFetcher, WebsiteIconFetcher>();
             services.AddSingleton<IWebsiteIconStore, WebsiteIconStore>();
             services.AddSingleton<IWebsiteIcons, WebsiteIcons>();
+            services.AddSingleton<IShortcutIcons, ShortcutIcons>();
             services.AddSingleton<ILaunchpadSession, LaunchpadSession>();
             services.AddSingleton<ThemeApplier>();
 

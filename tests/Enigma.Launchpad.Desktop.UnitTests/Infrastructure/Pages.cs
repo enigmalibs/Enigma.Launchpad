@@ -21,9 +21,9 @@ internal sealed class PageHarness
         ShortcutValidator validator = new();
         Page = kind switch
         {
-            ShortcutKind.Application => new ApplicationsPageViewModel(Session, validator, Dialogs, Actions, ProgramIcons),
-            ShortcutKind.Directory => new DirectoriesPageViewModel(Session, validator, Dialogs, Actions),
-            _ => new UrlsPageViewModel(Session, validator, Dialogs, Actions, WebsiteIcons),
+            ShortcutKind.Application => new ApplicationsPageViewModel(Session, validator, Dialogs, Actions, Icons, Notifications),
+            ShortcutKind.Directory => new DirectoriesPageViewModel(Session, validator, Dialogs, Actions, Icons, Notifications),
+            _ => new UrlsPageViewModel(Session, validator, Dialogs, Actions, Icons, Notifications),
         };
     }
 
@@ -35,9 +35,7 @@ internal sealed class PageHarness
 
     public RecordingShortcutActions Actions { get; } = new();
 
-    public FakeTargetIcons ProgramIcons { get; } = new();
-
-    public FakeTargetIcons WebsiteIcons { get; } = new();
+    public FakeShortcutIcons Icons { get; } = new();
 
     public LaunchpadSession Session { get; }
 

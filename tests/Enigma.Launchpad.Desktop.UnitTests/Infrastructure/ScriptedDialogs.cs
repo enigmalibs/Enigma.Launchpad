@@ -19,6 +19,14 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
     public Queue<Shortcut?> ShortcutAnswers { get; } = new();
 
     /// <summary>
+    /// The arguments typed in Run with arguments…, or <see langword="null"/> to cancel; with none queued, the
+    /// dialog is cancelled.
+    /// </summary>
+    public Queue<string?> ArgumentAnswers { get; } = new();
+
+    public List<Shortcut> ArgumentPrompts { get; } = [];
+
+    /// <summary>
     /// Each answer acts on the real selection dialog, as the user would, and returns what the dialog would: its
     /// <see cref="ShortcutSelectionViewModel.ToProfile"/>, or <see langword="null"/> to cancel. With no answer
     /// queued, the dialog is cancelled.
@@ -28,6 +36,11 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
     public List<NamePrompt> NamePrompts { get; } = [];
 
     public List<(string Title, string Message, string ConfirmText)> Confirmations { get; } = [];
+
+    /// <summary>
+    /// The neutral questions asked; they take their answers from <see cref="ConfirmAnswers"/> too.
+    /// </summary>
+    public List<(string Title, string Message, string ConfirmText)> Questions { get; } = [];
 
     public List<(ShortcutKind Kind, Shortcut? Existing)> ShortcutForms { get; } = [];
 
@@ -50,10 +63,22 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
         return Task.FromResult(ConfirmAnswers.Count > 0 && ConfirmAnswers.Dequeue());
     }
 
+    public Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        Questions.Add((title, message, confirmText));
+        return Task.FromResult(ConfirmAnswers.Count > 0 && ConfirmAnswers.Dequeue());
+    }
+
     public Task<Shortcut?> EditShortcutAsync(ShortcutKind kind, Shortcut? existing)
     {
         ShortcutForms.Add((kind, existing));
         return Task.FromResult(ShortcutAnswers.Count > 0 ? ShortcutAnswers.Dequeue() : null);
+    }
+
+    public Task<string?> PromptArgumentsAsync(Shortcut shortcut)
+    {
+        ArgumentPrompts.Add(shortcut);
+        return Task.FromResult(ArgumentAnswers.Count > 0 ? ArgumentAnswers.Dequeue() : null);
     }
 
     public Task<Profile?> SelectShortcutsAsync(string title, string message, string confirmText, Profile content)

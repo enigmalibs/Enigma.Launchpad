@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Enigma.Launchpad.Desktop.Services;
 using Enigma.Launchpad.Desktop.UnitTests.Infrastructure;
@@ -70,7 +69,7 @@ public sealed class ProgramIconsTests : IDisposable
         _reader.Started = started;
         int caller = Environment.CurrentManagedThreadId;
 
-        Task<IImage?> icon = _icons.GetAsync(program, TestContext.Current.CancellationToken);
+        Task<byte[]?> icon = _icons.GetAsync(program, TestContext.Current.CancellationToken);
 
         // This thread holds on until the read is underway, so the read cannot be running on it.
         Assert.True(started.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
@@ -98,8 +97,8 @@ public sealed class ProgramIconsTests : IDisposable
         using ManualResetEventSlim gate = new();
         _reader.Gate = gate;
 
-        Task<IImage?> first = _icons.GetAsync(program, TestContext.Current.CancellationToken);
-        Task<IImage?> second = _icons.GetAsync(program, TestContext.Current.CancellationToken);
+        Task<byte[]?> first = _icons.GetAsync(program, TestContext.Current.CancellationToken);
+        Task<byte[]?> second = _icons.GetAsync(program, TestContext.Current.CancellationToken);
 
         Assert.False(first.IsCompleted);
         Assert.False(second.IsCompleted);
@@ -119,13 +118,48 @@ public sealed class ProgramIconsTests : IDisposable
         _reader.Gate = gate;
         _reader.Answer = _ => FakeProgramIconReader.Opaque(4);
 
-        Task<IImage?> abandoned = _icons.GetAsync(program, cancellation.Token);
+        Task<byte[]?> abandoned = _icons.GetAsync(program, cancellation.Token);
         await cancellation.CancelAsync();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => abandoned);
 
         gate.Set();
         Assert.NotNull(await _icons.GetAsync(program, TestContext.Current.CancellationToken));
         Assert.Single(_reader.Reads);
+    }
+
+    [Fact]
+    public async Task ARefresh_ReadsTheProgramAgain()
+    {
+        string program = Program("tool.exe");
+        await _icons.GetAsync(program, TestContext.Current.CancellationToken);
+
+        await _icons.RefreshAsync(program, TestContext.Current.CancellationToken);
+        await _icons.GetAsync(program, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, _reader.Reads.Count);
+    }
+
+    [Fact]
+    public async Task ARefreshWhileAReadIsUnderway_SharesIt()
+    {
+        string program = Program("tool.exe");
+        using ManualResetEventSlim gate = new();
+        _reader.Gate = gate;
+
+        Task<byte[]?> first = _icons.GetAsync(program, TestContext.Current.CancellationToken);
+        Task<byte[]?> refreshed = _icons.RefreshAsync(program, TestContext.Current.CancellationToken);
+
+        gate.Set();
+        await Task.WhenAll(first, refreshed);
+
+        Assert.Single(_reader.Reads);
+    }
+
+    [Fact]
+    public async Task ARefresh_NeverReadsANetworkPath()
+    {
+        Assert.Null(await _icons.RefreshAsync(@"\\server\share\tool.exe", TestContext.Current.CancellationToken));
+        Assert.Empty(_reader.Reads);
     }
 
     [Fact]
@@ -156,16 +190,15 @@ public sealed class ProgramIconsTests : IDisposable
     }
 
     [Fact]
-    public void AnIcon_BecomesABitmapOfItsSize()
+    public void AnIcon_BecomesAPngOfItsSize()
         => _fixture.RunAsync(async () =>
         {
             string program = Program("tool.exe");
             _reader.Answer = _ => FakeProgramIconReader.Opaque(ProgramIcons.IconSize);
 
-            IImage? icon = await _icons.GetAsync(program);
+            byte[]? icon = await _icons.GetAsync(program);
 
-            Bitmap bitmap = Assert.IsType<Bitmap>(icon);
-            Assert.Equal(new PixelSize(ProgramIcons.IconSize, ProgramIcons.IconSize), bitmap.PixelSize);
+            Assert.Equal(new PixelSize(ProgramIcons.IconSize, ProgramIcons.IconSize), TestImages.SizeOf(Assert.IsType<byte[]>(icon)));
             Assert.Empty(_logger.Entries);
         });
 

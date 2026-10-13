@@ -160,6 +160,59 @@ public sealed class WebsiteIconFetcherTests : IDisposable
     }
 
     [Fact]
+    public async Task AnIconDeclaredOnlyInTheManifest_IsDownloaded()
+    {
+        byte[] icon = ImageBytes.Png(192);
+        _http.Html(Site, """<head><link rel="manifest" href="/site.webmanifest"></head>""");
+        _http.Answer(
+            "https://example.com/site.webmanifest",
+            Encoding.UTF8.GetBytes("""{ "icons": [ { "src": "/icons/192.png", "sizes": "192x192", "type": "image/png" } ] }"""),
+            "application/manifest+json");
+        _http.Answer("https://example.com/icons/192.png", icon, "image/png");
+
+        Assert.Equal(icon, await FetchAsync());
+        Assert.Equal([Site, "https://example.com/site.webmanifest", "https://example.com/icons/192.png"], RequestedAddresses());
+    }
+
+    [Fact]
+    public async Task AManifestThatCannotBeHad_LeavesFaviconIco()
+    {
+        byte[] favicon = ImageBytes.Ico(1);
+        _http.Html(Site, """<link rel="manifest" href="/missing.webmanifest">""");
+        _http.Answer("https://example.com/favicon.ico", favicon, "image/x-icon");
+
+        Assert.Equal(favicon, await FetchAsync());
+    }
+
+    [Fact]
+    public async Task AnOversizedManifest_IsNotRead()
+    {
+        string padding = new(' ', WebsiteIconFetcher.MaxManifestBytes);
+        _http.Html(Site, """<link rel="manifest" href="/site.webmanifest">""");
+        _http.Answer(
+            "https://example.com/site.webmanifest",
+            _ => StubHttpHandler.UnannouncedResponse(Encoding.UTF8.GetBytes($$"""{ "icons": [ { "src": "/big.png" } ] }{{padding}}"""), "application/json"));
+
+        Assert.Null(await FetchAsync());
+        Assert.DoesNotContain("https://example.com/big.png", RequestedAddresses());
+    }
+
+    [Fact]
+    public async Task ASiteIsNeverAskedMoreThanItsPage_ItsManifest_ThreeIcons_AndFaviconIco()
+    {
+        _http.Html(Site, string.Concat(Enumerable.Range(1, 4).Select(index => $"""<link rel="icon" href="/{index}.png">""")) + """<link rel="manifest" href="/m.json">""");
+        _http.Answer(
+            "https://example.com/m.json",
+            Encoding.UTF8.GetBytes("""{ "icons": [ { "src": "/m1.png", "sizes": "48x48" }, { "src": "/m2.png", "sizes": "96x96" } ] }"""),
+            "application/json");
+
+        Assert.Null(await FetchAsync());
+        Assert.Equal(
+            [Site, "https://example.com/m.json", "https://example.com/m1.png", "https://example.com/m2.png", "https://example.com/1.png", "https://example.com/favicon.ico"],
+            RequestedAddresses());
+    }
+
+    [Fact]
     public async Task Requests_SayWhoIsAsking_AndWhatTheyWant()
     {
         _http.Html(Site, """<link rel="icon" href="/a.png">""");
@@ -169,7 +222,7 @@ public sealed class WebsiteIconFetcherTests : IDisposable
 
         (Uri _, string pageAccept, string userAgent) = _http.Requests.First();
         (Uri _, string iconAccept, _) = _http.Requests.Last();
-        Assert.Equal("text/html", pageAccept);
+        Assert.Equal(WebsiteIconFetcher.PageAccept, pageAccept.Replace(" ", string.Empty, StringComparison.Ordinal));
         Assert.Equal("image/*", iconAccept);
         Assert.Equal($"Enigma.Launchpad/{WebsiteIconFetcher.ProductVersion}", userAgent);
     }

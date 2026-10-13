@@ -35,6 +35,12 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     private readonly IShortcutValidator _validator;
     private readonly ILaunchpadDialogs _dialogs;
     private readonly IShortcutActions _actions;
+    private readonly IShortcutIcons _icons;
+    private readonly IUserNotifications _notifications;
+
+    // Set while the groups are being built from the session, when the category is not whole yet.
+    private bool _isReadingGroups;
+    private bool _hasIconsToKeep;
 
     /// <summary>
     /// Initialises a new instance.
@@ -47,6 +53,8 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <param name="validator">The rules names and targets must meet.</param>
     /// <param name="dialogs">The questions asked of the user.</param>
     /// <param name="actions">Opens shortcuts, shows them in their folder, copies their targets.</param>
+    /// <param name="icons">The icons of the tiles: kept with the shortcuts, or found from their targets.</param>
+    /// <param name="notifications">Where a failed icon lookup is reported.</param>
     protected CategoryPageViewModel(
         ShortcutKind kind,
         string title,
@@ -55,7 +63,9 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         ILaunchpadSession session,
         IShortcutValidator validator,
         ILaunchpadDialogs dialogs,
-        IShortcutActions actions)
+        IShortcutActions actions,
+        IShortcutIcons icons,
+        IUserNotifications notifications)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
@@ -63,6 +73,8 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         ArgumentNullException.ThrowIfNull(validator);
         ArgumentNullException.ThrowIfNull(dialogs);
         ArgumentNullException.ThrowIfNull(actions);
+        ArgumentNullException.ThrowIfNull(icons);
+        ArgumentNullException.ThrowIfNull(notifications);
 
         Kind = kind;
         Title = title;
@@ -72,6 +84,8 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         _validator = validator;
         _dialogs = dialogs;
         _actions = actions;
+        _icons = icons;
+        _notifications = notifications;
 
         Groups.CollectionChanged += OnGroupsChanged;
         _session.ActiveProfileChanged += OnActiveProfileChanged;
@@ -324,18 +338,134 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     internal void OpenShortcut(ShortcutViewModel shortcut) => _actions.Open(Kind, shortcut.Model);
 
     /// <summary>
+    /// Asks which arguments to run an application with this once — starting from its default arguments — and runs
+    /// it with them. The shortcut itself is not changed.
+    /// </summary>
+    /// <param name="shortcut">The application's tile.</param>
+    /// <returns>A task that completes once the user has answered.</returns>
+    internal async Task RunWithArgumentsAsync(ShortcutViewModel shortcut)
+    {
+        if (Kind != ShortcutKind.Application)
+        {
+            return;
+        }
+
+        Shortcut model = shortcut.Model;
+        string? arguments = await _dialogs.PromptArgumentsAsync(model);
+
+        if (arguments is null)
+        {
+            return;
+        }
+
+        _actions.Open(Kind, model with { Arguments = arguments.Length == 0 ? null : arguments });
+    }
+
+    /// <summary>
+    /// Opens a terminal in a directory shortcut's folder; a failure is shown to the user.
+    /// </summary>
+    /// <param name="shortcut">The folder's tile.</param>
+    internal void OpenInTerminal(ShortcutViewModel shortcut)
+    {
+        if (Kind == ShortcutKind.Directory)
+        {
+            _actions.OpenInTerminal(shortcut.Model);
+        }
+    }
+
+    /// <summary>
     /// Shows a shortcut in its folder; a failure is shown to the user.
     /// </summary>
     /// <param name="shortcut">The shortcut.</param>
     internal void RevealShortcut(ShortcutViewModel shortcut) => _actions.Reveal(Kind, shortcut.Model);
 
     /// <summary>
-    /// Gets the icon of a shortcut's target — a program's, a website's — which its tile shows instead of the
+    /// Gets a value indicating whether the category's tiles can have their icon found from their targets.
+    /// </summary>
+    internal bool CanFindIcons => _icons.CanFind(Kind);
+
+    /// <summary>
+    /// Gets the image of an icon a shortcut keeps.
+    /// </summary>
+    /// <param name="icon">The icon.</param>
+    /// <returns>The image, or <see langword="null"/> when it cannot be shown.</returns>
+    internal IImage? ShowIcon(ShortcutIcon icon) => _icons.Show(icon);
+
+    /// <summary>
+    /// Finds the icon of a shortcut's target — a program's, a website's — which its tile shows instead of the
     /// category's glyph.
     /// </summary>
     /// <param name="target">The shortcut's target.</param>
-    /// <returns>The icon, or <see langword="null"/> for the glyph — always, unless the category has icons of its own.</returns>
-    internal virtual Task<IImage?> GetTargetIconAsync(string target) => Task.FromResult<IImage?>(null);
+    /// <returns>The icon, or <see langword="null"/> when none was found or the category has none to find.</returns>
+    internal Task<IconImage?> FindIconAsync(string target) => _icons.FindAsync(Kind, target);
+
+    /// <summary>
+    /// Looks a shortcut's icon up again — from the program, or from the website itself — and keeps it. An image the
+    /// user chose is only replaced once they have said so; when nothing is found, the user is told and the icon
+    /// stays as it was.
+    /// </summary>
+    /// <param name="shortcut">The tile.</param>
+    /// <returns>A task that completes once the icon has been looked up, or the user declined.</returns>
+    internal async Task FindShortcutIconAsync(ShortcutViewModel shortcut)
+    {
+        if (!CanFindIcons)
+        {
+            return;
+        }
+
+        string source = Kind == ShortcutKind.Url ? "website" : "program";
+
+        if ((shortcut.Model.Icon is { IsCustom: true })
+            && !await _dialogs.ConfirmAsync(
+                "Replace your icon?",
+                $"\u201C{shortcut.Name}\u201D uses an image you chose. Look for the {source}'s own icon and use it instead?",
+                "Replace"))
+        {
+            return;
+        }
+
+        Shortcut before = shortcut.Model;
+        IconImage? found = await _icons.RefreshAsync(Kind, before.Target);
+
+        // The tile may have been edited, moved off the page or deleted while its icon was looked up.
+        if ((FindShortcut(shortcut.Id) != shortcut) || (shortcut.Model != before))
+        {
+            return;
+        }
+
+        if (found is null)
+        {
+            _notifications.ShowWarning("No icon found", $"No icon could be found for \u201C{shortcut.Name}\u201D. Its icon is unchanged.");
+            return;
+        }
+
+        shortcut.SetFoundIcon(found);
+        Persist();
+    }
+
+    /// <summary>
+    /// Saves an icon a tile has just found and taken into its shortcut, so the next session shows it without
+    /// looking for it again.
+    /// </summary>
+    /// <param name="shortcut">The tile.</param>
+    /// <remarks>
+    /// While the groups are being built the category is not whole, and saving it then would drop the groups not
+    /// built yet; the save waits for the end of the build. A tile no longer on the page — the profile changed while
+    /// its icon was looked up — saves nothing: its icon is found again when the profile is shown again.
+    /// </remarks>
+    internal void KeepFoundIcon(ShortcutViewModel shortcut)
+    {
+        if (_isReadingGroups)
+        {
+            _hasIconsToKeep = true;
+            return;
+        }
+
+        if (FindShortcut(shortcut.Id) == shortcut)
+        {
+            Persist();
+        }
+    }
 
     /// <summary>
     /// Copies a shortcut's target to the clipboard.
@@ -511,11 +641,27 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
 
     private void ReadGroups()
     {
-        Groups.Clear();
+        _isReadingGroups = true;
 
-        foreach (ShortcutGroup group in _session.GroupsOf(Kind))
+        try
         {
-            Groups.Add(new GroupViewModel(this, group));
+            Groups.Clear();
+
+            foreach (ShortcutGroup group in _session.GroupsOf(Kind))
+            {
+                Groups.Add(new GroupViewModel(this, group));
+            }
+        }
+        finally
+        {
+            _isReadingGroups = false;
+        }
+
+        // Icons answered at once — already looked up this session — were taken into their shortcuts during the build.
+        if (_hasIconsToKeep)
+        {
+            _hasIconsToKeep = false;
+            Persist();
         }
     }
 

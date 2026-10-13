@@ -1,6 +1,3 @@
-using System;
-using System.Threading.Tasks;
-using Avalonia.Media;
 using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
@@ -13,8 +10,6 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 /// </summary>
 public sealed class ApplicationsPageViewModel : CategoryPageViewModel
 {
-    private readonly IProgramIcons _programIcons;
-
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
@@ -22,13 +17,15 @@ public sealed class ApplicationsPageViewModel : CategoryPageViewModel
     /// <param name="validator">The rules names and targets must meet.</param>
     /// <param name="dialogs">The questions asked of the user.</param>
     /// <param name="actions">Opens shortcuts, shows them in their folder, copies their targets.</param>
-    /// <param name="programIcons">The icons of the programs, for the tiles.</param>
+    /// <param name="icons">The icons of the tiles: kept with the shortcuts, or the programs' own.</param>
+    /// <param name="notifications">Where a failed icon lookup is reported.</param>
     public ApplicationsPageViewModel(
         ILaunchpadSession session,
         IShortcutValidator validator,
         ILaunchpadDialogs dialogs,
         IShortcutActions actions,
-        IProgramIcons programIcons)
+        IShortcutIcons icons,
+        IUserNotifications notifications)
         : base(
             ShortcutKind.Application,
             "Applications",
@@ -37,13 +34,9 @@ public sealed class ApplicationsPageViewModel : CategoryPageViewModel
             session,
             validator,
             dialogs,
-            actions)
+            actions,
+            icons,
+            notifications)
     {
-        ArgumentNullException.ThrowIfNull(programIcons);
-
-        _programIcons = programIcons;
     }
-
-    /// <inheritdoc />
-    internal override Task<IImage?> GetTargetIconAsync(string target) => _programIcons.GetAsync(target);
 }

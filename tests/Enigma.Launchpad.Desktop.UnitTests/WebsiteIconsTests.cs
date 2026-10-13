@@ -3,8 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Enigma.Launchpad.Core.Persistence;
 using Enigma.Launchpad.Desktop.Services;
 using Enigma.Launchpad.Desktop.UnitTests.Infrastructure;
@@ -84,15 +82,15 @@ public sealed class WebsiteIconsTests
     }
 
     [Fact]
-    public void AnIcon_IsDecoded()
+    public void AnIcon_IsGivenAsAPng()
         => _fixture.RunAsync(async () =>
         {
             byte[] png = Png(32, 32);
             _fetcher.Answer = _ => png;
 
-            IImage? icon = await _icons.GetAsync("https://example.com/");
+            byte[]? icon = await _icons.GetAsync("https://example.com/");
 
-            Assert.Equal(new PixelSize(32, 32), Assert.IsType<Bitmap>(icon).PixelSize);
+            Assert.Equal(new PixelSize(32, 32), SizeOf(icon));
         });
 
     [Fact]
@@ -102,9 +100,9 @@ public sealed class WebsiteIconsTests
             byte[] png = Png(96, 64);
             _fetcher.Answer = _ => png;
 
-            IImage? icon = await _icons.GetAsync("https://example.com/");
+            byte[]? icon = await _icons.GetAsync("https://example.com/");
 
-            Assert.Equal(new PixelSize(WebsiteIcons.IconSize, 32), Assert.IsType<Bitmap>(icon).PixelSize);
+            Assert.Equal(new PixelSize(IconPng.MaxSize, 32), SizeOf(icon));
         });
 
     [Fact]
@@ -137,9 +135,9 @@ public sealed class WebsiteIconsTests
         {
             _store.Entries[Site] = new StoredWebsiteIcon(Png(32, 32), IsFresh: true);
 
-            IImage? icon = await _icons.GetAsync("https://example.com/");
+            byte[]? icon = await _icons.GetAsync("https://example.com/");
 
-            Assert.Equal(new PixelSize(32, 32), Assert.IsType<Bitmap>(icon).PixelSize);
+            Assert.Equal(new PixelSize(32, 32), SizeOf(icon));
             Assert.Empty(_fetcher.Requests);
         });
 
@@ -163,9 +161,9 @@ public sealed class WebsiteIconsTests
             _store.Entries[Site] = new StoredWebsiteIcon(Png(16, 16), IsFresh: false);
             _fetcher.Answer = _ => newer;
 
-            IImage? icon = await _icons.GetAsync("https://example.com/");
+            byte[]? icon = await _icons.GetAsync("https://example.com/");
 
-            Assert.Equal(new PixelSize(32, 32), Assert.IsType<Bitmap>(icon).PixelSize);
+            Assert.Equal(new PixelSize(32, 32), SizeOf(icon));
             Assert.Same(newer, _store.Entries[Site].Bytes);
         });
 
@@ -175,9 +173,9 @@ public sealed class WebsiteIconsTests
         {
             _store.Entries[Site] = new StoredWebsiteIcon(Png(16, 16), IsFresh: false);
 
-            IImage? icon = await _icons.GetAsync("https://example.com/");
+            byte[]? icon = await _icons.GetAsync("https://example.com/");
 
-            Assert.Equal(new PixelSize(16, 16), Assert.IsType<Bitmap>(icon).PixelSize);
+            Assert.Equal(new PixelSize(16, 16), SizeOf(icon));
             Assert.Single(_fetcher.Requests);
         });
 
@@ -218,6 +216,42 @@ public sealed class WebsiteIconsTests
         });
 
     [Fact]
+    public void ARefresh_AsksTheSite_EvenWithAFreshStoredIcon_AndStoresTheAnswer()
+        => _fixture.RunAsync(async () =>
+        {
+            byte[] newer = Png(32, 32);
+            _store.Entries[Site] = new StoredWebsiteIcon(Png(16, 16), IsFresh: true);
+            Assert.Equal(new PixelSize(16, 16), SizeOf(await _icons.GetAsync("https://example.com/")));
+            _fetcher.Answer = _ => newer;
+
+            byte[]? icon = await _icons.RefreshAsync("https://example.com/page");
+
+            Assert.Equal(new PixelSize(32, 32), SizeOf(icon));
+            Assert.Single(_fetcher.Requests);
+            Assert.Same(newer, _store.Entries[Site].Bytes);
+            Assert.Equal(new PixelSize(32, 32), SizeOf(await _icons.GetAsync("https://example.com/")));
+        });
+
+    [Fact]
+    public void ARefreshThatBringsNothing_StillAnswersTheStoredIcon()
+        => _fixture.RunAsync(async () =>
+        {
+            _store.Entries[Site] = new StoredWebsiteIcon(Png(16, 16), IsFresh: true);
+
+            byte[]? icon = await _icons.RefreshAsync("https://example.com/");
+
+            Assert.Equal(new PixelSize(16, 16), SizeOf(icon));
+            Assert.Single(_fetcher.Requests);
+        });
+
+    [Fact]
+    public async Task ARefreshOfAnAddressThatIsNoWebsite_FetchesNothing()
+    {
+        Assert.Null(await _icons.RefreshAsync("ftp://example.com/file", TestContext.Current.CancellationToken));
+        Assert.Empty(_fetcher.Requests);
+    }
+
+    [Fact]
     public void AnIconFetchedOnce_IsShownAfterARestart_WithoutAskingTheSite()
         => _fixture.RunAsync(async () =>
         {
@@ -227,19 +261,13 @@ public sealed class WebsiteIconsTests
             Assert.NotNull(await new WebsiteIcons(_fetcher, disk, _logger).GetAsync("https://example.com/page"));
 
             FakeWebsiteIconFetcher offline = new();
-            IImage? icon = await new WebsiteIcons(offline, disk, _logger).GetAsync("https://example.com/other");
+            byte[]? icon = await new WebsiteIcons(offline, disk, _logger).GetAsync("https://example.com/other");
 
-            Assert.Equal(new PixelSize(32, 32), Assert.IsType<Bitmap>(icon).PixelSize);
+            Assert.Equal(new PixelSize(32, 32), SizeOf(icon));
             Assert.Empty(offline.Requests);
         });
 
-    // A real PNG file of one colour, as a site would serve it.
-    private static byte[] Png(int width, int height)
-    {
-        byte[] bgra = Enumerable.Repeat<byte>(0xC0, width * height * 4).ToArray();
-        using Bitmap bitmap = ProgramIcons.ToBitmap(new ProgramIconPixels(width, height, bgra));
-        using MemoryStream file = new();
-        bitmap.Save(file, PngBitmapEncoderOptions.Default);
-        return file.ToArray();
-    }
+    private static byte[] Png(int width, int height) => TestImages.Png(width, height);
+
+    private static PixelSize SizeOf(byte[]? icon) => TestImages.SizeOf(Assert.IsType<byte[]>(icon));
 }

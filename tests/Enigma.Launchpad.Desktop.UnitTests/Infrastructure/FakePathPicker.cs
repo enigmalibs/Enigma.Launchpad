@@ -13,6 +13,8 @@ internal sealed class FakePathPicker : IPathPicker
 
     public string? NextFolder { get; set; }
 
+    public string? NextImageFile { get; set; }
+
     public string? NextJsonFileToOpen { get; set; }
 
     public string? NextJsonFileToSave { get; set; }
@@ -31,6 +33,12 @@ internal sealed class FakePathPicker : IPathPicker
     {
         Requests.Add(("Folder", startPath));
         return Task.FromResult(NextFolder);
+    }
+
+    public Task<string?> PickImageFileAsync(string title)
+    {
+        Requests.Add(("Image", null));
+        return Task.FromResult(NextImageFile);
     }
 
     public Task<string?> PickJsonFileToOpenAsync(string title)

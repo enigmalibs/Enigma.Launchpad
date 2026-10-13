@@ -30,6 +30,13 @@ public interface IPathPicker
     Task<string?> PickFolderAsync(string title, string? startPath);
 
     /// <summary>
+    /// Asks for one image file — PNG, JPEG, GIF, BMP, WebP or ICO.
+    /// </summary>
+    /// <param name="title">The picker's title.</param>
+    /// <returns>The chosen file's path; <see langword="null"/> when the user cancelled.</returns>
+    Task<string?> PickImageFileAsync(string title);
+
+    /// <summary>
     /// Asks for one JSON file to read.
     /// </summary>
     /// <param name="title">The picker's title.</param>
@@ -56,6 +63,13 @@ public sealed class PathPicker : IPathPicker
         MimeTypes = ["application/json"],
     };
 
+    // What Avalonia decodes; SVG is left out, since it cannot without a renderer of its own.
+    private static readonly FilePickerFileType ImageFiles = new("Images")
+    {
+        Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp", "*.ico"],
+        MimeTypes = ["image/png", "image/jpeg", "image/gif", "image/bmp", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"],
+    };
+
     private readonly IFileDialogService _files;
     private readonly IFolderDialogService _folders;
 
@@ -80,6 +94,10 @@ public sealed class PathPicker : IPathPicker
     /// <inheritdoc />
     public async Task<string?> PickFolderAsync(string title, string? startPath)
         => (await _folders.ShowOpenFolderDialogAsync(title: title, suggestedStartLocation: StartFolder(startPath))).FirstOrDefault();
+
+    /// <inheritdoc />
+    public async Task<string?> PickImageFileAsync(string title)
+        => (await _files.ShowOpenFileDialogAsync(title: title, fileTypeFilter: [ImageFiles, FilePickerFileTypes.All])).FirstOrDefault();
 
     /// <inheritdoc />
     public async Task<string?> PickJsonFileToOpenAsync(string title)

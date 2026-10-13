@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
@@ -142,6 +143,34 @@ public sealed class CategoryPageViewTests
         });
 
     [Fact]
+    public void ADescription_IsShownUnderTheTilesIconRow_OnlyWhenThereIsOne()
+        => _fixture.RunAsync(async () =>
+        {
+            Shortcut described = PageHarness.Shortcut("Code", @"C:\Tools\code.exe") with { Description = "The editor" };
+            using WindowHarness harness = new(PageHarness.WithShortcuts(
+                ShortcutKind.Application,
+                ("Dev tools", [described, PageHarness.Shortcut("Git", @"C:\Tools\git.exe")]),
+                ("Plain", [PageHarness.Shortcut("Shell", @"C:\Tools\sh.exe")])));
+            CategoryPageView view = await LoadedPageAsync(harness);
+
+            TextBlock[] descriptions = view.GetVisualDescendants().OfType<TextBlock>()
+                .Where(text => text.Classes.Contains("tileDescription"))
+                .ToArray();
+            Assert.Equal(3, descriptions.Length);
+            Assert.Equal(["The editor"], descriptions.Where(text => text.IsEffectivelyVisible).Select(text => text.Text));
+
+            Button[] tiles = view.GetVisualDescendants().OfType<Button>().Where(button => button.Classes.Contains("tile")).ToArray();
+            Button code = tiles.Single(tile => tile.DataContext is ShortcutViewModel { Name: "Code" });
+            Button git = tiles.Single(tile => tile.DataContext is ShortcutViewModel { Name: "Git" });
+            Button shell = tiles.Single(tile => tile.DataContext is ShortcutViewModel { Name: "Shell" });
+
+            // A tile without a description keeps its size; one in the same row grows with its neighbour.
+            Assert.Equal(62, shell.Bounds.Height);
+            Assert.True(code.Bounds.Height > 62);
+            Assert.Equal(code.Bounds.Height, git.Bounds.Height);
+        });
+
+    [Fact]
     public void AnApplicationTile_TradesItsGlyphForItsProgramsIcon_OnceItArrives()
         => _fixture.RunAsync(async () =>
         {
@@ -157,12 +186,11 @@ public sealed class CategoryPageViewTests
             Assert.True(codeGlyph.IsEffectivelyVisible);
             Assert.False(codeImage.IsEffectivelyVisible);
 
-            Bitmap icon = ProgramIcons.ToBitmap(FakeProgramIconReader.Opaque(ProgramIcons.IconSize));
-            programIcons.Release(@"C:\Tools\code.exe", icon);
+            programIcons.Release(@"C:\Tools\code.exe", TestImages.Png(ProgramIcons.IconSize, ProgramIcons.IconSize));
             programIcons.Release(@"C:\Tools\git.exe", null);
             await WindowHarness.WaitUntilAsync(() => codeImage.IsEffectivelyVisible);
 
-            Assert.Same(icon, codeImage.Source);
+            Assert.Equal(new PixelSize(ProgramIcons.IconSize, ProgramIcons.IconSize), Assert.IsType<Bitmap>(codeImage.Source).PixelSize);
             Assert.False(codeGlyph.IsEffectivelyVisible);
             Assert.True(gitGlyph.IsEffectivelyVisible);
             Assert.False(gitImage.IsEffectivelyVisible);
@@ -197,6 +225,33 @@ public sealed class CategoryPageViewTests
             Shortcut? shortcut = await answer;
             Assert.NotNull(shortcut);
             Assert.Equal("https://docs.avaloniaui.net", shortcut.Target);
+        });
+
+    [Fact]
+    public void TheShortcutForm_HasAnIconRow_ShowingTheKindsGlyph_UntilAnImageIsChosen()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new();
+            await LoadedPageAsync(harness);
+            ILaunchpadDialogs dialogs = harness.Provider.GetRequiredService<ILaunchpadDialogs>();
+
+            Task<Shortcut?> answer = dialogs.EditShortcutAsync(ShortcutKind.Directory, null);
+            await WindowHarness.WaitUntilAsync(() => harness.Window.HostDialog.IsOpen);
+            harness.Window.UpdateLayout();
+
+            Control content = Assert.IsAssignableFrom<Control>(harness.Window.HostDialog.Content);
+            ShortcutEditorViewModel form = Assert.IsType<ShortcutEditorViewModel>(content.DataContext);
+            Icon glyph = content.GetVisualDescendants().OfType<Icon>().Single(icon => icon.Name == "IconGlyph");
+            Image image = content.GetVisualDescendants().OfType<Image>().Single(candidate => candidate.Name == "IconImage");
+            Button choose = content.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "ChooseIconButton");
+
+            Assert.True(glyph.IsEffectivelyVisible);
+            Assert.False(image.IsEffectivelyVisible);
+            Assert.True(choose.IsEffectivelyVisible);
+            Assert.Same(form.ChooseIconCommand, choose.Command);
+
+            await harness.Window.HostDialog.HideAsync();
+            Assert.Null(await answer);
         });
 
     private static async Task<CategoryPageView> LoadedPageAsync(WindowHarness harness)

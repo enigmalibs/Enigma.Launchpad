@@ -96,5 +96,68 @@ public sealed class FaviconLinksTests
         Assert.Equal(["/b.png", "/a.png"], Paths(FaviconLinks.Find(Html, Page)));
     }
 
+    [Theory]
+    [InlineData("""<link rel="manifest" href="/site.webmanifest">""", "https://example.com/site.webmanifest")]
+    [InlineData("""<link href="manifest.json" rel="MANIFEST">""", "https://example.com/docs/manifest.json")]
+    [InlineData("""<link rel="manifest" href="https://cdn.example.net/m.json"><link rel="manifest" href="/second.json">""", "https://cdn.example.net/m.json")]
+    public void AManifestLink_IsFound(string html, string expected)
+        => Assert.Equal(new Uri(expected), FaviconLinks.FindManifest(html, new Uri("https://example.com/docs/index.html")));
+
+    [Theory]
+    [InlineData("""<link rel="icon" href="/a.png">""")]
+    [InlineData("""<link rel="manifest">""")]
+    [InlineData("""<link rel="manifest" href="data:application/json,{}">""")]
+    public void NoUsableManifestLink_IsNone(string html)
+        => Assert.Null(FaviconLinks.FindManifest(html, Page));
+
+    [Fact]
+    public void AManifestsIcons_AreRead_InOrder_WithTheirSizes()
+    {
+        const string Json = """
+            {
+              "name": "App",
+              "icons": [
+                { "src": "icons/192.png", "sizes": "192x192", "type": "image/png" },
+                { "src": "/any.png", "sizes": "any" },
+                { "src": "https://cdn.example.net/512.webp", "sizes": "256x256 512x512", "purpose": "maskable any" },
+              ]
+            }
+            """;
+
+        Assert.Equal(
+            [
+                (new Uri("https://example.com/assets/icons/192.png"), 192),
+                (new Uri("https://example.com/any.png"), 192),
+                (new Uri("https://cdn.example.net/512.webp"), 512),
+            ],
+            FaviconLinks.ReadManifest(Json, new Uri("https://example.com/assets/site.webmanifest")));
+    }
+
+    [Theory]
+    [InlineData("""{ "icons": [ { "src": "/a.svg", "sizes": "any" } ] }""")]
+    [InlineData("""{ "icons": [ { "src": "/a", "type": "image/svg+xml" } ] }""")]
+    [InlineData("""{ "icons": [ { "src": "/a.png", "purpose": "monochrome" } ] }""")]
+    [InlineData("""{ "icons": [ { "src": "javascript:alert(1)" } ] }""")]
+    [InlineData("""{ "icons": [ { "sizes": "48x48" }, "a.png", 7 ] }""")]
+    [InlineData("""{ "icons": {} }""")]
+    [InlineData("""{ "name": "No icons" }""")]
+    [InlineData("""[]""")]
+    [InlineData("""<html>Not a manifest</html>""")]
+    public void AManifestWithNoUsableIcon_GivesNone(string json)
+        => Assert.Empty(FaviconLinks.ReadManifest(json, Page));
+
+    [Fact]
+    public void LinkedAndManifestIcons_AreRankedTogether()
+    {
+        IReadOnlyList<Uri> ranked = FaviconLinks.Rank(
+        [
+            (new Uri("https://example.com/32.png"), 32),
+            (new Uri("https://example.com/192.png"), 192),
+            (new Uri("https://example.com/64.png"), 64),
+        ]);
+
+        Assert.Equal(["/64.png", "/192.png", "/32.png"], Paths(ranked));
+    }
+
     private static IEnumerable<string> Paths(IReadOnlyList<Uri> icons) => icons.Select(icon => icon.AbsolutePath).ToArray();
 }

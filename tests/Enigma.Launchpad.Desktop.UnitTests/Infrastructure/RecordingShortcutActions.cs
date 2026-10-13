@@ -24,6 +24,12 @@ internal sealed class RecordingShortcutActions : IShortcutActions
         return true;
     }
 
+    public bool OpenInTerminal(Shortcut shortcut)
+    {
+        Performed.Add(("Terminal", ShortcutKind.Directory, shortcut));
+        return true;
+    }
+
     public Task CopyTargetAsync(Shortcut shortcut)
     {
         Performed.Add(("Copy", default, shortcut));

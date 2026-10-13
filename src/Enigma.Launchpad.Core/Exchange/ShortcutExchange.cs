@@ -19,13 +19,15 @@ namespace Enigma.Launchpad.Core.Exchange;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The document holds names, targets and arguments only — no identities and no fold state: it is a way to move
-/// shortcuts between profiles and machines, not a copy of <c>launchpad.json</c>, whose format it never follows.
+/// The document holds names, targets, arguments, descriptions and icons only — no identities and no fold state: it
+/// is a way to move shortcuts between profiles and machines, not a copy of <c>launchpad.json</c>, whose format it
+/// never follows.
 /// </para>
 /// <para>
 /// A file is untrusted input. One that is not a version 1 export is refused as a whole; inside one that is, an
 /// entry the shortcut form would not accept is left out and counted — except that a path need not exist, since the
-/// file may come from another machine and the launcher checks every target when it opens it.
+/// file may come from another machine and the launcher checks every target when it opens it. An icon that is not a
+/// PNG image of an acceptable size is left out on its own: the shortcut is kept, and finds its icon again.
 /// </para>
 /// </remarks>
 public sealed class ShortcutExchange : IShortcutExchange
@@ -228,7 +230,9 @@ public sealed class ShortcutExchange : IShortcutExchange
                     .Select(shortcut => new ExportShortcut(
                         shortcut.Name,
                         shortcut.Target,
-                        string.IsNullOrWhiteSpace(shortcut.Arguments) ? null : shortcut.Arguments))
+                        string.IsNullOrWhiteSpace(shortcut.Arguments) ? null : shortcut.Arguments,
+                        string.IsNullOrWhiteSpace(shortcut.Description) ? null : shortcut.Description,
+                        shortcut.Icon is { } icon ? new ExportIcon(icon.Png, icon.IsCustom) : null))
                     .ToArray()))
             .ToArray();
 
@@ -299,7 +303,9 @@ public sealed class ShortcutExchange : IShortcutExchange
 
     private Shortcut? Read(ShortcutKind kind, ExportShortcut shortcut)
     {
-        if ((_validator.ValidateShortcutName(shortcut.Name) is not null) || (ReadTarget(kind, shortcut.Target) is not { } target))
+        if ((_validator.ValidateShortcutName(shortcut.Name) is not null)
+            || (_validator.ValidateDescription(shortcut.Description) is not null)
+            || (ReadTarget(kind, shortcut.Target) is not { } target))
         {
             return null;
         }
@@ -309,7 +315,25 @@ public sealed class ShortcutExchange : IShortcutExchange
             ? shortcut.Arguments.Trim()
             : null;
 
-        return new Shortcut(Guid.NewGuid(), shortcut.Name.Trim(), target, arguments);
+        string? description = string.IsNullOrWhiteSpace(shortcut.Description) ? null : shortcut.Description.Trim();
+
+        return new Shortcut(Guid.NewGuid(), shortcut.Name.Trim(), target, arguments, description, ReadIcon(shortcut.Icon));
+    }
+
+    /// <summary>
+    /// The icon to store, or <see langword="null"/> when the file has none, or one that is not a PNG image of an
+    /// acceptable size.
+    /// </summary>
+    private static ShortcutIcon? ReadIcon(ExportIcon? icon)
+    {
+        if (icon?.Png is not { } png)
+        {
+            return null;
+        }
+
+        ShortcutIcon read = new(png, icon.IsCustom);
+
+        return read.TryReadBytes(out _) ? read : null;
     }
 
     /// <summary>
@@ -342,5 +366,19 @@ public sealed class ShortcutExchange : IShortcutExchange
     /// <param name="Name">The shortcut's name.</param>
     /// <param name="Target">The executable path, the directory path, or the URL.</param>
     /// <param name="Arguments">Command-line arguments, for an application that has some.</param>
-    private sealed record ExportShortcut(string Name, string Target, string? Arguments = null);
+    /// <param name="Description">What the shortcut is for, when it says.</param>
+    /// <param name="Icon">The icon its tile shows, when it has one.</param>
+    private sealed record ExportShortcut(
+        string Name,
+        string Target,
+        string? Arguments = null,
+        string? Description = null,
+        ExportIcon? Icon = null);
+
+    /// <summary>
+    /// One exported icon. The image is optional here so that a damaged icon costs only itself, not the file.
+    /// </summary>
+    /// <param name="Png">The image: a PNG file, in base64.</param>
+    /// <param name="IsCustom">Whether the user chose it.</param>
+    private sealed record ExportIcon(string? Png = null, bool IsCustom = false);
 }

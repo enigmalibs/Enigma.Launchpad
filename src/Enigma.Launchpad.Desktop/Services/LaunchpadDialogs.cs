@@ -38,12 +38,28 @@ public interface ILaunchpadDialogs
     Task<bool> ConfirmDeleteAsync(string title, string message, string confirmText);
 
     /// <summary>
+    /// Asks whether to go ahead with something that replaces what the user had, with Cancel as the default.
+    /// </summary>
+    /// <param name="title">The question.</param>
+    /// <param name="message">What would change.</param>
+    /// <param name="confirmText">The confirm button's text.</param>
+    /// <returns><see langword="true"/> only when the confirm button was pressed.</returns>
+    Task<bool> ConfirmAsync(string title, string message, string confirmText);
+
+    /// <summary>
     /// Shows the form adding or editing a shortcut; the confirm button is enabled only for a valid form.
     /// </summary>
     /// <param name="kind">The kind of shortcut.</param>
     /// <param name="existing">The shortcut to edit; <see langword="null"/> to add one.</param>
     /// <returns>The shortcut as entered, with a normalised target; <see langword="null"/> when the user cancelled.</returns>
     Task<Shortcut?> EditShortcutAsync(ShortcutKind kind, Shortcut? existing);
+
+    /// <summary>
+    /// Asks which arguments to run an application with this once, starting from its default arguments.
+    /// </summary>
+    /// <param name="shortcut">The application shortcut.</param>
+    /// <returns>The arguments as typed, trimmed — empty for none; <see langword="null"/> when the user cancelled.</returns>
+    Task<string?> PromptArgumentsAsync(Shortcut shortcut);
 
     /// <summary>
     /// Asks which of a profile's groups and shortcuts to take, as a tree of checkboxes where everything starts
@@ -70,22 +86,26 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
     private readonly IContentDialogService _dialogs;
     private readonly IShortcutValidator _validator;
     private readonly IPathPicker _picker;
+    private readonly IShortcutIcons _icons;
 
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
     /// <param name="dialogs">The dialog service, whose host is the main window's.</param>
     /// <param name="validator">The rules a shortcut's name and target must meet.</param>
-    /// <param name="picker">Lets the shortcut form pick its target.</param>
-    public LaunchpadDialogs(IContentDialogService dialogs, IShortcutValidator validator, IPathPicker picker)
+    /// <param name="picker">Lets the shortcut form pick its target and its icon.</param>
+    /// <param name="icons">Shows the shortcut form's icon, and reads the image picked as one.</param>
+    public LaunchpadDialogs(IContentDialogService dialogs, IShortcutValidator validator, IPathPicker picker, IShortcutIcons icons)
     {
         ArgumentNullException.ThrowIfNull(dialogs);
         ArgumentNullException.ThrowIfNull(validator);
         ArgumentNullException.ThrowIfNull(picker);
+        ArgumentNullException.ThrowIfNull(icons);
 
         _dialogs = dialogs;
         _validator = validator;
         _picker = picker;
+        _icons = icons;
     }
 
     /// <inheritdoc />
@@ -102,7 +122,7 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
     /// <inheritdoc />
     public async Task<Shortcut?> EditShortcutAsync(ShortcutKind kind, Shortcut? existing)
     {
-        ShortcutEditorViewModel model = new(kind, existing, _validator, _picker);
+        ShortcutEditorViewModel model = new(kind, existing, _validator, _picker, _icons);
         string noun = kind switch
         {
             ShortcutKind.Application => "application",
@@ -118,6 +138,17 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
             () => model.IsValid);
 
         return confirmed && model.IsValid ? model.ToShortcut() : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> PromptArgumentsAsync(Shortcut shortcut)
+    {
+        ArgumentNullException.ThrowIfNull(shortcut);
+
+        ArgumentsDialogViewModel model = new(shortcut);
+        bool confirmed = await ShowFormAsync($"Run {shortcut.Name}", "Run", new ArgumentsDialogView { DataContext = model }, model, () => true);
+
+        return confirmed ? model.TrimmedArguments : null;
     }
 
     /// <inheritdoc />
@@ -159,6 +190,21 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
         {
             shown?.Classes.Remove(DangerClass);
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        DialogResult result = await _dialogs.ShowAsync(dialog =>
+        {
+            dialog.Title = title;
+            dialog.Content = message;
+            dialog.PrimaryButtonText = confirmText;
+            dialog.CloseButtonText = "Cancel";
+            dialog.DefaultButton = DefaultButton.Close;
+        });
+
+        return result == DialogResult.Primary;
     }
 
     /// <summary>

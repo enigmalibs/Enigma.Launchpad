@@ -218,8 +218,10 @@
   </Style>
 
   <!--
-    Shortcut tiles: a fixed size so a group reads as a grid, a soft plate one step above the card, and an
-    accent frame on hover so the tile under the pointer is unmistakable.
+    Shortcut tiles: a fixed width so a group reads as a grid, a soft plate one step above the card, and an
+    accent frame on hover so the tile under the pointer is unmistakable. A tile grows downwards only for its
+    description; its content sits at the top, padded so a tile without one keeps its icon row centred in 62 px,
+    and every tile of a row stretches to the tallest, so the icon rows stay aligned.
   -->
   <Style Selector="Panel.tileSlot">
     <Setter Property="Margin" Value="0,0,8,8" />
@@ -227,10 +229,11 @@
 
   <Style Selector="Button.tile">
     <Setter Property="Width" Value="248" />
-    <Setter Property="Height" Value="62" />
-    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="MinHeight" Value="62" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="10,12" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceHighBrush}" />
@@ -286,6 +289,56 @@
 
   <Style Selector="TextBlock.tileSubtitle">
     <Setter Property="FontSize" Value="11" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!--
+    A tile's quick actions: small buttons over the end of its text, shown only while the tile is hovered or holds
+    the keyboard focus, so the text keeps the tile's width the rest of the time and nothing reflows. The strip
+    wears the hover colour, so it covers the text cleanly.
+  -->
+  <Style Selector="StackPanel.tileActions">
+    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.tile:pointerover StackPanel.tileActions, Button.tile:focus-within StackPanel.tileActions">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+
+  <Style Selector="Button.tileAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="5" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.tileAction /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Button.tileAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaPressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.tileAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaSelectionBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!-- Two lines at most; the tooltip has the rest. -->
+  <Style Selector="TextBlock.tileDescription">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Margin" Value="0,8,0,0" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
   </Style>

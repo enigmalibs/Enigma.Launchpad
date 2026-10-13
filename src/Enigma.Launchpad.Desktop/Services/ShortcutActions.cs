@@ -30,6 +30,13 @@ public interface IShortcutActions
     bool Reveal(ShortcutKind kind, Shortcut shortcut);
 
     /// <summary>
+    /// Opens a terminal in a directory shortcut's folder; a failure is shown to the user.
+    /// </summary>
+    /// <param name="shortcut">The directory shortcut.</param>
+    /// <returns><see langword="true"/> when a terminal was opened.</returns>
+    bool OpenInTerminal(Shortcut shortcut);
+
+    /// <summary>
     /// Copies a shortcut's target to the clipboard.
     /// </summary>
     /// <param name="shortcut">The shortcut.</param>
@@ -85,23 +92,13 @@ public sealed class ShortcutActions : IShortcutActions
     }
 
     /// <inheritdoc />
-    public bool Open(ShortcutKind kind, Shortcut shortcut)
-    {
-        if (!Report(_launcher.Launch(kind, shortcut)))
-        {
-            return false;
-        }
-
-        if (_settings.Current.MinimizeAfterLaunch)
-        {
-            _window.Minimize();
-        }
-
-        return true;
-    }
+    public bool Open(ShortcutKind kind, Shortcut shortcut) => StepAsideAfter(_launcher.Launch(kind, shortcut));
 
     /// <inheritdoc />
     public bool Reveal(ShortcutKind kind, Shortcut shortcut) => Report(_launcher.Reveal(kind, shortcut));
+
+    /// <inheritdoc />
+    public bool OpenInTerminal(Shortcut shortcut) => StepAsideAfter(_launcher.OpenInTerminal(shortcut));
 
     /// <inheritdoc />
     public Task CopyTargetAsync(Shortcut shortcut)
@@ -117,6 +114,22 @@ public sealed class ShortcutActions : IShortcutActions
 
         // Opened as a directory shortcut would be, so the launcher's checks and its failure messages apply.
         return Report(_launcher.Launch(ShortcutKind.Directory, new Shortcut(Guid.Empty, Path.GetFileName(path), path)));
+    }
+
+    // Something was opened outside the launchpad, as a click on a tile does: the window steps aside if asked to.
+    private bool StepAsideAfter(LaunchResult result)
+    {
+        if (!Report(result))
+        {
+            return false;
+        }
+
+        if (_settings.Current.MinimizeAfterLaunch)
+        {
+            _window.Minimize();
+        }
+
+        return true;
     }
 
     private bool Report(LaunchResult result)

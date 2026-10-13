@@ -28,3 +28,16 @@
 | - PHASE02    | URL tiles show website icons        | DONE   | (in FEATURE-1178.md)      |
 | - PHASE03    | Website icon disk cache             | DONE   | (in FEATURE-1178.md)      |
 | FEATURE-79F9 | Repository dotfiles                 | DONE   | docs/plan/FEATURE-79F9.md |
+| FEATURE-059B | Shortcut descriptions               | DONE   | docs/plan/FEATURE-059B.md |
+| FEATURE-3349 | Icons stored with shortcuts         | DONE   | docs/plan/FEATURE-3349.md |
+| - PHASE01    | Icon in the shortcut model          | DONE   | (in FEATURE-3349.md)      |
+| - PHASE02    | Tiles keep found icons              | DONE   | (in FEATURE-3349.md)      |
+| - PHASE03    | Icon field in the forms             | DONE   | (in FEATURE-3349.md)      |
+| - PHASE04    | Try to get icon                     | DONE   | (in FEATURE-3349.md)      |
+| BUG-3079     | Unreliable automatic icons          | DONE   | docs/plan/BUG-3079.md     |
+| - PHASE01    | Program icon reading                | DONE   | (in BUG-3079.md)          |
+| - PHASE02    | Website icon finding                | DONE   | (in BUG-3079.md)          |
+| FEATURE-2DA2 | Tile quick actions                  | DONE   | docs/plan/FEATURE-2DA2.md |
+| - PHASE01    | Action strip & copy buttons         | DONE   | (in FEATURE-2DA2.md)      |
+| - PHASE02    | Run with arguments                  | DONE   | (in FEATURE-2DA2.md)      |
+| - PHASE03    | Open in terminal                    | DONE   | (in FEATURE-2DA2.md)      |

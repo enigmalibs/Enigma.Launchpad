@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
 using Enigma.Launchpad.Desktop.UnitTests.Infrastructure;
@@ -14,6 +15,7 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
     private readonly TempDirectory _temp = new();
     private readonly FakePathPicker _picker = new();
     private readonly ShortcutValidator _validator = new();
+    private readonly FakeShortcutIcons _icons = new();
 
     public void Dispose() => _temp.Dispose();
 
@@ -124,6 +126,222 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
         Assert.Equal(existing with { Name = "Scratch" }, form.ToShortcut());
     }
 
+    [Theory]
+    [InlineData(ShortcutKind.Application)]
+    [InlineData(ShortcutKind.Directory)]
+    [InlineData(ShortcutKind.Url)]
+    public void EveryKind_TakesADescription_StoredTrimmed(ShortcutKind kind)
+    {
+        string target = kind switch
+        {
+            ShortcutKind.Application => Program("tool.exe"),
+            ShortcutKind.Directory => _temp.Path,
+            _ => "https://example.com",
+        };
+        ShortcutEditorViewModel form = Form(kind, new Shortcut(Guid.NewGuid(), "Here", target));
+
+        form.Description = "  What it is for  ";
+
+        Assert.Equal("What it is for", form.ToShortcut().Description);
+    }
+
+    [Fact]
+    public void ABlankDescription_IsStoredAsNone()
+    {
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Description: "Old"));
+
+        form.Description = "   ";
+
+        Assert.Null(form.ToShortcut().Description);
+    }
+
+    [Fact]
+    public void ALongDescription_IsRefused_WithItsErrorShown()
+    {
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path));
+
+        Assert.Null(form.VisibleDescriptionError);
+
+        form.Description = new string('x', ShortcutValidator.MaxDescriptionLength + 1);
+
+        Assert.False(form.IsValid);
+        Assert.Equal("Keep the description to 200 characters or fewer.", form.VisibleDescriptionError);
+
+        form.Description = "Short";
+
+        Assert.True(form.IsValid);
+        Assert.Null(form.VisibleDescriptionError);
+    }
+
+    [Fact]
+    public void AnEditedShortcut_StartsWithItsDescription_AndKeepsIt()
+    {
+        Shortcut existing = new(Guid.NewGuid(), "Temp", _temp.Path, Description: "Scratch space");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, existing);
+
+        Assert.Equal("Scratch space", form.Description);
+        Assert.Equal(existing, form.ToShortcut());
+    }
+
+    [Fact]
+    public void AnEditedShortcut_KeepsItsIcon()
+    {
+        Shortcut existing = new(Guid.NewGuid(), "Temp", _temp.Path, Icon: new ShortcutIcon("iVBORw0KGgo=", IsCustom: true));
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, existing);
+
+        form.Name = "Scratch";
+
+        Assert.Equal(existing.Icon, form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public void AnIconFoundFromTheOldTarget_IsDropped_WhenTheTargetChanges()
+    {
+        Shortcut existing = new(Guid.NewGuid(), "Temp", _temp.Path, Icon: new ShortcutIcon("iVBORw0KGgo="));
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, existing);
+
+        form.Target = Directory.CreateDirectory(_temp.Combine("Other")).FullName;
+
+        Assert.Null(form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public void AChosenIcon_IsKept_WhenTheTargetChanges()
+    {
+        ShortcutIcon chosen = new("iVBORw0KGgo=", IsCustom: true);
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: chosen));
+
+        form.Target = Directory.CreateDirectory(_temp.Combine("Other")).FullName;
+
+        Assert.Equal(chosen, form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public void AnIconFoundFromTheTarget_IsKept_WhenTheTargetIsRetypedUnchanged()
+    {
+        ShortcutIcon found = new("iVBORw0KGgo=");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: found));
+
+        form.Target = $"  {_temp.Path}  ";
+
+        Assert.Equal(found, form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public void ANewForm_ShowsTheKindsGlyph_AndWhereTheIconWillComeFrom()
+    {
+        ShortcutEditorViewModel application = Form(ShortcutKind.Application);
+        ShortcutEditorViewModel folder = Form(ShortcutKind.Directory);
+
+        Assert.Null(application.Icon);
+        Assert.False(application.HasIconPreview);
+        Assert.Equal(PhosphorIcon.AppWindow, application.KindGlyph);
+        Assert.Equal("The program's own icon, when it can be found, unless you choose an image.", application.IconHint);
+        Assert.False(application.CanResetIcon);
+        Assert.Equal("Use automatic icon", application.ResetIconLabel);
+
+        Assert.Equal(PhosphorIcon.Folder, folder.KindGlyph);
+        Assert.Equal("The folder glyph, unless you choose an image.", folder.IconHint);
+        Assert.Equal("Remove", folder.ResetIconLabel);
+    }
+
+    [Fact]
+    public void AnEditedShortcut_ShowsTheIconItKeeps()
+    {
+        ShortcutIcon found = new("found");
+        StubImage image = new();
+        _icons.Images["found"] = image;
+
+        ShortcutEditorViewModel form = Form(ShortcutKind.Application, new Shortcut(Guid.NewGuid(), "Tool", Program("tool.exe"), Icon: found));
+
+        Assert.Same(image, form.IconPreview);
+        Assert.True(form.HasIconPreview);
+        Assert.Equal("The program's own icon, found automatically.", form.IconHint);
+        Assert.False(form.CanResetIcon);
+    }
+
+    [Fact]
+    public async Task ChoosingAnImage_MakesItTheIcon()
+    {
+        string image = _temp.Combine("logo.png");
+        _picker.NextImageFile = image;
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path));
+
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        Assert.Equal([image], _icons.ReadFiles);
+        Assert.Equal(FakeShortcutIcons.ChosenIcon(image), form.Icon);
+        Assert.True(form.HasIconPreview);
+        Assert.Equal("Your image.", form.IconHint);
+        Assert.True(form.CanResetIcon);
+        Assert.True(form.ResetIconCommand.CanExecute(null));
+        Assert.Equal(FakeShortcutIcons.ChosenIcon(image), form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public async Task ChoosingNoImage_ChangesNothing()
+    {
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory);
+
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        Assert.Empty(_icons.ReadFiles);
+        Assert.Null(form.Icon);
+    }
+
+    [Theory]
+    [InlineData(typeof(InvalidDataException))]
+    [InlineData(typeof(FileNotFoundException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    public async Task AnImageThatCannotBeUsed_ShowsWhy_AndKeepsTheIcon(Type failure)
+    {
+        ShortcutIcon kept = new("kept", IsCustom: true);
+        _picker.NextImageFile = _temp.Combine("broken.png");
+        _icons.ReadFailure = (Exception)Activator.CreateInstance(failure, "This file is not an image the launchpad can show.")!;
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: kept));
+
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        Assert.Equal("This file is not an image the launchpad can show.", form.IconError);
+        Assert.Equal(kept, form.Icon);
+        Assert.True(form.IsValid);
+    }
+
+    [Fact]
+    public async Task GivingUpAChosenImage_LeavesNoIcon_AndClearsTheError()
+    {
+        _picker.NextImageFile = _temp.Combine("logo.png");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Application);
+        await form.ChooseIconCommand.ExecuteAsync(null);
+        _icons.ReadFailure = new InvalidDataException("Not an image.");
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        form.ResetIconCommand.Execute(null);
+
+        Assert.Null(form.Icon);
+        Assert.False(form.HasIconPreview);
+        Assert.Null(form.IconError);
+        Assert.False(form.CanResetIcon);
+        Assert.False(form.ResetIconCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void AnIconFoundFromTheTarget_IsSetAside_WhileTheTargetDiffers_AndComesBack()
+    {
+        ShortcutIcon found = new("found");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: found));
+
+        form.Target = _temp.Combine("elsewhere");
+
+        Assert.Null(form.Icon);
+        Assert.False(form.HasIconPreview);
+
+        form.Target = _temp.Path;
+
+        Assert.Equal(found, form.Icon);
+        Assert.True(form.HasIconPreview);
+    }
+
     [Fact]
     public async Task Browse_FillsTheTarget_AndTheNameWhenItIsEmpty()
     {
@@ -167,5 +385,12 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
         Assert.Equal(string.Empty, form.Name);
     }
 
-    private ShortcutEditorViewModel Form(ShortcutKind kind, Shortcut? existing = null) => new(kind, existing, _validator, _picker);
+    private ShortcutEditorViewModel Form(ShortcutKind kind, Shortcut? existing = null) => new(kind, existing, _validator, _picker, _icons);
+
+    private string Program(string name)
+    {
+        string program = _temp.Combine(name);
+        File.WriteAllText(program, string.Empty);
+        return program;
+    }
 }

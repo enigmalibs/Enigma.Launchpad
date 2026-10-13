@@ -31,6 +31,23 @@ public sealed class ShortcutValidatorTests
         Assert.NotNull(_validator.ValidateShortcutName(new string('a', ShortcutValidator.MaxNameLength + 1)));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("The editor")]
+    public void ValidateDescription_AcceptsAnEmptyOrShortDescription(string? description)
+        => Assert.Null(_validator.ValidateDescription(description));
+
+    [Fact]
+    public void ValidateDescription_RefusesALongDescription_IgnoringSurroundingSpaces()
+    {
+        Assert.Null(_validator.ValidateDescription($"  {new string('a', ShortcutValidator.MaxDescriptionLength)}  "));
+        Assert.Equal(
+            "Keep the description to 200 characters or fewer.",
+            _validator.ValidateDescription(new string('a', ShortcutValidator.MaxDescriptionLength + 1)));
+    }
+
     [Fact]
     public void ValidateGroupName_RefusesADuplicateIgnoringCaseAndSpaces()
         => Assert.Equal(

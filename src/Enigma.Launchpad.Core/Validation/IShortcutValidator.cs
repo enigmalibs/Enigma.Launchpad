@@ -16,6 +16,13 @@ public interface IShortcutValidator
     string? ValidateShortcutName(string? name);
 
     /// <summary>
+    /// Checks a shortcut's description, which may be left empty.
+    /// </summary>
+    /// <param name="description">The description as typed.</param>
+    /// <returns>Why the description is refused, or <see langword="null"/> when it is accepted.</returns>
+    string? ValidateDescription(string? description);
+
+    /// <summary>
     /// Checks a group's name against the other groups of its category.
     /// </summary>
     /// <param name="name">The name as typed.</param>

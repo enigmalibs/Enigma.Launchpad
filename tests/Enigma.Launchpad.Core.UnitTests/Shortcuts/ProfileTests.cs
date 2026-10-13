@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Enigma.Launchpad.Core.Shortcuts;
+using Enigma.Launchpad.Core.UnitTests.Infrastructure;
 using Xunit;
 
 namespace Enigma.Launchpad.Core.UnitTests.Shortcuts;
@@ -60,8 +61,8 @@ public sealed class ProfileTests
             {
                 Assert.NotEqual(original.Id, copied.Id);
                 Assert.Equal(
-                    original.Shortcuts.Select(shortcut => (shortcut.Name, shortcut.Target, shortcut.Arguments)),
-                    copied.Shortcuts.Select(shortcut => (shortcut.Name, shortcut.Target, shortcut.Arguments)));
+                    original.Shortcuts.Select(shortcut => (shortcut.Name, shortcut.Target, shortcut.Arguments, shortcut.Description, shortcut.Icon)),
+                    copied.Shortcuts.Select(shortcut => (shortcut.Name, shortcut.Target, shortcut.Arguments, shortcut.Description, shortcut.Icon)));
                 Assert.Empty(original.Shortcuts.Select(shortcut => shortcut.Id).Intersect(copied.Shortcuts.Select(shortcut => shortcut.Id)));
             }
         }
@@ -168,7 +169,7 @@ public sealed class ProfileTests
 
     private static string[] Describe(IEnumerable<ShortcutGroup> groups)
         => groups
-            .Select(group => $"{group.Name}: {string.Join(", ", group.Shortcuts.Select(shortcut => $"{shortcut.Name} → {shortcut.Target} {shortcut.Arguments}"))}")
+            .Select(group => $"{group.Name}: {string.Join(", ", group.Shortcuts.Select(shortcut => $"{shortcut.Name} → {shortcut.Target} {shortcut.Arguments} ({shortcut.Description})"))}")
             .ToArray();
 
     private static Guid[] Identities(IEnumerable<ShortcutGroup> groups)
@@ -182,7 +183,7 @@ public sealed class ProfileTests
                 new ShortcutGroup(
                     Guid.NewGuid(),
                     "Dev tools",
-                    [new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "-n"), new Shortcut(Guid.NewGuid(), "Shell", @"C:\Tools\sh.exe")],
+                    [new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "-n", "The editor", ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: true)), new Shortcut(Guid.NewGuid(), "Shell", @"C:\Tools\sh.exe")],
                     IsCollapsed: true),
             ],
             [new ShortcutGroup(Guid.NewGuid(), "Work", [])],

@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Enigma.Launchpad.Core.Launching;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.UnitTests.Infrastructure;
@@ -35,6 +36,106 @@ public sealed class ShortcutLauncherTests : IDisposable
         Assert.Equal(_temp.Combine("bin"), started.WorkingDirectory);
         Assert.Equal("--flag value", started.Arguments);
     }
+
+    [Fact]
+    public void ATerminal_OnWindows_IsWindowsTerminal_ThenTheCommandPrompt_InTheFolder()
+    {
+        string folder = @"C:\Work;Projects";
+
+        ProcessStartInfo[] terminals = [.. ShortcutLauncher.BuildTerminalStartInfos(DesktopPlatform.Windows, folder)];
+
+        Assert.Equal(["wt.exe", "cmd.exe"], terminals.Select(terminal => terminal.FileName));
+        Assert.All(terminals, terminal => Assert.Equal(folder, terminal.WorkingDirectory));
+        Assert.All(terminals, terminal => Assert.False(terminal.UseShellExecute));
+        Assert.Equal(["-d", "."], terminals[0].ArgumentList);
+        Assert.Empty(terminals[1].ArgumentList);
+        Assert.Empty(terminals[1].Arguments);
+    }
+
+    [Fact]
+    public void ATerminal_OnMacOS_IsTerminal_GivenTheFolderAsAnArgumentOfItsOwn()
+    {
+        ProcessStartInfo terminal = Assert.Single(ShortcutLauncher.BuildTerminalStartInfos(DesktopPlatform.MacOS, "/Users/me/My Projects"));
+
+        Assert.Equal("open", terminal.FileName);
+        Assert.Equal(["-a", "Terminal", "/Users/me/My Projects"], terminal.ArgumentList);
+        Assert.False(terminal.UseShellExecute);
+    }
+
+    [Fact]
+    public void ATerminal_OnLinux_IsTheDesktopsOwn_ThenTheCommonOnes_InTheFolder()
+    {
+        ProcessStartInfo[] terminals = [.. ShortcutLauncher.BuildTerminalStartInfos(DesktopPlatform.Linux, "/home/me/work")];
+
+        Assert.Equal(["x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"], terminals.Select(terminal => terminal.FileName));
+        Assert.All(terminals, terminal => Assert.Equal("/home/me/work", terminal.WorkingDirectory));
+        Assert.All(terminals, terminal => Assert.Empty(terminal.ArgumentList));
+    }
+
+    [Fact]
+    public void OpenInTerminal_StartsThePreferredTerminal()
+    {
+        LaunchResult result = _launcher.OpenInTerminal(Shortcut("Temp", _temp.Path));
+
+        Assert.True(result.Succeeded);
+        ProcessStartInfo started = Assert.Single(_starter.Started);
+        Assert.Equal(_temp.Path, started.WorkingDirectory);
+    }
+
+    [Fact]
+    public void OpenInTerminal_TriesTheNextTerminal_WhenOneIsNotInstalled()
+    {
+        string preferred = TerminalsHere()[0];
+        _starter.Missing.Add(preferred);
+
+        LaunchResult result = _launcher.OpenInTerminal(Shortcut("Temp", _temp.Path));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(TerminalsHere()[1], Assert.Single(_starter.Started).FileName);
+    }
+
+    [Fact]
+    public void OpenInTerminal_WithNoTerminalInstalled_SaysSo()
+    {
+        foreach (string terminal in TerminalsHere())
+        {
+            _starter.Missing.Add(terminal);
+        }
+
+        LaunchResult result = _launcher.OpenInTerminal(Shortcut("Temp", _temp.Path));
+
+        Assert.Equal(new LaunchResult(LaunchOutcome.Failed, "No terminal was found on this computer."), result);
+        Assert.Empty(_starter.Started);
+    }
+
+    [Fact]
+    public void OpenInTerminal_ThatFailsOtherwise_StopsThere_AndSaysWhy()
+    {
+        _starter.Failure = new Win32Exception(5, "Access is denied.");
+
+        LaunchResult result = _launcher.OpenInTerminal(Shortcut("Temp", _temp.Path));
+
+        Assert.Equal(LaunchOutcome.Failed, result.Outcome);
+        Assert.Equal("A terminal could not be opened in \u201CTemp\u201D: Access is denied.", result.Message);
+        Assert.Single(_starter.Attempted);
+    }
+
+    [Fact]
+    public void OpenInTerminal_OfAMissingFolder_StartsNothing()
+    {
+        string missing = _temp.Combine("gone");
+
+        LaunchResult result = _launcher.OpenInTerminal(Shortcut("Gone", missing));
+
+        Assert.Equal(LaunchOutcome.TargetMissing, result.Outcome);
+        Assert.Empty(_starter.Attempted);
+    }
+
+    private static string[] TerminalsHere()
+        => [.. ShortcutLauncher.BuildTerminalStartInfos(
+                OperatingSystem.IsWindows() ? DesktopPlatform.Windows : OperatingSystem.IsMacOS() ? DesktopPlatform.MacOS : DesktopPlatform.Linux,
+                "/")
+            .Select(terminal => terminal.FileName)];
 
     [Fact]
     public void Launch_PassesNoArgumentsWhenThereAreNone()

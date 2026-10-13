@@ -33,16 +33,19 @@ public sealed class ShortcutExchangeTests : IDisposable
     }
 
     [Fact]
-    public void Serialize_LeavesOutIdentities_FoldState_AndAbsentArguments()
+    public void Serialize_LeavesOutIdentities_FoldState_AndAbsentArgumentsDescriptionsAndIcons()
     {
         using JsonDocument json = JsonDocument.Parse(ShortcutExchange.Serialize(Sample()));
         JsonElement tools = json.RootElement.GetProperty("applications")[0];
         JsonElement[] shortcuts = [.. tools.GetProperty("shortcuts").EnumerateArray()];
 
         Assert.Equal(["name", "shortcuts"], tools.EnumerateObject().Select(property => property.Name));
-        Assert.Equal(["name", "target", "arguments"], shortcuts[0].EnumerateObject().Select(property => property.Name));
+        Assert.Equal(["name", "target", "arguments", "description", "icon"], shortcuts[0].EnumerateObject().Select(property => property.Name));
         Assert.Equal(["name", "target"], shortcuts[1].EnumerateObject().Select(property => property.Name));
         Assert.Equal("--new-window", shortcuts[0].GetProperty("arguments").GetString());
+        Assert.Equal("The editor", shortcuts[0].GetProperty("description").GetString());
+        Assert.Equal(Convert.ToBase64String(SamplePng.Bytes), shortcuts[0].GetProperty("icon").GetProperty("png").GetString());
+        Assert.True(shortcuts[0].GetProperty("icon").GetProperty("isCustom").GetBoolean());
     }
 
     [Fact]
@@ -154,7 +157,8 @@ public sealed class ShortcutExchangeTests : IDisposable
                   { "name": "  ", "target": {{tool}} },
                   { "name": "{{new string('x', 101)}}", "target": {{tool}} },
                   { "name": "Relative", "target": "bin\\tool.exe" },
-                  { "name": "Empty", "target": "   " }
+                  { "name": "Empty", "target": "   " },
+                  { "name": "Long description", "target": {{tool}}, "description": "{{new string('x', 201)}}" }
                 ] },
                 { "name": "", "shortcuts": [ { "name": "Lost with its group", "target": {{tool}} } ] }
               ],
@@ -173,7 +177,7 @@ public sealed class ShortcutExchangeTests : IDisposable
 
         Assert.True(_exchange.TryParse(json, out ShortcutImport? import, out _));
 
-        Assert.Equal(8, import.SkippedEntries);
+        Assert.Equal(9, import.SkippedEntries);
         Assert.Equal(["Kept"], Assert.Single(import.Content.Applications).Shortcuts.Select(shortcut => shortcut.Name));
         Assert.Equal(["Projects"], Assert.Single(import.Content.Directories).Shortcuts.Select(shortcut => shortcut.Name));
         Assert.Equal(["Kept"], Assert.Single(import.Content.Urls).Shortcuts.Select(shortcut => shortcut.Name));
@@ -190,8 +194,8 @@ public sealed class ShortcutExchangeTests : IDisposable
               "version": 1,
               "profile": "  Home  ",
               "applications": [ { "name": " Tools ", "shortcuts": [
-                { "name": " Editor ", "target": {{tool}}, "arguments": "  --wait  " },
-                { "name": "Plain", "target": {{tool}}, "arguments": "   " }
+                { "name": " Editor ", "target": {{tool}}, "arguments": "  --wait  ", "description": "  The editor  " },
+                { "name": "Plain", "target": {{tool}}, "arguments": "   ", "description": "   " }
               ] } ],
               "directories": [ { "name": "Work", "shortcuts": [ { "name": "Projects", "target": {{folder}}, "arguments": "--ignored" } ] } ],
               "urls": [ { "name": "Links", "shortcuts": [ { "name": "Example", "target": " example.com/start ", "arguments": "--ignored" } ] } ]
@@ -203,13 +207,42 @@ public sealed class ShortcutExchangeTests : IDisposable
         ShortcutGroup tools = Assert.Single(import.Content.Applications);
         Assert.Equal("Home", import.Content.Name);
         Assert.Equal("Tools", tools.Name);
-        Assert.Equal(("Editor", "--wait"), (tools.Shortcuts[0].Name, tools.Shortcuts[0].Arguments));
+        Assert.Equal(("Editor", "--wait", "The editor"), (tools.Shortcuts[0].Name, tools.Shortcuts[0].Arguments, tools.Shortcuts[0].Description));
         Assert.Null(tools.Shortcuts[1].Arguments);
+        Assert.Null(tools.Shortcuts[1].Description);
         Assert.Null(Assert.Single(Assert.Single(import.Content.Directories).Shortcuts).Arguments);
 
         Shortcut link = Assert.Single(Assert.Single(import.Content.Urls).Shortcuts);
         Assert.Equal("https://example.com/start", link.Target);
         Assert.Null(link.Arguments);
+    }
+
+    [Fact]
+    public void TryParse_DropsAnIconThatIsNotAPngImage_AndKeepsItsShortcut()
+    {
+        string tool = JsonSerializer.Serialize(Absolute("tool.exe"));
+        string png = Convert.ToBase64String(SamplePng.Bytes);
+        string json = $$"""
+            {
+              "format": "enigma-launchpad-shortcuts",
+              "version": 1,
+              "applications": [ { "name": "Tools", "shortcuts": [
+                { "name": "Chosen", "target": {{tool}}, "icon": { "png": "{{png}}", "isCustom": true } },
+                { "name": "Found", "target": {{tool}}, "icon": { "png": "{{png}}" } },
+                { "name": "Not base64", "target": {{tool}}, "icon": { "png": "%%%" } },
+                { "name": "Not a PNG", "target": {{tool}}, "icon": { "png": "R0lGODlhAQABAAAAACw=" } },
+                { "name": "No image", "target": {{tool}}, "icon": { "isCustom": true } }
+              ] } ]
+            }
+            """;
+
+        Assert.True(_exchange.TryParse(json, out ShortcutImport? import, out _));
+
+        Assert.Equal(0, import.SkippedEntries);
+        Shortcut[] shortcuts = [.. Assert.Single(import.Content.Applications).Shortcuts];
+        Assert.Equal(new ShortcutIcon(png, IsCustom: true), shortcuts[0].Icon);
+        Assert.Equal(new ShortcutIcon(png, IsCustom: false), shortcuts[1].Icon);
+        Assert.All(shortcuts[2..], shortcut => Assert.Null(shortcut.Icon));
     }
 
     [Fact]
@@ -249,7 +282,7 @@ public sealed class ShortcutExchangeTests : IDisposable
                     Guid.NewGuid(),
                     "Dev tools",
                     [
-                        new Shortcut(Guid.NewGuid(), "Code", Absolute("Code", "Code.exe"), "--new-window"),
+                        new Shortcut(Guid.NewGuid(), "Code", Absolute("Code", "Code.exe"), "--new-window", "The editor", ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: true)),
                         new Shortcut(Guid.NewGuid(), "Terminal", Absolute("Terminal", "wt.exe")),
                     ],
                     IsCollapsed: true),
@@ -264,7 +297,7 @@ public sealed class ShortcutExchangeTests : IDisposable
 
     private static string[] Describe(IEnumerable<ShortcutGroup> groups)
         => groups
-            .Select(group => $"{group.Name}: {string.Join(", ", group.Shortcuts.Select(shortcut => $"{shortcut.Name} → {shortcut.Target} {shortcut.Arguments}"))}")
+            .Select(group => $"{group.Name}: {string.Join(", ", group.Shortcuts.Select(shortcut => $"{shortcut.Name} → {shortcut.Target} {shortcut.Arguments} ({shortcut.Description}) [{shortcut.Icon}]"))}")
             .ToArray();
 
     private static Guid[] Identities(IEnumerable<ShortcutGroup> groups)

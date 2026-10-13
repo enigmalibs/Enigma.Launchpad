@@ -6,9 +6,11 @@ and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia
 
 Each of the three categories is a page in the navigation rail, where your shortcuts are arranged in
 groups you create, rename, fold, reorder and delete. Add a shortcut with a group's **+** (Browse… picks a
-program or a folder); click its tile, or press Enter, to open it; right-click it to edit it, copy its target,
-show it in its folder, move it or delete it. Drag a group by its grip, or a tile, to reorder them; drop a
-tile on another group of the same category to move it there.
+program or a folder); click its tile, or press Enter, to open it; right-click it to edit it, try to get its
+icon again, copy its target, show it in its folder, move it or delete it. Hover a tile, or give it the keyboard
+focus, for its own buttons: *Run with arguments…* on an application, which starts it once with other arguments than
+its default ones; *Open in terminal* and *Copy path* on a folder; *Copy URL* on a link. Drag a group by its grip, or
+a tile, to reorder them; drop a tile on another group of the same category to move it there.
 
 **Profiles** keep separate sets of shortcuts — say *Work* and *Home* — each with its own applications,
 directories and URLs. Choose the profile in use from the **Profile** list at the top of the window; create,
@@ -38,21 +40,25 @@ application-data folder:
 It holds every profile and remembers the one in use. A file written before profiles existed is read into a
 single *Default* profile, and saved in the current format on the next change.
 
+Each shortcut keeps its icon in it too, as a small PNG image: the image you chose in its form, or a program's or a
+website's icon, saved there the first time it is found and shown, so it is back at the next start without asking
+the system or the site again.
+
 The file is written atomically. If it ever cannot be read, it is kept as
 `launchpad.corrupt-<timestamp>.json` beside the original, and the launchpad starts empty; nothing is overwritten.
 
 Your preferences are kept beside it in `settings.json`. An unreadable settings file is likewise kept as
 `settings.corrupt-<timestamp>.json`, and the defaults are used.
 
-The icons on URL tiles are kept beside it too, in an `icons` folder. To find one, the launchpad asks the site
-itself — its home page and its icon files, never the address a shortcut points to, and without cookies — at most
-once a week per site; a site that cannot be reached keeps the icon it had. The folder is only a cache: deleting it
-is safe.
+Website icons are also cached beside it, in an `icons` folder, so a new shortcut to a site seen before gets its
+icon at once. To find one, the launchpad asks the site itself — its home page, the web app manifest it links and its
+icon files, never the address a shortcut points to, and without cookies — at most once a week per site; a site that
+cannot be reached keeps the icon it had. The folder is only a cache: deleting it is safe.
 
 ### Export files
 
 An export is a small, readable JSON document of its own — not a copy of `launchpad.json` — holding names,
-targets and arguments, but no internal identities and no folded state:
+targets, arguments, descriptions and icons, but no internal identities and no folded state:
 
 ```json
 {
@@ -60,18 +66,19 @@ targets and arguments, but no internal identities and no folded state:
   "version": 1,
   "profile": "Work",
   "applications": [
-    { "name": "Dev tools", "shortcuts": [ { "name": "VS Code", "target": "C:\\Tools\\Code\\Code.exe", "arguments": "--new-window" } ] }
+    { "name": "Dev tools", "shortcuts": [ { "name": "VS Code", "target": "C:\\Tools\\Code\\Code.exe", "arguments": "--new-window", "description": "The editor" } ] }
   ],
   "directories": [],
   "urls": [
-    { "name": "Docs", "shortcuts": [ { "name": "Avalonia", "target": "https://docs.avaloniaui.net" } ] }
+    { "name": "Docs", "shortcuts": [ { "name": "Avalonia", "target": "https://docs.avaloniaui.net", "icon": { "png": "iVBORw0KGgo…", "isCustom": false } } ] }
   ]
 }
 ```
 
 A file that is not such an export, or is damaged, is refused with the reason. Inside one, an entry the shortcut
-form would refuse — a blank name, a relative path, an address other than http or https — is left out, and the
-import says how many were. Paths need not exist on the machine importing them.
+form would refuse — a blank name, a relative path, an address other than http or https, a description over 200
+characters — is left out, and the import says how many were. Paths need not exist on the machine importing them.
+An icon is a PNG image in base64; one that is not, or is over 256 KB, is dropped and its shortcut kept.
 
 ## Requirements
 

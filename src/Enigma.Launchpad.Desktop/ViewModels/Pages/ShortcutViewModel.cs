@@ -7,6 +7,7 @@ using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
 using Enigma.Launchpad.Desktop.DragAndDrop;
+using Enigma.Launchpad.Desktop.Services;
 
 namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 
@@ -38,14 +39,17 @@ public sealed class ShortcutViewModel : ObservableObject
         Model = model;
 
         OpenCommand = new RelayCommand(() => _page.OpenShortcut(this));
+        RunWithArgumentsCommand = new AsyncRelayCommand(() => _page.RunWithArgumentsAsync(this), () => CanRunWithArguments);
+        OpenInTerminalCommand = new RelayCommand(() => _page.OpenInTerminal(this), () => CanOpenInTerminal);
         EditCommand = new AsyncRelayCommand(() => _page.EditShortcutAsync(this));
+        FindIconCommand = new AsyncRelayCommand(() => _page.FindShortcutIconAsync(this), () => CanFindIcon);
         CopyTargetCommand = new AsyncRelayCommand(() => _page.CopyShortcutTargetAsync(this));
         RevealCommand = new RelayCommand(() => _page.RevealShortcut(this), () => CanReveal);
         DeleteCommand = new AsyncRelayCommand(() => _page.DeleteShortcutAsync(this));
         MoveUpCommand = new RelayCommand(() => _page.MoveShortcut(this, -1), () => _page.CanMoveShortcut(this, -1));
         MoveDownCommand = new RelayCommand(() => _page.MoveShortcut(this, 1), () => _page.CanMoveShortcut(this, 1));
 
-        // The tile shows its glyph straight away; the icon replaces it once read, which a cached one already is.
+        // The tile shows the icon its shortcut keeps straight away; one still to be found replaces the glyph once it is.
         _ = LoadTargetIconAsync();
     }
 
@@ -67,6 +71,8 @@ public sealed class ShortcutViewModel : ObservableObject
                 OnPropertyChanged(nameof(Name));
                 OnPropertyChanged(nameof(Target));
                 OnPropertyChanged(nameof(Subtitle));
+                OnPropertyChanged(nameof(Description));
+                OnPropertyChanged(nameof(HasDescription));
                 OnPropertyChanged(nameof(ToolTip));
             }
         }
@@ -98,8 +104,8 @@ public sealed class ShortcutViewModel : ObservableObject
     };
 
     /// <summary>
-    /// Gets the icon of the shortcut's target — a program's, a website's — which the tile shows instead of
-    /// <see cref="Icon"/>; <see langword="null"/> until it has been read, and when there is none.
+    /// Gets the shortcut's own icon — the one it keeps, or a program's or a website's once found — which the tile
+    /// shows instead of <see cref="Icon"/>; <see langword="null"/> until it has been found, and when there is none.
     /// </summary>
     public IImage? TargetIcon
     {
@@ -127,10 +133,55 @@ public sealed class ShortcutViewModel : ObservableObject
             : Target;
 
     /// <summary>
-    /// Gets the tile's tooltip: the full target, and the arguments when there are any.
+    /// Gets the shortcut's description; empty when it has none.
+    /// </summary>
+    public string Description => Model.Description ?? string.Empty;
+
+    /// <summary>
+    /// Gets a value indicating whether the tile shows a description under its name.
+    /// </summary>
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Model.Description);
+
+    /// <summary>
+    /// Gets the tile's tooltip: the full target, the arguments when there are any, and the whole description on a
+    /// line of its own, since the tile may cut it short.
     /// </summary>
     public string ToolTip
-        => string.IsNullOrWhiteSpace(Model.Arguments) ? Target : $"{Target} {Model.Arguments}";
+    {
+        get
+        {
+            string target = string.IsNullOrWhiteSpace(Model.Arguments) ? Target : $"{Target} {Model.Arguments}";
+
+            return HasDescription ? $"{target}{Environment.NewLine}{Description}" : target;
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the tile can look its icon up again: an application's or a link's can, a
+    /// folder's has none to find.
+    /// </summary>
+    public bool CanFindIcon => _page.CanFindIcons;
+
+    /// <summary>
+    /// Gets a value indicating whether the shortcut can be run with other arguments than its default ones: an
+    /// application can.
+    /// </summary>
+    public bool CanRunWithArguments => _page.Kind == ShortcutKind.Application;
+
+    /// <summary>
+    /// Gets a value indicating whether the shortcut can be opened in a terminal: a folder can.
+    /// </summary>
+    public bool CanOpenInTerminal => _page.Kind == ShortcutKind.Directory;
+
+    /// <summary>
+    /// Gets a value indicating whether the tile has a button copying its target: a folder's path, a link's address.
+    /// </summary>
+    public bool CanCopyFromTile => _page.Kind is ShortcutKind.Directory or ShortcutKind.Url;
+
+    /// <summary>
+    /// Gets what copying the target is called on the tile's button.
+    /// </summary>
+    public string CopyTargetLabel => _page.Kind == ShortcutKind.Url ? "Copy URL" : "Copy path";
 
     /// <summary>
     /// Gets a value indicating whether the shortcut can be shown in its folder; a link cannot.
@@ -180,9 +231,24 @@ public sealed class ShortcutViewModel : ObservableObject
     public RelayCommand OpenCommand { get; }
 
     /// <summary>
+    /// Gets the command asking for arguments and running the application with them, this once.
+    /// </summary>
+    public AsyncRelayCommand RunWithArgumentsCommand { get; }
+
+    /// <summary>
+    /// Gets the command opening a terminal in the folder.
+    /// </summary>
+    public RelayCommand OpenInTerminalCommand { get; }
+
+    /// <summary>
     /// Gets the command editing the shortcut.
     /// </summary>
     public AsyncRelayCommand EditCommand { get; }
+
+    /// <summary>
+    /// Gets the command looking the shortcut's icon up again, after asking when it is an image the user chose.
+    /// </summary>
+    public AsyncRelayCommand FindIconCommand { get; }
 
     /// <summary>
     /// Gets the command copying the shortcut's target to the clipboard.
@@ -217,15 +283,27 @@ public sealed class ShortcutViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        bool retargeted = model.Target != Model.Target;
+        bool iconChanged = (model.Target != Model.Target) || (model.Icon != Model.Icon);
         Model = model;
 
-        if (retargeted)
+        if (iconChanged)
         {
-            // The old target's icon would be wrong while the new one is read.
+            // The old icon would be wrong while the new one is shown or found.
             TargetIcon = null;
             _ = LoadTargetIconAsync();
         }
+    }
+
+    /// <summary>
+    /// Shows an icon just found for the shortcut, and takes it into the shortcut.
+    /// </summary>
+    /// <param name="found">The icon.</param>
+    internal void SetFoundIcon(IconImage found)
+    {
+        ArgumentNullException.ThrowIfNull(found);
+
+        TargetIcon = found.Image;
+        Model = Model with { Icon = found.Icon };
     }
 
     /// <summary>
@@ -237,16 +315,33 @@ public sealed class ShortcutViewModel : ObservableObject
         MoveDownCommand.NotifyCanExecuteChanged();
     }
 
-    // Never faults: the page answers null for any target whose icon cannot be had.
+    // Never faults: the page answers null for any icon that cannot be shown or found.
     private async Task LoadTargetIconAsync()
     {
-        string target = Target;
-        IImage? icon = await _page.GetTargetIconAsync(target);
+        ShortcutIcon? kept = Model.Icon;
 
-        // An edit may have pointed the shortcut elsewhere while this icon was read.
-        if (target == Target)
+        if ((kept is not null) && (_page.ShowIcon(kept) is { } shown))
         {
-            TargetIcon = icon;
+            TargetIcon = shown;
+            return;
         }
+
+        // An icon the user chose is never replaced behind their back, even one that no longer shows.
+        if ((kept is { IsCustom: true }) || !_page.CanFindIcons)
+        {
+            return;
+        }
+
+        string target = Target;
+        IconImage? found = await _page.FindIconAsync(target);
+
+        // An edit may have pointed the shortcut elsewhere, or given it an icon, while this one was looked up.
+        if ((found is null) || (target != Target) || (Model.Icon != kept))
+        {
+            return;
+        }
+
+        SetFoundIcon(found);
+        _page.KeepFoundIcon(this);
     }
 }

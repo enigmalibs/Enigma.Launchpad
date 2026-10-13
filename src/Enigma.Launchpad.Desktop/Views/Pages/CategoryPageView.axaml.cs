@@ -21,7 +21,8 @@ namespace Enigma.Launchpad.Desktop.Views.Pages;
 /// <para>
 /// Groups are dragged by their grip, shortcuts by their tile. The pointer handlers tunnel, because a
 /// button marks the press as handled to capture the pointer, and a bubbling handler would never see the
-/// press a drag starts from; none of them marks anything handled, so clicks work exactly as before.
+/// press a drag starts from; none of them marks anything handled, so clicks work exactly as before. A press on
+/// one of a tile's own buttons is a click on that button, never the start of a drag.
 /// </para>
 /// </remarks>
 public partial class CategoryPageView : UserControl
@@ -162,6 +163,12 @@ public partial class CategoryPageView : UserControl
         _suppressNextClick = false;
 
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            ForgetDrag();
+            return;
+        }
+
+        if (FindAncestor(e.Source, "tileAction") is not null)
         {
             ForgetDrag();
             return;
