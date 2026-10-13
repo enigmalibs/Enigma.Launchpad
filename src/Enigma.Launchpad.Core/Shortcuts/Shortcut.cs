@@ -9,4 +9,11 @@ namespace Enigma.Launchpad.Core.Shortcuts;
 /// <param name="Name">What the shortcut is called.</param>
 /// <param name="Target">The executable path, the directory path, or the URL.</param>
 /// <param name="Arguments">Command-line arguments; applications only, <see langword="null"/> otherwise.</param>
-public sealed record Shortcut(Guid Id, string Name, string Target, string? Arguments = null);
+/// <param name="Description">A line saying what the shortcut is for, shown on its tile; <see langword="null"/> when
+/// there is none.</param>
+public sealed record Shortcut(
+    Guid Id,
+    string Name,
+    string Target,
+    string? Arguments = null,
+    string? Description = null);

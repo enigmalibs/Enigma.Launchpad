@@ -1,6 +1,6 @@
 # FEATURE-059B — Shortcut descriptions
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-059b-shortcut-descriptions`
 **Run:** vibe/2026-10-13-icons-descriptions-tile-actions

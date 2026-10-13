@@ -44,10 +44,12 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         Name = existing?.Name ?? string.Empty;
         Target = existing?.Target ?? string.Empty;
         Arguments = existing?.Arguments ?? string.Empty;
+        Description = existing?.Description ?? string.Empty;
 
         // Starting values are not edits: an edited shortcut opens without errors under its fields.
         HasEditedName = false;
         HasEditedTarget = false;
+        HasEditedDescription = false;
         Revalidate();
 
         BrowseCommand = new AsyncRelayCommand(BrowseAsync, () => CanBrowse);
@@ -131,6 +133,22 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     public string Arguments { get; set => SetProperty(ref field, value); } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the description as typed; it may stay empty.
+    /// </summary>
+    public string Description
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                HasEditedDescription = true;
+                Revalidate();
+            }
+        }
+    } = string.Empty;
+
+    /// <summary>
     /// Gets why the name is refused, or <see langword="null"/>.
     /// </summary>
     public string? NameError
@@ -163,6 +181,22 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Gets why the description is refused, or <see langword="null"/>.
+    /// </summary>
+    public string? DescriptionError
+    {
+        get;
+        private set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(VisibleDescriptionError));
+                OnPropertyChanged(nameof(IsValid));
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets the name error to show, once the name has been edited.
     /// </summary>
     public string? VisibleNameError => HasEditedName ? NameError : null;
@@ -173,9 +207,14 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     public string? VisibleTargetError => HasEditedTarget ? TargetError : null;
 
     /// <summary>
+    /// Gets the description error to show, once the description has been edited.
+    /// </summary>
+    public string? VisibleDescriptionError => HasEditedDescription ? DescriptionError : null;
+
+    /// <summary>
     /// Gets a value indicating whether the form can be confirmed.
     /// </summary>
-    public bool IsValid => (NameError is null) && (TargetError is null);
+    public bool IsValid => (NameError is null) && (TargetError is null) && (DescriptionError is null);
 
     /// <summary>
     /// Gets the command picking the target with the platform's picker.
@@ -206,6 +245,18 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         }
     }
 
+    private bool HasEditedDescription
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(VisibleDescriptionError));
+            }
+        }
+    }
+
     /// <summary>
     /// Builds the shortcut the form describes.
     /// </summary>
@@ -221,14 +272,16 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         }
 
         string? arguments = HasArguments && !string.IsNullOrWhiteSpace(Arguments) ? Arguments.Trim() : null;
+        string? description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
 
-        return new Shortcut(_id, Name.Trim(), normalized, arguments);
+        return new Shortcut(_id, Name.Trim(), normalized, arguments, description);
     }
 
     private void Revalidate()
     {
         NameError = _validator.ValidateShortcutName(Name);
         TargetError = _validator.ValidateTarget(Kind, Target).Error;
+        DescriptionError = _validator.ValidateDescription(Description);
     }
 
     private async Task BrowseAsync()

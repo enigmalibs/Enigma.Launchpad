@@ -17,6 +17,11 @@ public sealed class ShortcutValidator : IShortcutValidator
     /// </summary>
     public const int MaxNameLength = 100;
 
+    /// <summary>
+    /// The longest a shortcut's description may be: about two lines of a tile.
+    /// </summary>
+    public const int MaxDescriptionLength = 200;
+
     private readonly bool _acceptsApplicationBundles;
 
     /// <summary>
@@ -35,6 +40,12 @@ public sealed class ShortcutValidator : IShortcutValidator
 
     /// <inheritdoc />
     public string? ValidateShortcutName(string? name) => ValidateName(name);
+
+    /// <inheritdoc />
+    public string? ValidateDescription(string? description)
+        => (description?.Trim().Length ?? 0) > MaxDescriptionLength
+            ? $"Keep the description to {MaxDescriptionLength} characters or fewer."
+            : null;
 
     /// <inheritdoc />
     public string? ValidateGroupName(string? name, IEnumerable<string> otherGroupNames)

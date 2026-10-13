@@ -142,6 +142,34 @@ public sealed class CategoryPageViewTests
         });
 
     [Fact]
+    public void ADescription_IsShownUnderTheTilesIconRow_OnlyWhenThereIsOne()
+        => _fixture.RunAsync(async () =>
+        {
+            Shortcut described = PageHarness.Shortcut("Code", @"C:\Tools\code.exe") with { Description = "The editor" };
+            using WindowHarness harness = new(PageHarness.WithShortcuts(
+                ShortcutKind.Application,
+                ("Dev tools", [described, PageHarness.Shortcut("Git", @"C:\Tools\git.exe")]),
+                ("Plain", [PageHarness.Shortcut("Shell", @"C:\Tools\sh.exe")])));
+            CategoryPageView view = await LoadedPageAsync(harness);
+
+            TextBlock[] descriptions = view.GetVisualDescendants().OfType<TextBlock>()
+                .Where(text => text.Classes.Contains("tileDescription"))
+                .ToArray();
+            Assert.Equal(3, descriptions.Length);
+            Assert.Equal(["The editor"], descriptions.Where(text => text.IsEffectivelyVisible).Select(text => text.Text));
+
+            Button[] tiles = view.GetVisualDescendants().OfType<Button>().Where(button => button.Classes.Contains("tile")).ToArray();
+            Button code = tiles.Single(tile => tile.DataContext is ShortcutViewModel { Name: "Code" });
+            Button git = tiles.Single(tile => tile.DataContext is ShortcutViewModel { Name: "Git" });
+            Button shell = tiles.Single(tile => tile.DataContext is ShortcutViewModel { Name: "Shell" });
+
+            // A tile without a description keeps its size; one in the same row grows with its neighbour.
+            Assert.Equal(62, shell.Bounds.Height);
+            Assert.True(code.Bounds.Height > 62);
+            Assert.Equal(code.Bounds.Height, git.Bounds.Height);
+        });
+
+    [Fact]
     public void AnApplicationTile_TradesItsGlyphForItsProgramsIcon_OnceItArrives()
         => _fixture.RunAsync(async () =>
         {

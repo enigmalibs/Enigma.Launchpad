@@ -185,5 +185,36 @@ public sealed class CategoryPageShortcutsTests
         Assert.Equal(@"C:\Tools\code.exe", tile.Subtitle);
         Assert.Equal(@"C:\Tools\code.exe --new-window", tile.ToolTip);
         Assert.Equal(PhosphorIcon.AppWindow, tile.Icon);
+        Assert.False(tile.HasDescription);
+        Assert.Equal(string.Empty, tile.Description);
+    }
+
+    [Fact]
+    public async Task ATileWithADescription_ShowsIt_AndPutsItWholeInTheToolTip()
+    {
+        Shortcut code = PageHarness.Shortcut("Code", @"C:\Tools\code.exe", "--new-window") with { Description = "The editor" };
+        PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [code])));
+        CategoryPageViewModel page = await harness.LoadAsync();
+        ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
+
+        Assert.True(tile.HasDescription);
+        Assert.Equal("The editor", tile.Description);
+        Assert.Equal($@"C:\Tools\code.exe --new-window{Environment.NewLine}The editor", tile.ToolTip);
+    }
+
+    [Fact]
+    public async Task EditingADescription_UpdatesTheTile_AndSaves()
+    {
+        Shortcut code = PageHarness.Shortcut("Code");
+        PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [code])));
+        CategoryPageViewModel page = await harness.LoadAsync();
+        ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
+        harness.Dialogs.ShortcutAnswers.Enqueue(code with { Description = "The editor" });
+
+        await tile.EditCommand.ExecuteAsync(null);
+
+        Assert.Equal("The editor", tile.Description);
+        Assert.True(tile.HasDescription);
+        Assert.Equal("The editor", Assert.Single(Assert.Single(await harness.SavedApplicationsAsync()).Shortcuts).Description);
     }
 }

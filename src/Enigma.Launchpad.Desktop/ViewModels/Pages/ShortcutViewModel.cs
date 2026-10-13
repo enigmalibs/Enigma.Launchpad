@@ -67,6 +67,8 @@ public sealed class ShortcutViewModel : ObservableObject
                 OnPropertyChanged(nameof(Name));
                 OnPropertyChanged(nameof(Target));
                 OnPropertyChanged(nameof(Subtitle));
+                OnPropertyChanged(nameof(Description));
+                OnPropertyChanged(nameof(HasDescription));
                 OnPropertyChanged(nameof(ToolTip));
             }
         }
@@ -127,10 +129,28 @@ public sealed class ShortcutViewModel : ObservableObject
             : Target;
 
     /// <summary>
-    /// Gets the tile's tooltip: the full target, and the arguments when there are any.
+    /// Gets the shortcut's description; empty when it has none.
+    /// </summary>
+    public string Description => Model.Description ?? string.Empty;
+
+    /// <summary>
+    /// Gets a value indicating whether the tile shows a description under its name.
+    /// </summary>
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Model.Description);
+
+    /// <summary>
+    /// Gets the tile's tooltip: the full target, the arguments when there are any, and the whole description on a
+    /// line of its own, since the tile may cut it short.
     /// </summary>
     public string ToolTip
-        => string.IsNullOrWhiteSpace(Model.Arguments) ? Target : $"{Target} {Model.Arguments}";
+    {
+        get
+        {
+            string target = string.IsNullOrWhiteSpace(Model.Arguments) ? Target : $"{Target} {Model.Arguments}";
+
+            return HasDescription ? $"{target}{Environment.NewLine}{Description}" : target;
+        }
+    }
 
     /// <summary>
     /// Gets a value indicating whether the shortcut can be shown in its folder; a link cannot.
