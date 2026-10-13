@@ -119,7 +119,7 @@ Acceptance criteria:
 
 ### PHASE03 — Icon field in the forms
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `IPathPicker.PickImageFileAsync`.

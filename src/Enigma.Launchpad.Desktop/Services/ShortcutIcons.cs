@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
@@ -43,6 +44,18 @@ public interface IShortcutIcons
     /// <returns>The icon, not marked as chosen by the user; <see langword="null"/> when none was found, and always
     /// for a kind that cannot have one found.</returns>
     Task<IconImage?> FindAsync(ShortcutKind kind, string target, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads an image file the user picked as a shortcut's icon, off the UI thread.
+    /// </summary>
+    /// <param name="path">The file.</param>
+    /// <param name="cancellationToken">Stops the read.</param>
+    /// <returns>The icon, marked as chosen by the user.</returns>
+    /// <exception cref="InvalidDataException">The file is too large, or not an image that can be shown; the message
+    /// says which, worded for the user.</exception>
+    /// <exception cref="IOException">The file could not be read.</exception>
+    /// <exception cref="UnauthorizedAccessException">The file may not be read.</exception>
+    Task<IconImage> ReadFileAsync(string path, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -54,6 +67,11 @@ public interface IShortcutIcons
 /// </remarks>
 public sealed class ShortcutIcons : IShortcutIcons
 {
+    /// <summary>
+    /// The largest image file accepted as an icon: far beyond any icon, small enough never to stall the decoder.
+    /// </summary>
+    internal const long MaxFileBytes = 10 * 1024 * 1024;
+
     private readonly IProgramIcons _programIcons;
     private readonly IWebsiteIcons _websiteIcons;
     private readonly ILogger<ShortcutIcons> _logger;
@@ -121,5 +139,36 @@ public sealed class ShortcutIcons : IShortcutIcons
         ShortcutIcon icon = ShortcutIcon.FromBytes(png, isCustom: false);
 
         return Show(icon) is { } image ? new IconImage(image, icon) : null;
+    }
+
+    /// <inheritdoc />
+    public Task<IconImage> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        return Task.Run(() => ReadFileCoreAsync(path, cancellationToken), cancellationToken);
+    }
+
+    private static async Task<IconImage> ReadFileCoreAsync(string path, CancellationToken cancellationToken)
+    {
+        if (new FileInfo(path) is { Exists: true, Length: > MaxFileBytes })
+        {
+            throw new InvalidDataException("This file is larger than 10 MB, too large for an icon.");
+        }
+
+        byte[] bytes = await File.ReadAllBytesAsync(path, cancellationToken);
+        byte[] png;
+
+        try
+        {
+            png = IconPng.Normalize(bytes);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The decoder's own exceptions are not a documented set; to the user they all mean the same.
+            throw new InvalidDataException("This file is not an image the launchpad can show.", exception);
+        }
+
+        return new IconImage(IconPng.Decode(png), ShortcutIcon.FromBytes(png, isCustom: true));
     }
 }

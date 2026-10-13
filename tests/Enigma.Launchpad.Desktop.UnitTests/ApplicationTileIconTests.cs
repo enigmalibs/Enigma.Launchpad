@@ -261,6 +261,40 @@ public sealed class ApplicationTileIconTests
     }
 
     [Fact]
+    public async Task AnEditThatChoosesAnImage_ShowsIt_AndSavesIt()
+    {
+        Icons.Answer = _ => new StubImage();
+        ShortcutViewModel tile = await LoadedTileAsync();
+        ShortcutIcon chosen = FakeShortcutIcons.ChosenIcon(@"C:\Pictures\code.png");
+        StubImage image = new();
+        Icons.Images[chosen.Png] = image;
+
+        await EditAsync(tile, tile.Model with { Icon = chosen });
+
+        Assert.Same(image, tile.TargetIcon);
+        Assert.Equal([CodePath], Icons.Requests);
+        Assert.Equal(chosen, Assert.Single(Assert.Single(await _harness.SavedApplicationsAsync()).Shortcuts).Icon);
+    }
+
+    [Fact]
+    public async Task AnEditThatGivesUpAChosenImage_LooksForTheProgramsIcon()
+    {
+        ShortcutIcon chosen = FakeShortcutIcons.ChosenIcon(@"C:\Pictures\code.png");
+        PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [_code with { Icon = chosen }])));
+        StubImage found = new();
+        harness.Icons.Answer = _ => found;
+        CategoryPageViewModel page = await harness.LoadAsync();
+        ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
+        Assert.Empty(harness.Icons.Requests);
+
+        harness.Dialogs.ShortcutAnswers.Enqueue(tile.Model with { Icon = null });
+        await tile.EditCommand.ExecuteAsync(null);
+
+        Assert.Same(found, tile.TargetIcon);
+        Assert.Equal(FakeShortcutIcons.FoundIcon(CodePath), tile.Model.Icon);
+    }
+
+    [Fact]
     public async Task AnEditThatKeepsTheTarget_DoesNotLookAgain()
     {
         StubImage icon = new();

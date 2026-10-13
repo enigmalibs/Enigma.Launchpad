@@ -70,22 +70,26 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
     private readonly IContentDialogService _dialogs;
     private readonly IShortcutValidator _validator;
     private readonly IPathPicker _picker;
+    private readonly IShortcutIcons _icons;
 
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
     /// <param name="dialogs">The dialog service, whose host is the main window's.</param>
     /// <param name="validator">The rules a shortcut's name and target must meet.</param>
-    /// <param name="picker">Lets the shortcut form pick its target.</param>
-    public LaunchpadDialogs(IContentDialogService dialogs, IShortcutValidator validator, IPathPicker picker)
+    /// <param name="picker">Lets the shortcut form pick its target and its icon.</param>
+    /// <param name="icons">Shows the shortcut form's icon, and reads the image picked as one.</param>
+    public LaunchpadDialogs(IContentDialogService dialogs, IShortcutValidator validator, IPathPicker picker, IShortcutIcons icons)
     {
         ArgumentNullException.ThrowIfNull(dialogs);
         ArgumentNullException.ThrowIfNull(validator);
         ArgumentNullException.ThrowIfNull(picker);
+        ArgumentNullException.ThrowIfNull(icons);
 
         _dialogs = dialogs;
         _validator = validator;
         _picker = picker;
+        _icons = icons;
     }
 
     /// <inheritdoc />
@@ -102,7 +106,7 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
     /// <inheritdoc />
     public async Task<Shortcut?> EditShortcutAsync(ShortcutKind kind, Shortcut? existing)
     {
-        ShortcutEditorViewModel model = new(kind, existing, _validator, _picker);
+        ShortcutEditorViewModel model = new(kind, existing, _validator, _picker, _icons);
         string noun = kind switch
         {
             ShortcutKind.Application => "application",
