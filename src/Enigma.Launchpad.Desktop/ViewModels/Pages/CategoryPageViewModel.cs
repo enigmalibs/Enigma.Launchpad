@@ -36,6 +36,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     private readonly ILaunchpadDialogs _dialogs;
     private readonly IShortcutActions _actions;
     private readonly IShortcutIcons _icons;
+    private readonly IUserNotifications _notifications;
 
     // Set while the groups are being built from the session, when the category is not whole yet.
     private bool _isReadingGroups;
@@ -53,6 +54,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <param name="dialogs">The questions asked of the user.</param>
     /// <param name="actions">Opens shortcuts, shows them in their folder, copies their targets.</param>
     /// <param name="icons">The icons of the tiles: kept with the shortcuts, or found from their targets.</param>
+    /// <param name="notifications">Where a failed icon lookup is reported.</param>
     protected CategoryPageViewModel(
         ShortcutKind kind,
         string title,
@@ -62,7 +64,8 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         IShortcutValidator validator,
         ILaunchpadDialogs dialogs,
         IShortcutActions actions,
-        IShortcutIcons icons)
+        IShortcutIcons icons,
+        IUserNotifications notifications)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
@@ -71,6 +74,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         ArgumentNullException.ThrowIfNull(dialogs);
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentNullException.ThrowIfNull(icons);
+        ArgumentNullException.ThrowIfNull(notifications);
 
         Kind = kind;
         Title = title;
@@ -81,6 +85,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         _dialogs = dialogs;
         _actions = actions;
         _icons = icons;
+        _notifications = notifications;
 
         Groups.CollectionChanged += OnGroupsChanged;
         _session.ActiveProfileChanged += OnActiveProfileChanged;
@@ -357,6 +362,50 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <param name="target">The shortcut's target.</param>
     /// <returns>The icon, or <see langword="null"/> when none was found or the category has none to find.</returns>
     internal Task<IconImage?> FindIconAsync(string target) => _icons.FindAsync(Kind, target);
+
+    /// <summary>
+    /// Looks a shortcut's icon up again — from the program, or from the website itself — and keeps it. An image the
+    /// user chose is only replaced once they have said so; when nothing is found, the user is told and the icon
+    /// stays as it was.
+    /// </summary>
+    /// <param name="shortcut">The tile.</param>
+    /// <returns>A task that completes once the icon has been looked up, or the user declined.</returns>
+    internal async Task FindShortcutIconAsync(ShortcutViewModel shortcut)
+    {
+        if (!CanFindIcons)
+        {
+            return;
+        }
+
+        string source = Kind == ShortcutKind.Url ? "website" : "program";
+
+        if ((shortcut.Model.Icon is { IsCustom: true })
+            && !await _dialogs.ConfirmAsync(
+                "Replace your icon?",
+                $"\u201C{shortcut.Name}\u201D uses an image you chose. Look for the {source}'s own icon and use it instead?",
+                "Replace"))
+        {
+            return;
+        }
+
+        Shortcut before = shortcut.Model;
+        IconImage? found = await _icons.RefreshAsync(Kind, before.Target);
+
+        // The tile may have been edited, moved off the page or deleted while its icon was looked up.
+        if ((FindShortcut(shortcut.Id) != shortcut) || (shortcut.Model != before))
+        {
+            return;
+        }
+
+        if (found is null)
+        {
+            _notifications.ShowWarning("No icon found", $"No icon could be found for \u201C{shortcut.Name}\u201D. Its icon is unchanged.");
+            return;
+        }
+
+        shortcut.SetFoundIcon(found);
+        Persist();
+    }
 
     /// <summary>
     /// Saves an icon a tile has just found and taken into its shortcut, so the next session shows it without

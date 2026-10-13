@@ -38,6 +38,15 @@ public interface ILaunchpadDialogs
     Task<bool> ConfirmDeleteAsync(string title, string message, string confirmText);
 
     /// <summary>
+    /// Asks whether to go ahead with something that replaces what the user had, with Cancel as the default.
+    /// </summary>
+    /// <param name="title">The question.</param>
+    /// <param name="message">What would change.</param>
+    /// <param name="confirmText">The confirm button's text.</param>
+    /// <returns><see langword="true"/> only when the confirm button was pressed.</returns>
+    Task<bool> ConfirmAsync(string title, string message, string confirmText);
+
+    /// <summary>
     /// Shows the form adding or editing a shortcut; the confirm button is enabled only for a valid form.
     /// </summary>
     /// <param name="kind">The kind of shortcut.</param>
@@ -163,6 +172,21 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
         {
             shown?.Classes.Remove(DangerClass);
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        DialogResult result = await _dialogs.ShowAsync(dialog =>
+        {
+            dialog.Title = title;
+            dialog.Content = message;
+            dialog.PrimaryButtonText = confirmText;
+            dialog.CloseButtonText = "Cancel";
+            dialog.DefaultButton = DefaultButton.Close;
+        });
+
+        return result == DialogResult.Primary;
     }
 
     /// <summary>

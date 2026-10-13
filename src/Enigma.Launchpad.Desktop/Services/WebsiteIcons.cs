@@ -20,6 +20,16 @@ public interface IWebsiteIcons
     /// <returns>The icon as a PNG file no larger than <see cref="IconPng.MaxSize"/>, or <see langword="null"/> when
     /// there is none to show.</returns>
     Task<byte[]?> GetAsync(string url, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asks the website for its icon again, however recently it was stored; when the site gives nothing, the stored
+    /// icon is still the answer. A fetch already underway is shared rather than started twice.
+    /// </summary>
+    /// <param name="url">The address.</param>
+    /// <param name="cancellationToken">Stops this wait only: the icon is still fetched for whoever asks next.</param>
+    /// <returns>The icon as a PNG file no larger than <see cref="IconPng.MaxSize"/>, or <see langword="null"/> when
+    /// there is none to show.</returns>
+    Task<byte[]?> RefreshAsync(string url, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -66,26 +76,11 @@ public sealed class WebsiteIcons : IWebsiteIcons
 
     /// <inheritdoc />
     public Task<byte[]?> GetAsync(string url, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(url);
+        => Get(url, refresh: false, cancellationToken);
 
-        if (SiteOf(url) is not { } site)
-        {
-            return NoIcon;
-        }
-
-        lock (_sync)
-        {
-            if (!_icons.TryGetValue(site, out Task<byte[]?>? icon))
-            {
-                // The fetch is shared by every caller, so no caller's token may cancel it.
-                icon = Task.Run(() => LoadAsync(site), CancellationToken.None);
-                _icons.Add(site, icon);
-            }
-
-            return icon.WaitAsync(cancellationToken);
-        }
-    }
+    /// <inheritdoc />
+    public Task<byte[]?> RefreshAsync(string url, CancellationToken cancellationToken = default)
+        => Get(url, refresh: true, cancellationToken);
 
     /// <summary>
     /// The root of the site an address belongs to: its scheme, host and port, and nothing else — no path, no
@@ -98,13 +93,35 @@ public sealed class WebsiteIcons : IWebsiteIcons
             ? new UriBuilder(address.Scheme, address.IdnHost, address.Port).Uri
             : null;
 
+    private Task<byte[]?> Get(string url, bool refresh, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(url);
+
+        if (SiteOf(url) is not { } site)
+        {
+            return NoIcon;
+        }
+
+        lock (_sync)
+        {
+            if (!_icons.TryGetValue(site, out Task<byte[]?>? icon) || (refresh && icon.IsCompleted))
+            {
+                // The fetch is shared by every caller, so no caller's token may cancel it.
+                icon = Task.Run(() => LoadAsync(site, refresh), CancellationToken.None);
+                _icons[site] = icon;
+            }
+
+            return icon.WaitAsync(cancellationToken);
+        }
+    }
+
     // An icon is decoration: whatever goes wrong at any step, the tile keeps its glyph, so no step throws.
-    private async Task<byte[]?> LoadAsync(Uri site)
+    private async Task<byte[]?> LoadAsync(Uri site, bool refresh)
     {
         StoredWebsiteIcon? stored = await ReadStoredAsync(site);
         byte[]? previous = (stored is null) ? null : TryNormalize(stored.Bytes, site, LogLevel.Debug);
 
-        if ((stored is { IsFresh: true }) && (previous is not null))
+        if (!refresh && (stored is { IsFresh: true }) && (previous is not null))
         {
             return previous;
         }

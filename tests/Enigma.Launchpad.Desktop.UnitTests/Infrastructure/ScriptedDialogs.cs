@@ -29,6 +29,11 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
 
     public List<(string Title, string Message, string ConfirmText)> Confirmations { get; } = [];
 
+    /// <summary>
+    /// The neutral questions asked; they take their answers from <see cref="ConfirmAnswers"/> too.
+    /// </summary>
+    public List<(string Title, string Message, string ConfirmText)> Questions { get; } = [];
+
     public List<(ShortcutKind Kind, Shortcut? Existing)> ShortcutForms { get; } = [];
 
     public List<(string Title, string Message, string ConfirmText, Profile Content)> Selections { get; } = [];
@@ -47,6 +52,12 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
     public Task<bool> ConfirmDeleteAsync(string title, string message, string confirmText)
     {
         Confirmations.Add((title, message, confirmText));
+        return Task.FromResult(ConfirmAnswers.Count > 0 && ConfirmAnswers.Dequeue());
+    }
+
+    public Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        Questions.Add((title, message, confirmText));
         return Task.FromResult(ConfirmAnswers.Count > 0 && ConfirmAnswers.Dequeue());
     }
 

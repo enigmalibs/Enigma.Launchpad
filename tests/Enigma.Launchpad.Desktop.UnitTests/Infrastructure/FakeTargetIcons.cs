@@ -25,6 +25,17 @@ internal sealed class FakeTargetIcons : IProgramIcons, IWebsiteIcons
 
     public List<string> Requests { get; } = [];
 
+    /// <summary>
+    /// The paths whose icon was asked for again, in order; they are in <see cref="Requests"/> too.
+    /// </summary>
+    public List<string> Refreshes { get; } = [];
+
+    public Task<byte[]?> RefreshAsync(string path, CancellationToken cancellationToken = default)
+    {
+        Refreshes.Add(path);
+        return GetAsync(path, cancellationToken);
+    }
+
     public Task<byte[]?> GetAsync(string path, CancellationToken cancellationToken = default)
     {
         Requests.Add(path);

@@ -40,6 +40,7 @@ public sealed class ShortcutViewModel : ObservableObject
 
         OpenCommand = new RelayCommand(() => _page.OpenShortcut(this));
         EditCommand = new AsyncRelayCommand(() => _page.EditShortcutAsync(this));
+        FindIconCommand = new AsyncRelayCommand(() => _page.FindShortcutIconAsync(this), () => CanFindIcon);
         CopyTargetCommand = new AsyncRelayCommand(() => _page.CopyShortcutTargetAsync(this));
         RevealCommand = new RelayCommand(() => _page.RevealShortcut(this), () => CanReveal);
         DeleteCommand = new AsyncRelayCommand(() => _page.DeleteShortcutAsync(this));
@@ -154,6 +155,12 @@ public sealed class ShortcutViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Gets a value indicating whether the tile can look its icon up again: an application's or a link's can, a
+    /// folder's has none to find.
+    /// </summary>
+    public bool CanFindIcon => _page.CanFindIcons;
+
+    /// <summary>
     /// Gets a value indicating whether the shortcut can be shown in its folder; a link cannot.
     /// </summary>
     public bool CanReveal => _page.Kind != ShortcutKind.Url;
@@ -206,6 +213,11 @@ public sealed class ShortcutViewModel : ObservableObject
     public AsyncRelayCommand EditCommand { get; }
 
     /// <summary>
+    /// Gets the command looking the shortcut's icon up again, after asking when it is an image the user chose.
+    /// </summary>
+    public AsyncRelayCommand FindIconCommand { get; }
+
+    /// <summary>
     /// Gets the command copying the shortcut's target to the clipboard.
     /// </summary>
     public AsyncRelayCommand CopyTargetCommand { get; }
@@ -250,6 +262,18 @@ public sealed class ShortcutViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Shows an icon just found for the shortcut, and takes it into the shortcut.
+    /// </summary>
+    /// <param name="found">The icon.</param>
+    internal void SetFoundIcon(IconImage found)
+    {
+        ArgumentNullException.ThrowIfNull(found);
+
+        TargetIcon = found.Image;
+        Model = Model with { Icon = found.Icon };
+    }
+
+    /// <summary>
     /// Re-evaluates the commands that depend on the shortcut's position in its group.
     /// </summary>
     internal void RefreshPosition()
@@ -284,8 +308,7 @@ public sealed class ShortcutViewModel : ObservableObject
             return;
         }
 
-        TargetIcon = found.Image;
-        Model = Model with { Icon = found.Icon };
+        SetFoundIcon(found);
         _page.KeepFoundIcon(this);
     }
 }

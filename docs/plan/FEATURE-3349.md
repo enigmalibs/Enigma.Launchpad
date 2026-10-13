@@ -1,6 +1,6 @@
 # FEATURE-3349 — Icons stored with shortcuts
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-3349-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-13-icons-descriptions-tile-actions
@@ -138,7 +138,7 @@ Acceptance criteria:
 
 ### PHASE04 — Try to get icon
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `refresh` through `IProgramIcons`, `IWebsiteIcons`, `IShortcutIcons`.

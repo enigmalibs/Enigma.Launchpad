@@ -46,6 +46,17 @@ public interface IShortcutIcons
     Task<IconImage?> FindAsync(ShortcutKind kind, string target, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the icon of a shortcut's target again — from the program, or from the website itself — rather than
+    /// answering what was found earlier.
+    /// </summary>
+    /// <param name="kind">The kind of shortcut.</param>
+    /// <param name="target">Its target.</param>
+    /// <param name="cancellationToken">Stops this wait only.</param>
+    /// <returns>The icon, not marked as chosen by the user; <see langword="null"/> when none was found, and always
+    /// for a kind that cannot have one found.</returns>
+    Task<IconImage?> RefreshAsync(ShortcutKind kind, string target, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reads an image file the user picked as a shortcut's icon, off the UI thread.
     /// </summary>
     /// <param name="path">The file.</param>
@@ -120,14 +131,29 @@ public sealed class ShortcutIcons : IShortcutIcons
     }
 
     /// <inheritdoc />
-    public async Task<IconImage?> FindAsync(ShortcutKind kind, string target, CancellationToken cancellationToken = default)
+    public Task<IconImage?> FindAsync(ShortcutKind kind, string target, CancellationToken cancellationToken = default)
+        => FindAsync(kind, target, refresh: false, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<IconImage?> RefreshAsync(ShortcutKind kind, string target, CancellationToken cancellationToken = default)
+        => FindAsync(kind, target, refresh: true, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<IconImage> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        return Task.Run(() => ReadFileCoreAsync(path, cancellationToken), cancellationToken);
+    }
+
+    private async Task<IconImage?> FindAsync(ShortcutKind kind, string target, bool refresh, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(target);
 
         Task<byte[]?> lookup = kind switch
         {
-            ShortcutKind.Application => _programIcons.GetAsync(target, cancellationToken),
-            ShortcutKind.Url => _websiteIcons.GetAsync(target, cancellationToken),
+            ShortcutKind.Application => refresh ? _programIcons.RefreshAsync(target, cancellationToken) : _programIcons.GetAsync(target, cancellationToken),
+            ShortcutKind.Url => refresh ? _websiteIcons.RefreshAsync(target, cancellationToken) : _websiteIcons.GetAsync(target, cancellationToken),
             _ => Task.FromResult<byte[]?>(null),
         };
 
@@ -139,14 +165,6 @@ public sealed class ShortcutIcons : IShortcutIcons
         ShortcutIcon icon = ShortcutIcon.FromBytes(png, isCustom: false);
 
         return Show(icon) is { } image ? new IconImage(image, icon) : null;
-    }
-
-    /// <inheritdoc />
-    public Task<IconImage> ReadFileAsync(string path, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-
-        return Task.Run(() => ReadFileCoreAsync(path, cancellationToken), cancellationToken);
     }
 
     private static async Task<IconImage> ReadFileCoreAsync(string path, CancellationToken cancellationToken)

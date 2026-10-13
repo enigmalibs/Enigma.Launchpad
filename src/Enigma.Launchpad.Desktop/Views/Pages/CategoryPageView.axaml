@@ -179,6 +179,13 @@
                                     <ei:Icon Kind="PencilSimple" Classes="menu" />
                                   </MenuItem.Icon>
                                 </MenuItem>
+                                <MenuItem Header="Try to get icon"
+                                          Command="{Binding FindIconCommand}"
+                                          IsVisible="{Binding CanFindIcon}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="ArrowsClockwise" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
                                 <MenuItem Header="Copy target" Command="{Binding CopyTargetCommand}">
                                   <MenuItem.Icon>
                                     <ei:Icon Kind="Copy" Classes="menu" />
