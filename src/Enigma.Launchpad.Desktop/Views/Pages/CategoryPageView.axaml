@@ -160,6 +160,16 @@
                                 <TextBlock Text="{Binding Name}" Classes="tileName" />
                                 <TextBlock Text="{Binding Subtitle}" Classes="tileSubtitle" />
                               </StackPanel>
+                              <!-- The tile's quick actions, over the end of its text while it is hovered or focused. -->
+                              <StackPanel Grid.Column="1" Classes="tileActions">
+                                <Button Classes="tileAction"
+                                        Command="{Binding CopyTargetCommand}"
+                                        IsVisible="{Binding CanCopyFromTile}"
+                                        ToolTip.Tip="{Binding CopyTargetLabel}"
+                                        AutomationProperties.Name="{Binding CopyTargetLabel}">
+                                  <ei:Icon Kind="Copy" Classes="row" />
+                                </Button>
+                              </StackPanel>
                               <!-- Under the icon row, across the tile: the description, when the shortcut has one. -->
                               <TextBlock Grid.Row="1"
                                          Grid.ColumnSpan="2"

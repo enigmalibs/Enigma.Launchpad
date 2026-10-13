@@ -1,6 +1,6 @@
 # FEATURE-2DA2 — Tile quick actions
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-2da2-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-13-icons-descriptions-tile-actions
@@ -60,7 +60,7 @@ arguments…, where they can be changed for one run without changing the shortcu
 
 ### PHASE01 — Action strip & copy buttons
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. ViewModel properties; tile markup; styles.
