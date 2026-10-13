@@ -161,6 +161,16 @@ public sealed class ShortcutViewModel : ObservableObject
     public bool CanFindIcon => _page.CanFindIcons;
 
     /// <summary>
+    /// Gets a value indicating whether the tile has a button copying its target: a folder's path, a link's address.
+    /// </summary>
+    public bool CanCopyFromTile => _page.Kind is ShortcutKind.Directory or ShortcutKind.Url;
+
+    /// <summary>
+    /// Gets what copying the target is called on the tile's button.
+    /// </summary>
+    public string CopyTargetLabel => _page.Kind == ShortcutKind.Url ? "Copy URL" : "Copy path";
+
+    /// <summary>
     /// Gets a value indicating whether the shortcut can be shown in its folder; a link cannot.
     /// </summary>
     public bool CanReveal => _page.Kind != ShortcutKind.Url;
