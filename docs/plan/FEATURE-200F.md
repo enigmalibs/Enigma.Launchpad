@@ -1,6 +1,6 @@
 # FEATURE-200F — Linux installer
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-200f-linux-installer`
 **Run:** vibe/2026-10-13-linux-installer-release

@@ -82,7 +82,9 @@ An icon is a PNG image in base64; one that is not, or is over 256 KB, is dropped
 
 ## Requirements
 
-- .NET SDK 10.0.100 or later (pinned in `global.json`, rolls forward to newer feature bands)
+- .NET SDK 10.0.100 or later to build (pinned in `global.json`, rolls forward to newer feature bands). The Linux
+  installer bundles the .NET runtime with the application by default; a framework-dependent build needs the .NET 10
+  runtime instead
 - Windows 10/11, Linux (X11) or macOS
 
 ## Build, run, test
@@ -93,6 +95,28 @@ dotnet run --project src/Enigma.Launchpad.Desktop
 dotnet test --solution Enigma.Launchpad.slnx
 ```
 
+## Install on Linux
+
+`packaging/linux/install.sh` builds the application from this repository and installs it for you — no root, no
+`sudo`, nothing outside your home directory — so that **Enigma Launchpad** is in your application launcher:
+
+```bash
+./packaging/linux/install.sh
+```
+
+| What                                     | Where (`XDG_DATA_HOME` and `XDG_BIN_HOME` are honoured)               |
+|------------------------------------------|-----------------------------------------------------------------------|
+| The application                          | `~/.local/share/enigma-launchpad`                                     |
+| A launcher command, `enigma-launchpad`   | `~/.local/bin/enigma-launchpad`                                       |
+| The desktop entry                        | `~/.local/share/applications/enigma-launchpad.desktop`                |
+| The icon, in seven sizes                 | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`      |
+
+By default the .NET runtime is bundled with the application (about 115 MB), so it runs whatever is installed on the
+machine. `--framework-dependent` builds against an installed .NET 10 runtime instead (about 35 MB); `--from DIR`
+installs a directory you published yourself, and `--rid` picks another runtime identifier. Run the installer again
+to upgrade in place. `./packaging/linux/uninstall.sh` removes those four things and nothing else: your shortcuts,
+profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
+
 ## Solution layout
 
 | Path                                       | What it is                                                         |
@@ -101,6 +125,7 @@ dotnet test --solution Enigma.Launchpad.slnx
 | `src/Enigma.Launchpad.Desktop`             | The Avalonia application: composition root, ViewModels, Views      |
 | `tests/Enigma.Launchpad.Core.UnitTests`    | xUnit v3 tests for the core library                                |
 | `tests/Enigma.Launchpad.Desktop.UnitTests` | xUnit v3 tests for the app, including headless Avalonia tests      |
+| `packaging/linux`                          | The Linux installer and uninstaller, the desktop entry, the icons  |
 | `docs/`                                    | Roadmap, plans and completion records                              |
 
 ## License

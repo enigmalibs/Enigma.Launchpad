@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Enigma Launchpad
+GenericName=Shortcut Launcher
+Comment=Your applications, folders and websites, one click away
+Exec=@EXEC@
+Icon=enigma-launchpad
+Terminal=false
+Categories=Utility;
+Keywords=launcher;shortcut;application;program;folder;directory;url;website;bookmark;profile;
+StartupNotify=true
+StartupWMClass=Enigma.Launchpad.Desktop
