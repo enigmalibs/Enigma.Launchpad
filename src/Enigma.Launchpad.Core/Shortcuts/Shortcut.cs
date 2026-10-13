@@ -11,9 +11,12 @@ namespace Enigma.Launchpad.Core.Shortcuts;
 /// <param name="Arguments">Command-line arguments; applications only, <see langword="null"/> otherwise.</param>
 /// <param name="Description">A line saying what the shortcut is for, shown on its tile; <see langword="null"/> when
 /// there is none.</param>
+/// <param name="Icon">The icon its tile shows — chosen by the user, or found from the target and kept;
+/// <see langword="null"/> when there is none yet.</param>
 public sealed record Shortcut(
     Guid Id,
     string Name,
     string Target,
     string? Arguments = null,
-    string? Description = null);
+    string? Description = null,
+    ShortcutIcon? Icon = null);

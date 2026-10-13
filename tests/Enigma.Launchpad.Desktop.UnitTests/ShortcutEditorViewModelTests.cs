@@ -182,6 +182,17 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AnEditedShortcut_KeepsItsIcon()
+    {
+        Shortcut existing = new(Guid.NewGuid(), "Temp", _temp.Path, Icon: new ShortcutIcon("iVBORw0KGgo=", IsCustom: true));
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, existing);
+
+        form.Name = "Scratch";
+
+        Assert.Equal(existing.Icon, form.ToShortcut().Icon);
+    }
+
+    [Fact]
     public async Task Browse_FillsTheTarget_AndTheNameWhenItIsEmpty()
     {
         string program = Path.Combine(_temp.Path, "Editor.exe");
