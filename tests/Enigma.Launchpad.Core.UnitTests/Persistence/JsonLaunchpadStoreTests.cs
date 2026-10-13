@@ -59,6 +59,8 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
         Assert.Contains("\"profiles\": [", json, StringComparison.Ordinal);
         Assert.Contains("\"name\": \"Work\"", json, StringComparison.Ordinal);
         Assert.Contains("\"description\": \"The editor\"", json, StringComparison.Ordinal);
+        Assert.Contains($"\"png\": \"{Convert.ToBase64String(SamplePng.Bytes)}\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"isCustom\": true", json, StringComparison.Ordinal);
         Assert.Contains("\"applications\": [", json, StringComparison.Ordinal);
         Assert.DoesNotContain("\"activeProfile\":", json, StringComparison.Ordinal);
         Assert.Contains("\"isCollapsed\": true", json, StringComparison.Ordinal);
@@ -198,7 +200,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadAsync_ReadsAShortcutWithoutADescription_AsHavingNone()
+    public async Task LoadAsync_ReadsAShortcutWithoutADescriptionOrAnIcon_AsHavingNone()
     {
         const string json = """
             {
@@ -216,6 +218,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
         Assert.Null(result.UnreadableFileMovedTo);
         Shortcut shortcut = Assert.Single(Assert.Single(result.Data.GroupsOf(ShortcutKind.Application)).Shortcuts);
         Assert.Null(shortcut.Description);
+        Assert.Null(shortcut.Icon);
     }
 
     [Fact]
@@ -272,7 +275,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
                     Guid.NewGuid(),
                     "Dev tools",
                     [
-                        new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "--new-window", "The editor"),
+                        new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "--new-window", "The editor", ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: true)),
                         new Shortcut(Guid.NewGuid(), "Terminal", @"C:\Tools\wt.exe"),
                     ],
                     IsCollapsed: true),
@@ -282,7 +285,10 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
                 new ShortcutGroup(Guid.NewGuid(), "Empty", []),
             ],
             [
-                new ShortcutGroup(Guid.NewGuid(), "Docs", [new Shortcut(Guid.NewGuid(), "Avalonia", "https://docs.avaloniaui.net")]),
+                new ShortcutGroup(
+                    Guid.NewGuid(),
+                    "Docs",
+                    [new Shortcut(Guid.NewGuid(), "Avalonia", "https://docs.avaloniaui.net", Icon: ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: false))]),
             ]);
 
         Profile home = Profile.Create("Home") with

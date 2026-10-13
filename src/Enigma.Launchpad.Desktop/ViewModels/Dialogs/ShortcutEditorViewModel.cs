@@ -22,6 +22,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     private readonly IShortcutValidator _validator;
     private readonly IPathPicker _picker;
     private readonly Guid _id;
+    private readonly ShortcutIcon? _icon;
 
     /// <summary>
     /// Initialises a new instance.
@@ -39,6 +40,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         _validator = validator;
         _picker = picker;
         _id = existing?.Id ?? Guid.NewGuid();
+        _icon = existing?.Icon;
         IsNew = existing is null;
 
         Name = existing?.Name ?? string.Empty;
@@ -260,7 +262,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     /// <summary>
     /// Builds the shortcut the form describes.
     /// </summary>
-    /// <returns>The shortcut, keeping the identity of the one edited.</returns>
+    /// <returns>The shortcut, keeping the identity and the icon of the one edited.</returns>
     /// <exception cref="InvalidOperationException">The form is not valid.</exception>
     public Shortcut ToShortcut()
     {
@@ -274,7 +276,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         string? arguments = HasArguments && !string.IsNullOrWhiteSpace(Arguments) ? Arguments.Trim() : null;
         string? description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
 
-        return new Shortcut(_id, Name.Trim(), normalized, arguments, description);
+        return new Shortcut(_id, Name.Trim(), normalized, arguments, description, _icon);
     }
 
     private void Revalidate()

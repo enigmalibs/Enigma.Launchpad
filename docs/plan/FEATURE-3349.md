@@ -1,6 +1,6 @@
 # FEATURE-3349 — Icons stored with shortcuts
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-3349-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-13-icons-descriptions-tile-actions
@@ -78,7 +78,7 @@ A shortcut's icon lives **in `launchpad.json`**, with the shortcut:
 
 ### PHASE01 — Icon in the shortcut model
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Shortcuts/ShortcutIcon.cs`; `Shortcut.Icon`.

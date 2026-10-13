@@ -52,7 +52,7 @@ is safe.
 ### Export files
 
 An export is a small, readable JSON document of its own — not a copy of `launchpad.json` — holding names,
-targets, arguments and descriptions, but no internal identities and no folded state:
+targets, arguments, descriptions and icons, but no internal identities and no folded state:
 
 ```json
 {
@@ -64,7 +64,7 @@ targets, arguments and descriptions, but no internal identities and no folded st
   ],
   "directories": [],
   "urls": [
-    { "name": "Docs", "shortcuts": [ { "name": "Avalonia", "target": "https://docs.avaloniaui.net" } ] }
+    { "name": "Docs", "shortcuts": [ { "name": "Avalonia", "target": "https://docs.avaloniaui.net", "icon": { "png": "iVBORw0KGgo…", "isCustom": false } } ] }
   ]
 }
 ```
@@ -72,6 +72,7 @@ targets, arguments and descriptions, but no internal identities and no folded st
 A file that is not such an export, or is damaged, is refused with the reason. Inside one, an entry the shortcut
 form would refuse — a blank name, a relative path, an address other than http or https, a description over 200
 characters — is left out, and the import says how many were. Paths need not exist on the machine importing them.
+An icon is a PNG image in base64; one that is not, or is over 256 KB, is dropped and its shortcut kept.
 
 ## Requirements
 
