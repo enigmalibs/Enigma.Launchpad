@@ -1,6 +1,6 @@
 # FEATURE-2DA2 — Tile quick actions
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-2da2-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-13-icons-descriptions-tile-actions
@@ -90,7 +90,7 @@ Acceptance criteria:
 
 ### PHASE03 — Open in terminal
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Core launcher: candidates per platform, fallback chain, results.

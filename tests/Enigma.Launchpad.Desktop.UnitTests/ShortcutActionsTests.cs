@@ -54,6 +54,30 @@ public sealed class ShortcutActionsTests
     }
 
     [Fact]
+    public void OpenInTerminal_ThatSucceeds_MinimizesTheWindow_WhenTheUserAskedForIt()
+    {
+        _settings.Update(current => current with { MinimizeAfterLaunch = true });
+
+        Assert.True(_actions.OpenInTerminal(Shortcut()));
+
+        Assert.Equal(["Terminal"], _launcher.Calls);
+        Assert.Equal(1, _window.Minimized);
+        Assert.Empty(_notifications.Shown);
+    }
+
+    [Fact]
+    public void OpenInTerminal_ThatFails_ShowsAnError_AndNeverMinimizes()
+    {
+        _settings.Update(current => current with { MinimizeAfterLaunch = true });
+        _launcher.Result = new LaunchResult(LaunchOutcome.Failed, "No terminal was found on this computer.");
+
+        Assert.False(_actions.OpenInTerminal(Shortcut()));
+
+        Assert.Equal(("Error", "The shortcut could not be opened", "No terminal was found on this computer."), Assert.Single(_notifications.Shown));
+        Assert.Equal(0, _window.Minimized);
+    }
+
+    [Fact]
     public async Task CopyTarget_PutsTheTargetOnTheClipboard()
     {
         await _actions.CopyTargetAsync(Shortcut("https://example.com"));
@@ -132,6 +156,12 @@ public sealed class ShortcutActionsTests
         public LaunchResult Reveal(ShortcutKind kind, Shortcut shortcut)
         {
             Calls.Add($"Reveal {kind}");
+            return Result;
+        }
+
+        public LaunchResult OpenInTerminal(Shortcut shortcut)
+        {
+            Calls.Add("Terminal");
             return Result;
         }
     }

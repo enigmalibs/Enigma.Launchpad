@@ -40,6 +40,7 @@ public sealed class ShortcutViewModel : ObservableObject
 
         OpenCommand = new RelayCommand(() => _page.OpenShortcut(this));
         RunWithArgumentsCommand = new AsyncRelayCommand(() => _page.RunWithArgumentsAsync(this), () => CanRunWithArguments);
+        OpenInTerminalCommand = new RelayCommand(() => _page.OpenInTerminal(this), () => CanOpenInTerminal);
         EditCommand = new AsyncRelayCommand(() => _page.EditShortcutAsync(this));
         FindIconCommand = new AsyncRelayCommand(() => _page.FindShortcutIconAsync(this), () => CanFindIcon);
         CopyTargetCommand = new AsyncRelayCommand(() => _page.CopyShortcutTargetAsync(this));
@@ -168,6 +169,11 @@ public sealed class ShortcutViewModel : ObservableObject
     public bool CanRunWithArguments => _page.Kind == ShortcutKind.Application;
 
     /// <summary>
+    /// Gets a value indicating whether the shortcut can be opened in a terminal: a folder can.
+    /// </summary>
+    public bool CanOpenInTerminal => _page.Kind == ShortcutKind.Directory;
+
+    /// <summary>
     /// Gets a value indicating whether the tile has a button copying its target: a folder's path, a link's address.
     /// </summary>
     public bool CanCopyFromTile => _page.Kind is ShortcutKind.Directory or ShortcutKind.Url;
@@ -228,6 +234,11 @@ public sealed class ShortcutViewModel : ObservableObject
     /// Gets the command asking for arguments and running the application with them, this once.
     /// </summary>
     public AsyncRelayCommand RunWithArgumentsCommand { get; }
+
+    /// <summary>
+    /// Gets the command opening a terminal in the folder.
+    /// </summary>
+    public RelayCommand OpenInTerminalCommand { get; }
 
     /// <summary>
     /// Gets the command editing the shortcut.

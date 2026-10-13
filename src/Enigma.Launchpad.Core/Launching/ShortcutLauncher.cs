@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
 using Microsoft.Extensions.Logging;
@@ -30,6 +32,14 @@ public interface IShortcutLauncher
     /// <param name="shortcut">The shortcut.</param>
     /// <returns>How it ended.</returns>
     LaunchResult Reveal(ShortcutKind kind, Shortcut shortcut);
+
+    /// <summary>
+    /// Opens a terminal in a directory shortcut's folder: Windows Terminal or the Command Prompt on Windows,
+    /// Terminal on macOS, the desktop's terminal on Linux.
+    /// </summary>
+    /// <param name="shortcut">The directory shortcut.</param>
+    /// <returns>How it ended.</returns>
+    LaunchResult OpenInTerminal(Shortcut shortcut);
 }
 
 /// <summary>
@@ -59,6 +69,12 @@ internal enum DesktopPlatform
 /// </remarks>
 public sealed class ShortcutLauncher : IShortcutLauncher
 {
+    // What starting a program that is not installed fails with: ERROR_FILE_NOT_FOUND on Windows, ENOENT elsewhere.
+    private const int ProgramNotFound = 2;
+
+    // The terminals tried on Linux, the distribution's own choice first.
+    private static readonly string[] LinuxTerminals = ["x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"];
+
     private readonly IProcessStarter _starter;
     private readonly ILogger<ShortcutLauncher> _logger;
 
@@ -99,6 +115,49 @@ public sealed class ShortcutLauncher : IShortcutLauncher
         LaunchResult? refusal = CheckTarget(kind, shortcut.Target);
 
         return refusal ?? Start(BuildRevealStartInfo(CurrentPlatform, shortcut.Target), shortcut);
+    }
+
+    /// <inheritdoc />
+    public LaunchResult OpenInTerminal(Shortcut shortcut)
+    {
+        ArgumentNullException.ThrowIfNull(shortcut);
+
+        LaunchResult? refusal = CheckTarget(ShortcutKind.Directory, shortcut.Target);
+
+        return refusal ?? StartFirstTerminal(BuildTerminalStartInfos(CurrentPlatform, shortcut.Target), shortcut);
+    }
+
+    /// <summary>
+    /// The terminals a folder can be opened in, the preferred first.
+    /// </summary>
+    /// <param name="platform">The desktop the application runs on.</param>
+    /// <param name="directory">The folder.</param>
+    /// <returns>The start information of each; the folder is always the working directory or an argument of its own,
+    /// never part of a command line a terminal or a shell would parse.</returns>
+    internal static IReadOnlyList<ProcessStartInfo> BuildTerminalStartInfos(DesktopPlatform platform, string directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+
+        switch (platform)
+        {
+            case DesktopPlatform.Windows:
+                // "-d ." opens in Windows Terminal's own working directory, so the path never meets its command
+                // line, where a ';' would start a new tab.
+                ProcessStartInfo windowsTerminal = new("wt.exe") { UseShellExecute = false, WorkingDirectory = directory };
+                windowsTerminal.ArgumentList.Add("-d");
+                windowsTerminal.ArgumentList.Add(".");
+                return [windowsTerminal, new ProcessStartInfo("cmd.exe") { UseShellExecute = false, WorkingDirectory = directory }];
+
+            case DesktopPlatform.MacOS:
+                ProcessStartInfo mac = new("open") { UseShellExecute = false };
+                mac.ArgumentList.Add("-a");
+                mac.ArgumentList.Add("Terminal");
+                mac.ArgumentList.Add(directory);
+                return [mac];
+
+            default:
+                return LinuxTerminals.Select(terminal => new ProcessStartInfo(terminal) { UseShellExecute = false, WorkingDirectory = directory }).ToArray();
+        }
     }
 
     /// <summary>
@@ -190,6 +249,30 @@ public sealed class ShortcutLauncher : IShortcutLauncher
                 => new LaunchResult(LaunchOutcome.Refused, error),
             _ => null,
         };
+
+    // Each terminal that is not installed gives way to the next; any other failure is the answer.
+    private LaunchResult StartFirstTerminal(IReadOnlyList<ProcessStartInfo> terminals, Shortcut shortcut)
+    {
+        foreach (ProcessStartInfo terminal in terminals)
+        {
+            try
+            {
+                _starter.Start(terminal);
+                return LaunchResult.Launched;
+            }
+            catch (Win32Exception exception) when (exception.NativeErrorCode == ProgramNotFound)
+            {
+                _logger.LogDebug(exception, "The terminal {Terminal} is not installed", terminal.FileName);
+            }
+            catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or PlatformNotSupportedException)
+            {
+                _logger.LogWarning(exception, "Opening a terminal in {Name} failed", shortcut.Name);
+                return new LaunchResult(LaunchOutcome.Failed, $"A terminal could not be opened in \u201C{shortcut.Name}\u201D: {exception.Message}");
+            }
+        }
+
+        return new LaunchResult(LaunchOutcome.Failed, "No terminal was found on this computer.");
+    }
 
     private LaunchResult Start(ProcessStartInfo startInfo, Shortcut shortcut)
     {

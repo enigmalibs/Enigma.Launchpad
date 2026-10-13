@@ -362,6 +362,18 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     }
 
     /// <summary>
+    /// Opens a terminal in a directory shortcut's folder; a failure is shown to the user.
+    /// </summary>
+    /// <param name="shortcut">The folder's tile.</param>
+    internal void OpenInTerminal(ShortcutViewModel shortcut)
+    {
+        if (Kind == ShortcutKind.Directory)
+        {
+            _actions.OpenInTerminal(shortcut.Model);
+        }
+    }
+
+    /// <summary>
     /// Shows a shortcut in its folder; a failure is shown to the user.
     /// </summary>
     /// <param name="shortcut">The shortcut.</param>
