@@ -43,11 +43,11 @@
     </StackPanel>
 
     <StackPanel Spacing="4" IsVisible="{Binding HasArguments}">
-      <TextBlock Text="Arguments (optional)" Classes="fieldLabel" />
+      <TextBlock Text="Default arguments (optional)" Classes="fieldLabel" />
       <TextBox Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                PlaceholderText="--new-window"
-               AutomationProperties.Name="Arguments" />
-      <TextBlock Text="Passed to the program as typed. It starts in its own folder."
+               AutomationProperties.Name="Default arguments" />
+      <TextBlock Text="Passed as typed when the tile is clicked; Run with arguments… starts from them and can change them for one run. The program starts in its own folder."
                  Classes="fieldHint" />
     </StackPanel>
 

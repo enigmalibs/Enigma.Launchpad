@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.ArgumentsDialogView"
+             x:DataType="vm:ArgumentsDialogViewModel"
+             MinWidth="420">
+  <StackPanel Spacing="14">
+    <StackPanel Spacing="4">
+      <TextBlock Text="Program" Classes="fieldLabel" />
+      <TextBlock Text="{Binding Program}"
+                 TextTrimming="PrefixCharacterEllipsis"
+                 ToolTip.Tip="{Binding Program}" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Arguments" Classes="fieldLabel" />
+      <TextBox x:Name="ArgumentsBox"
+               Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               PlaceholderText="None"
+               AutomationProperties.Name="Arguments" />
+      <TextBlock Text="{Binding Hint}" Classes="fieldHint" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

@@ -55,6 +55,13 @@ public interface ILaunchpadDialogs
     Task<Shortcut?> EditShortcutAsync(ShortcutKind kind, Shortcut? existing);
 
     /// <summary>
+    /// Asks which arguments to run an application with this once, starting from its default arguments.
+    /// </summary>
+    /// <param name="shortcut">The application shortcut.</param>
+    /// <returns>The arguments as typed, trimmed — empty for none; <see langword="null"/> when the user cancelled.</returns>
+    Task<string?> PromptArgumentsAsync(Shortcut shortcut);
+
+    /// <summary>
     /// Asks which of a profile's groups and shortcuts to take, as a tree of checkboxes where everything starts
     /// checked and open; the confirm button is enabled only while something is checked.
     /// </summary>
@@ -131,6 +138,17 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
             () => model.IsValid);
 
         return confirmed && model.IsValid ? model.ToShortcut() : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> PromptArgumentsAsync(Shortcut shortcut)
+    {
+        ArgumentNullException.ThrowIfNull(shortcut);
+
+        ArgumentsDialogViewModel model = new(shortcut);
+        bool confirmed = await ShowFormAsync($"Run {shortcut.Name}", "Run", new ArgumentsDialogView { DataContext = model }, model, () => true);
+
+        return confirmed ? model.TrimmedArguments : null;
     }
 
     /// <inheritdoc />

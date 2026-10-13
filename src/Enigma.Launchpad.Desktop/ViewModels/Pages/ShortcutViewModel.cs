@@ -39,6 +39,7 @@ public sealed class ShortcutViewModel : ObservableObject
         Model = model;
 
         OpenCommand = new RelayCommand(() => _page.OpenShortcut(this));
+        RunWithArgumentsCommand = new AsyncRelayCommand(() => _page.RunWithArgumentsAsync(this), () => CanRunWithArguments);
         EditCommand = new AsyncRelayCommand(() => _page.EditShortcutAsync(this));
         FindIconCommand = new AsyncRelayCommand(() => _page.FindShortcutIconAsync(this), () => CanFindIcon);
         CopyTargetCommand = new AsyncRelayCommand(() => _page.CopyShortcutTargetAsync(this));
@@ -161,6 +162,12 @@ public sealed class ShortcutViewModel : ObservableObject
     public bool CanFindIcon => _page.CanFindIcons;
 
     /// <summary>
+    /// Gets a value indicating whether the shortcut can be run with other arguments than its default ones: an
+    /// application can.
+    /// </summary>
+    public bool CanRunWithArguments => _page.Kind == ShortcutKind.Application;
+
+    /// <summary>
     /// Gets a value indicating whether the tile has a button copying its target: a folder's path, a link's address.
     /// </summary>
     public bool CanCopyFromTile => _page.Kind is ShortcutKind.Directory or ShortcutKind.Url;
@@ -216,6 +223,11 @@ public sealed class ShortcutViewModel : ObservableObject
     /// Gets the command opening the shortcut.
     /// </summary>
     public RelayCommand OpenCommand { get; }
+
+    /// <summary>
+    /// Gets the command asking for arguments and running the application with them, this once.
+    /// </summary>
+    public AsyncRelayCommand RunWithArgumentsCommand { get; }
 
     /// <summary>
     /// Gets the command editing the shortcut.
