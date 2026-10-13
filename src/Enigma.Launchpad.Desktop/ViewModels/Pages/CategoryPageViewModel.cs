@@ -338,6 +338,30 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     internal void OpenShortcut(ShortcutViewModel shortcut) => _actions.Open(Kind, shortcut.Model);
 
     /// <summary>
+    /// Asks which arguments to run an application with this once — starting from its default arguments — and runs
+    /// it with them. The shortcut itself is not changed.
+    /// </summary>
+    /// <param name="shortcut">The application's tile.</param>
+    /// <returns>A task that completes once the user has answered.</returns>
+    internal async Task RunWithArgumentsAsync(ShortcutViewModel shortcut)
+    {
+        if (Kind != ShortcutKind.Application)
+        {
+            return;
+        }
+
+        Shortcut model = shortcut.Model;
+        string? arguments = await _dialogs.PromptArgumentsAsync(model);
+
+        if (arguments is null)
+        {
+            return;
+        }
+
+        _actions.Open(Kind, model with { Arguments = arguments.Length == 0 ? null : arguments });
+    }
+
+    /// <summary>
     /// Shows a shortcut in its folder; a failure is shown to the user.
     /// </summary>
     /// <param name="shortcut">The shortcut.</param>

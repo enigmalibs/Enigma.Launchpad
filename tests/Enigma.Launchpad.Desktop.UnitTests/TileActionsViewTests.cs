@@ -6,6 +6,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Desktop.Services;
@@ -76,6 +77,35 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
             (string action, _, Shortcut shortcut) = Assert.Single(recording.Performed);
             Assert.Equal("Copy", action);
             Assert.Equal(Folder, shortcut.Target);
+        });
+
+    [Fact]
+    public void AnApplicationTile_OffersRunWithArguments_WhichAsksThenRuns()
+        => fixture.RunAsync(async () =>
+        {
+            RecordingShortcutActions recording = new();
+            Shortcut code = PageHarness.Shortcut("Code", @"C:\Tools\code.exe", "--new-window");
+            using WindowHarness harness = new(
+                PageHarness.WithShortcuts(ShortcutKind.Application, ("Tools", [code])),
+                services => services.AddSingleton<IShortcutActions>(recording));
+            CategoryPageView view = await harness.LoadedPageAsync();
+            Button run = Assert.Single(ActionButtons(Tile(view)), button => button.IsVisible);
+            Assert.Equal("Run with arguments", AutomationProperties.GetName(run));
+
+            run.Command!.Execute(null);
+            await WindowHarness.WaitUntilAsync(() => harness.Window.HostDialog.IsOpen);
+            harness.Window.UpdateLayout();
+
+            Assert.Equal("Run Code", harness.Window.HostDialog.Title);
+            TextBox field = harness.Window.HostDialog.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "ArgumentsBox");
+            Assert.Equal("--new-window", field.Text);
+
+            field.Text = "--wait notes.txt";
+            Button confirm = harness.Window.HostDialog.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "PART_PrimaryButton");
+            confirm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WindowHarness.WaitUntilAsync(() => recording.Performed.Count > 0);
+
+            Assert.Equal("--wait notes.txt", Assert.Single(recording.Performed).Shortcut.Arguments);
         });
 
     [Fact]

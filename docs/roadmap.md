@@ -39,5 +39,5 @@
 | - PHASE02    | Website icon finding                | DONE        | (in BUG-3079.md)          |
 | FEATURE-2DA2 | Tile quick actions                  | IN PROGRESS | docs/plan/FEATURE-2DA2.md |
 | - PHASE01    | Action strip & copy buttons         | DONE        | (in FEATURE-2DA2.md)      |
-| - PHASE02    | Run with arguments                  | TODO        | (in FEATURE-2DA2.md)      |
+| - PHASE02    | Run with arguments                  | DONE        | (in FEATURE-2DA2.md)      |
 | - PHASE03    | Open in terminal                    | TODO        | (in FEATURE-2DA2.md)      |

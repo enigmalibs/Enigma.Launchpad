@@ -74,7 +74,7 @@ Acceptance criteria:
 
 ### PHASE02 — Run with arguments
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Arguments dialog (ViewModel, view, `ILaunchpadDialogs` method).
