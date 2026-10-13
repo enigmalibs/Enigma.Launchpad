@@ -50,5 +50,20 @@
       <TextBlock Text="Passed to the program as typed. It starts in its own folder."
                  Classes="fieldHint" />
     </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Description (optional)" Classes="fieldLabel" />
+      <TextBox x:Name="DescriptionBox"
+               Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               TextWrapping="Wrap"
+               MaxLength="400"
+               PlaceholderText="What it is for"
+               AutomationProperties.Name="Description" />
+      <TextBlock Text="{Binding VisibleDescriptionError}"
+                 IsVisible="{Binding VisibleDescriptionError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+      <TextBlock Text="Shown on the tile, under its name."
+                 Classes="fieldHint" />
+    </StackPanel>
   </StackPanel>
 </UserControl>

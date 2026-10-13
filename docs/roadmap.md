@@ -28,7 +28,7 @@
 | - PHASE02    | URL tiles show website icons        | DONE   | (in FEATURE-1178.md)      |
 | - PHASE03    | Website icon disk cache             | DONE   | (in FEATURE-1178.md)      |
 | FEATURE-79F9 | Repository dotfiles                 | DONE   | docs/plan/FEATURE-79F9.md |
-| FEATURE-059B | Shortcut descriptions               | TODO   | docs/plan/FEATURE-059B.md |
+| FEATURE-059B | Shortcut descriptions               | DONE   | docs/plan/FEATURE-059B.md |
 | FEATURE-3349 | Icons stored with shortcuts         | TODO   | docs/plan/FEATURE-3349.md |
 | - PHASE01    | Icon in the shortcut model          | TODO   | (in FEATURE-3349.md)      |
 | - PHASE02    | Tiles keep found icons              | TODO   | (in FEATURE-3349.md)      |

@@ -145,7 +145,7 @@
                                   Command="{Binding OpenCommand}"
                                   ToolTip.Tip="{Binding ToolTip}"
                                   AutomationProperties.Name="{Binding Name}">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12">
                               <!-- The target's own icon — a program's, a website's — when there is one, else the category's glyph. -->
                               <Border Grid.Column="0" Classes="tileIcon">
                                 <Panel>
@@ -160,6 +160,12 @@
                                 <TextBlock Text="{Binding Name}" Classes="tileName" />
                                 <TextBlock Text="{Binding Subtitle}" Classes="tileSubtitle" />
                               </StackPanel>
+                              <!-- Under the icon row, across the tile: the description, when the shortcut has one. -->
+                              <TextBlock Grid.Row="1"
+                                         Grid.ColumnSpan="2"
+                                         Text="{Binding Description}"
+                                         Classes="tileDescription"
+                                         IsVisible="{Binding HasDescription}" />
                             </Grid>
                             <Button.ContextMenu>
                               <ContextMenu>

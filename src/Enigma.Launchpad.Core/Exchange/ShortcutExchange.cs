@@ -19,8 +19,9 @@ namespace Enigma.Launchpad.Core.Exchange;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The document holds names, targets and arguments only — no identities and no fold state: it is a way to move
-/// shortcuts between profiles and machines, not a copy of <c>launchpad.json</c>, whose format it never follows.
+/// The document holds names, targets, arguments and descriptions only — no identities and no fold state: it is a
+/// way to move shortcuts between profiles and machines, not a copy of <c>launchpad.json</c>, whose format it never
+/// follows.
 /// </para>
 /// <para>
 /// A file is untrusted input. One that is not a version 1 export is refused as a whole; inside one that is, an
@@ -228,7 +229,8 @@ public sealed class ShortcutExchange : IShortcutExchange
                     .Select(shortcut => new ExportShortcut(
                         shortcut.Name,
                         shortcut.Target,
-                        string.IsNullOrWhiteSpace(shortcut.Arguments) ? null : shortcut.Arguments))
+                        string.IsNullOrWhiteSpace(shortcut.Arguments) ? null : shortcut.Arguments,
+                        string.IsNullOrWhiteSpace(shortcut.Description) ? null : shortcut.Description))
                     .ToArray()))
             .ToArray();
 
@@ -299,7 +301,9 @@ public sealed class ShortcutExchange : IShortcutExchange
 
     private Shortcut? Read(ShortcutKind kind, ExportShortcut shortcut)
     {
-        if ((_validator.ValidateShortcutName(shortcut.Name) is not null) || (ReadTarget(kind, shortcut.Target) is not { } target))
+        if ((_validator.ValidateShortcutName(shortcut.Name) is not null)
+            || (_validator.ValidateDescription(shortcut.Description) is not null)
+            || (ReadTarget(kind, shortcut.Target) is not { } target))
         {
             return null;
         }
@@ -309,7 +313,9 @@ public sealed class ShortcutExchange : IShortcutExchange
             ? shortcut.Arguments.Trim()
             : null;
 
-        return new Shortcut(Guid.NewGuid(), shortcut.Name.Trim(), target, arguments);
+        string? description = string.IsNullOrWhiteSpace(shortcut.Description) ? null : shortcut.Description.Trim();
+
+        return new Shortcut(Guid.NewGuid(), shortcut.Name.Trim(), target, arguments, description);
     }
 
     /// <summary>
@@ -342,5 +348,10 @@ public sealed class ShortcutExchange : IShortcutExchange
     /// <param name="Name">The shortcut's name.</param>
     /// <param name="Target">The executable path, the directory path, or the URL.</param>
     /// <param name="Arguments">Command-line arguments, for an application that has some.</param>
-    private sealed record ExportShortcut(string Name, string Target, string? Arguments = null);
+    /// <param name="Description">What the shortcut is for, when it says.</param>
+    private sealed record ExportShortcut(
+        string Name,
+        string Target,
+        string? Arguments = null,
+        string? Description = null);
 }

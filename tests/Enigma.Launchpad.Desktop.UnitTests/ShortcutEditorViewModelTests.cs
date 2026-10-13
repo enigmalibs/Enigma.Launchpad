@@ -124,6 +124,63 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
         Assert.Equal(existing with { Name = "Scratch" }, form.ToShortcut());
     }
 
+    [Theory]
+    [InlineData(ShortcutKind.Application)]
+    [InlineData(ShortcutKind.Directory)]
+    [InlineData(ShortcutKind.Url)]
+    public void EveryKind_TakesADescription_StoredTrimmed(ShortcutKind kind)
+    {
+        string target = kind switch
+        {
+            ShortcutKind.Application => Program("tool.exe"),
+            ShortcutKind.Directory => _temp.Path,
+            _ => "https://example.com",
+        };
+        ShortcutEditorViewModel form = Form(kind, new Shortcut(Guid.NewGuid(), "Here", target));
+
+        form.Description = "  What it is for  ";
+
+        Assert.Equal("What it is for", form.ToShortcut().Description);
+    }
+
+    [Fact]
+    public void ABlankDescription_IsStoredAsNone()
+    {
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Description: "Old"));
+
+        form.Description = "   ";
+
+        Assert.Null(form.ToShortcut().Description);
+    }
+
+    [Fact]
+    public void ALongDescription_IsRefused_WithItsErrorShown()
+    {
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path));
+
+        Assert.Null(form.VisibleDescriptionError);
+
+        form.Description = new string('x', ShortcutValidator.MaxDescriptionLength + 1);
+
+        Assert.False(form.IsValid);
+        Assert.Equal("Keep the description to 200 characters or fewer.", form.VisibleDescriptionError);
+
+        form.Description = "Short";
+
+        Assert.True(form.IsValid);
+        Assert.Null(form.VisibleDescriptionError);
+    }
+
+    [Fact]
+    public void AnEditedShortcut_StartsWithItsDescription_AndKeepsIt()
+    {
+        Shortcut existing = new(Guid.NewGuid(), "Temp", _temp.Path, Description: "Scratch space");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, existing);
+
+        Assert.Equal("Scratch space", form.Description);
+        Assert.Equal(existing, form.ToShortcut());
+    }
+
     [Fact]
     public async Task Browse_FillsTheTarget_AndTheNameWhenItIsEmpty()
     {
@@ -168,4 +225,11 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
     }
 
     private ShortcutEditorViewModel Form(ShortcutKind kind, Shortcut? existing = null) => new(kind, existing, _validator, _picker);
+
+    private string Program(string name)
+    {
+        string program = _temp.Combine(name);
+        File.WriteAllText(program, string.Empty);
+        return program;
+    }
 }

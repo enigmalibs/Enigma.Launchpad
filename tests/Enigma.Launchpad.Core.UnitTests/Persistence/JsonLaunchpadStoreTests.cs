@@ -58,6 +58,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
         Assert.Contains("\"activeProfileId\": ", json, StringComparison.Ordinal);
         Assert.Contains("\"profiles\": [", json, StringComparison.Ordinal);
         Assert.Contains("\"name\": \"Work\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"description\": \"The editor\"", json, StringComparison.Ordinal);
         Assert.Contains("\"applications\": [", json, StringComparison.Ordinal);
         Assert.DoesNotContain("\"activeProfile\":", json, StringComparison.Ordinal);
         Assert.Contains("\"isCollapsed\": true", json, StringComparison.Ordinal);
@@ -197,6 +198,27 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadAsync_ReadsAShortcutWithoutADescription_AsHavingNone()
+    {
+        const string json = """
+            {
+              "version": 2,
+              "activeProfileId": "44444444-4444-4444-4444-444444444444",
+              "profiles": [ { "id": "44444444-4444-4444-4444-444444444444", "name": "Work", "directories": [], "urls": [],
+                "applications": [ { "id": "11111111-1111-1111-1111-111111111111", "name": "Dev tools",
+                  "shortcuts": [ { "id": "22222222-2222-2222-2222-222222222222", "name": "Code", "target": "C:\\Code.exe" } ] } ] } ]
+            }
+            """;
+        await File.WriteAllTextAsync(_store.FilePath, json, TestContext.Current.CancellationToken);
+
+        LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Null(result.UnreadableFileMovedTo);
+        Shortcut shortcut = Assert.Single(Assert.Single(result.Data.GroupsOf(ShortcutKind.Application)).Shortcuts);
+        Assert.Null(shortcut.Description);
+    }
+
+    [Fact]
     public async Task AVersion1File_IsWrittenBackAsVersion2_OnTheNextSave()
     {
         _temp.CreateFile(
@@ -250,7 +272,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
                     Guid.NewGuid(),
                     "Dev tools",
                     [
-                        new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "--new-window"),
+                        new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "--new-window", "The editor"),
                         new Shortcut(Guid.NewGuid(), "Terminal", @"C:\Tools\wt.exe"),
                     ],
                     IsCollapsed: true),

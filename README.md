@@ -52,7 +52,7 @@ is safe.
 ### Export files
 
 An export is a small, readable JSON document of its own — not a copy of `launchpad.json` — holding names,
-targets and arguments, but no internal identities and no folded state:
+targets, arguments and descriptions, but no internal identities and no folded state:
 
 ```json
 {
@@ -60,7 +60,7 @@ targets and arguments, but no internal identities and no folded state:
   "version": 1,
   "profile": "Work",
   "applications": [
-    { "name": "Dev tools", "shortcuts": [ { "name": "VS Code", "target": "C:\\Tools\\Code\\Code.exe", "arguments": "--new-window" } ] }
+    { "name": "Dev tools", "shortcuts": [ { "name": "VS Code", "target": "C:\\Tools\\Code\\Code.exe", "arguments": "--new-window", "description": "The editor" } ] }
   ],
   "directories": [],
   "urls": [
@@ -70,8 +70,8 @@ targets and arguments, but no internal identities and no folded state:
 ```
 
 A file that is not such an export, or is damaged, is refused with the reason. Inside one, an entry the shortcut
-form would refuse — a blank name, a relative path, an address other than http or https — is left out, and the
-import says how many were. Paths need not exist on the machine importing them.
+form would refuse — a blank name, a relative path, an address other than http or https, a description over 200
+characters — is left out, and the import says how many were. Paths need not exist on the machine importing them.
 
 ## Requirements
 
