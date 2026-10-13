@@ -33,9 +33,10 @@ public interface IWebsiteIconFetcher
 /// </summary>
 /// <remarks>
 /// <para>
-/// The site's home page is read for the icons it links; failing those, <c>/favicon.ico</c> is tried. The first
-/// candidate that is really an image wins: servers often answer a missing icon with an HTML page and a success
-/// status, so the bytes' signature is checked rather than the declared content type.
+/// The site's home page is read for the icons it links, and for those of the web app manifest it links; failing
+/// those, <c>/favicon.ico</c> is tried. The first candidate that is really an image wins: servers often answer a
+/// missing icon with an HTML page and a success status, so the bytes' signature is checked rather than the declared
+/// content type.
 /// </para>
 /// <para>
 /// Every request is bounded — in time, in size, in redirects — and carries no cookie and no credential. A site
@@ -55,9 +56,20 @@ public sealed class WebsiteIconFetcher : IWebsiteIconFetcher, IDisposable
     internal const int MaxIconBytes = 1024 * 1024;
 
     /// <summary>
-    /// How many of the page's icon links are tried before <c>/favicon.ico</c>.
+    /// The largest web app manifest read; a real one is a few kilobytes.
+    /// </summary>
+    internal const int MaxManifestBytes = 64 * 1024;
+
+    /// <summary>
+    /// How many of the icons the page and its manifest declare are tried before <c>/favicon.ico</c>.
     /// </summary>
     internal const int MaxLinkedIcons = 3;
+
+    /// <summary>
+    /// What the home page is asked for: a page, as a browser asks for it, since some servers answer a bare
+    /// <c>text/html</c> differently or not at all.
+    /// </summary>
+    internal const string PageAccept = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8";
 
     private readonly HttpClient _http;
     private readonly ILogger<WebsiteIconFetcher> _logger;
@@ -97,13 +109,14 @@ public sealed class WebsiteIconFetcher : IWebsiteIconFetcher, IDisposable
     {
         ArgumentNullException.ThrowIfNull(site);
 
-        List<Uri> candidates = [];
+        List<(Uri Address, int Size)> declared = [];
+        Uri? manifest = null;
         Uri page = site;
 
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Get, site);
-            request.Headers.Accept.ParseAdd("text/html");
+            request.Headers.Accept.ParseAdd(PageAccept);
             using HttpResponseMessage response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
             // Links and /favicon.ico resolve against where the redirects ended, not where they started.
@@ -113,7 +126,8 @@ public sealed class WebsiteIconFetcher : IWebsiteIconFetcher, IDisposable
             {
                 byte[] html = await ReadUpToAsync(response.Content, MaxPageBytes, cancellationToken);
                 string text = Encoding.UTF8.GetString(html, 0, Math.Min(html.Length, MaxPageBytes));
-                candidates.AddRange(FaviconLinks.Find(text, page).Take(MaxLinkedIcons));
+                declared.AddRange(FaviconLinks.FindLinked(text, page));
+                manifest = FaviconLinks.FindManifest(text, page);
             }
         }
         catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
@@ -122,6 +136,12 @@ public sealed class WebsiteIconFetcher : IWebsiteIconFetcher, IDisposable
             return null;
         }
 
+        if (manifest is not null)
+        {
+            declared.AddRange(await ReadManifestIconsAsync(manifest, cancellationToken));
+        }
+
+        List<Uri> candidates = [.. FaviconLinks.Rank(declared).Take(MaxLinkedIcons)];
         Uri favicon = new(page, "/favicon.ico");
 
         if (!candidates.Contains(favicon))
@@ -198,6 +218,33 @@ public sealed class WebsiteIconFetcher : IWebsiteIconFetcher, IDisposable
         }
 
         return copy.ToArray();
+    }
+
+    // A manifest that cannot be had or read only means fewer candidates.
+    private async Task<IReadOnlyList<(Uri Address, int Size)>> ReadManifestIconsAsync(Uri manifest, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using HttpRequestMessage request = new(HttpMethod.Get, manifest);
+            request.Headers.Accept.ParseAdd("application/manifest+json,application/json;q=0.9,*/*;q=0.8");
+            using HttpResponseMessage response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            if (!response.IsSuccessStatusCode || (response.Content.Headers.ContentLength > MaxManifestBytes))
+            {
+                return [];
+            }
+
+            byte[] json = await ReadUpToAsync(response.Content, MaxManifestBytes, cancellationToken);
+
+            return json.Length <= MaxManifestBytes
+                ? FaviconLinks.ReadManifest(Encoding.UTF8.GetString(json), response.RequestMessage?.RequestUri ?? manifest)
+                : [];
+        }
+        catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
+        {
+            _logger.LogDebug(exception, "The manifest {Address} could not be downloaded", manifest);
+            return [];
+        }
     }
 
     private async Task<byte[]?> TryDownloadIconAsync(Uri address, CancellationToken cancellationToken)
