@@ -49,9 +49,9 @@ Your preferences are kept beside it in `settings.json`. An unreadable settings f
 `settings.corrupt-<timestamp>.json`, and the defaults are used.
 
 Website icons are also cached beside it, in an `icons` folder, so a new shortcut to a site seen before gets its
-icon at once. To find one, the launchpad asks the site itself — its home page and its icon files, never the address
-a shortcut points to, and without cookies — at most once a week per site; a site that cannot be reached keeps the
-icon it had. The folder is only a cache: deleting it is safe.
+icon at once. To find one, the launchpad asks the site itself — its home page, the web app manifest it links and its
+icon files, never the address a shortcut points to, and without cookies — at most once a week per site; a site that
+cannot be reached keeps the icon it had. The folder is only a cache: deleting it is safe.
 
 ### Export files
 
