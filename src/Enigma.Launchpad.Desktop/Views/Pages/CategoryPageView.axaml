@@ -170,6 +170,13 @@
                                   <ei:Icon Kind="PlayCircle" Classes="row" />
                                 </Button>
                                 <Button Classes="tileAction"
+                                        Command="{Binding OpenInTerminalCommand}"
+                                        IsVisible="{Binding CanOpenInTerminal}"
+                                        ToolTip.Tip="Open in terminal"
+                                        AutomationProperties.Name="Open in terminal">
+                                  <ei:Icon Kind="TerminalWindow" Classes="row" />
+                                </Button>
+                                <Button Classes="tileAction"
                                         Command="{Binding CopyTargetCommand}"
                                         IsVisible="{Binding CanCopyFromTile}"
                                         ToolTip.Tip="{Binding CopyTargetLabel}"
@@ -196,6 +203,13 @@
                                           IsVisible="{Binding CanRunWithArguments}">
                                   <MenuItem.Icon>
                                     <ei:Icon Kind="PlayCircle" Classes="menu" />
+                                  </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Open in terminal"
+                                          Command="{Binding OpenInTerminalCommand}"
+                                          IsVisible="{Binding CanOpenInTerminal}">
+                                  <MenuItem.Icon>
+                                    <ei:Icon Kind="TerminalWindow" Classes="menu" />
                                   </MenuItem.Icon>
                                 </MenuItem>
                                 <MenuItem Header="Edit…" Command="{Binding EditCommand}">

@@ -7,8 +7,10 @@ and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia
 Each of the three categories is a page in the navigation rail, where your shortcuts are arranged in
 groups you create, rename, fold, reorder and delete. Add a shortcut with a group's **+** (Browse… picks a
 program or a folder); click its tile, or press Enter, to open it; right-click it to edit it, try to get its
-icon again, copy its target, show it in its folder, move it or delete it. Drag a group by its grip, or a tile, to
-reorder them; drop a tile on another group of the same category to move it there.
+icon again, copy its target, show it in its folder, move it or delete it. Hover a tile, or give it the keyboard
+focus, for its own buttons: *Run with arguments…* on an application, which starts it once with other arguments than
+its default ones; *Open in terminal* and *Copy path* on a folder; *Copy URL* on a link. Drag a group by its grip, or
+a tile, to reorder them; drop a tile on another group of the same category to move it there.
 
 **Profiles** keep separate sets of shortcuts — say *Work* and *Home* — each with its own applications,
 directories and URLs. Choose the profile in use from the **Profile** list at the top of the window; create,

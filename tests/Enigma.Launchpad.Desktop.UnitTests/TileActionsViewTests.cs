@@ -66,7 +66,7 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
             Button tile = Tile(view);
             harness.Window.MouseMove(Centre(harness, tile));
             harness.Window.UpdateLayout();
-            Button copy = Assert.Single(ActionButtons(tile), button => button.IsVisible);
+            Button copy = ActionButtons(tile).Single(button => AutomationProperties.GetName(button) == "Copy path");
             Assert.True(copy.IsEffectivelyVisible);
 
             Point point = Centre(harness, copy);
@@ -106,6 +106,18 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
             await WindowHarness.WaitUntilAsync(() => recording.Performed.Count > 0);
 
             Assert.Equal("--wait notes.txt", Assert.Single(recording.Performed).Shortcut.Arguments);
+        });
+
+    [Fact]
+    public void AFolderTile_OffersOpenInTerminal_AndCopyPath()
+        => fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(FolderData());
+            CategoryPageView view = await DirectoriesAsync(harness);
+
+            Assert.Equal(
+                ["Open in terminal", "Copy path"],
+                ActionButtons(Tile(view)).Where(button => button.IsVisible).Select(button => AutomationProperties.GetName(button)));
         });
 
     [Fact]
