@@ -227,6 +227,33 @@ public sealed class CategoryPageViewTests
             Assert.Equal("https://docs.avaloniaui.net", shortcut.Target);
         });
 
+    [Fact]
+    public void TheShortcutForm_HasAnIconRow_ShowingTheKindsGlyph_UntilAnImageIsChosen()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new();
+            await LoadedPageAsync(harness);
+            ILaunchpadDialogs dialogs = harness.Provider.GetRequiredService<ILaunchpadDialogs>();
+
+            Task<Shortcut?> answer = dialogs.EditShortcutAsync(ShortcutKind.Directory, null);
+            await WindowHarness.WaitUntilAsync(() => harness.Window.HostDialog.IsOpen);
+            harness.Window.UpdateLayout();
+
+            Control content = Assert.IsAssignableFrom<Control>(harness.Window.HostDialog.Content);
+            ShortcutEditorViewModel form = Assert.IsType<ShortcutEditorViewModel>(content.DataContext);
+            Icon glyph = content.GetVisualDescendants().OfType<Icon>().Single(icon => icon.Name == "IconGlyph");
+            Image image = content.GetVisualDescendants().OfType<Image>().Single(candidate => candidate.Name == "IconImage");
+            Button choose = content.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "ChooseIconButton");
+
+            Assert.True(glyph.IsEffectivelyVisible);
+            Assert.False(image.IsEffectivelyVisible);
+            Assert.True(choose.IsEffectivelyVisible);
+            Assert.Same(form.ChooseIconCommand, choose.Command);
+
+            await harness.Window.HostDialog.HideAsync();
+            Assert.Null(await answer);
+        });
+
     private static async Task<CategoryPageView> LoadedPageAsync(WindowHarness harness)
     {
         await WindowHarness.WaitUntilAsync(() => harness.ViewModel.Navigation.CurrentPage is CategoryPageView { DataContext: CategoryPageViewModel { IsLoaded: true } });

@@ -42,6 +42,21 @@ internal sealed class FakeShortcutIcons : IShortcutIcons
     public Dictionary<string, IImage?> Images { get; } = [];
 
     /// <summary>
+    /// The image files read as icons, in order.
+    /// </summary>
+    public List<string> ReadFiles { get; } = [];
+
+    /// <summary>
+    /// What reading a file throws; <see langword="null"/> to read it as <see cref="ChosenIcon"/>.
+    /// </summary>
+    public Exception? ReadFailure { get; set; }
+
+    /// <summary>
+    /// The icon an image file is read as: one per path, so a test can tell them apart.
+    /// </summary>
+    public static ShortcutIcon ChosenIcon(string path) => new($"file:{path}", IsCustom: true);
+
+    /// <summary>
     /// The icon a found image is kept as: one per target, so a test can tell them apart.
     /// </summary>
     public static ShortcutIcon FoundIcon(string target) => new($"found:{target}");
@@ -66,6 +81,15 @@ internal sealed class FakeShortcutIcons : IShortcutIcons
         TaskCompletionSource<IconImage?> answer = new();
         _held.Add((target, answer));
         return answer.Task;
+    }
+
+    public Task<IconImage> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+    {
+        ReadFiles.Add(path);
+
+        return ReadFailure is { } failure
+            ? Task.FromException<IconImage>(failure)
+            : Task.FromResult(new IconImage(new StubImage(), ChosenIcon(path)));
     }
 
     /// <summary>

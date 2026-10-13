@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
 using Enigma.Launchpad.Desktop.UnitTests.Infrastructure;
@@ -14,6 +15,7 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
     private readonly TempDirectory _temp = new();
     private readonly FakePathPicker _picker = new();
     private readonly ShortcutValidator _validator = new();
+    private readonly FakeShortcutIcons _icons = new();
 
     public void Dispose() => _temp.Dispose();
 
@@ -226,6 +228,121 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ANewForm_ShowsTheKindsGlyph_AndWhereTheIconWillComeFrom()
+    {
+        ShortcutEditorViewModel application = Form(ShortcutKind.Application);
+        ShortcutEditorViewModel folder = Form(ShortcutKind.Directory);
+
+        Assert.Null(application.Icon);
+        Assert.False(application.HasIconPreview);
+        Assert.Equal(PhosphorIcon.AppWindow, application.KindGlyph);
+        Assert.Equal("The program's own icon, when it can be found, unless you choose an image.", application.IconHint);
+        Assert.False(application.CanResetIcon);
+        Assert.Equal("Use automatic icon", application.ResetIconLabel);
+
+        Assert.Equal(PhosphorIcon.Folder, folder.KindGlyph);
+        Assert.Equal("The folder glyph, unless you choose an image.", folder.IconHint);
+        Assert.Equal("Remove", folder.ResetIconLabel);
+    }
+
+    [Fact]
+    public void AnEditedShortcut_ShowsTheIconItKeeps()
+    {
+        ShortcutIcon found = new("found");
+        StubImage image = new();
+        _icons.Images["found"] = image;
+
+        ShortcutEditorViewModel form = Form(ShortcutKind.Application, new Shortcut(Guid.NewGuid(), "Tool", Program("tool.exe"), Icon: found));
+
+        Assert.Same(image, form.IconPreview);
+        Assert.True(form.HasIconPreview);
+        Assert.Equal("The program's own icon, found automatically.", form.IconHint);
+        Assert.False(form.CanResetIcon);
+    }
+
+    [Fact]
+    public async Task ChoosingAnImage_MakesItTheIcon()
+    {
+        string image = _temp.Combine("logo.png");
+        _picker.NextImageFile = image;
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path));
+
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        Assert.Equal([image], _icons.ReadFiles);
+        Assert.Equal(FakeShortcutIcons.ChosenIcon(image), form.Icon);
+        Assert.True(form.HasIconPreview);
+        Assert.Equal("Your image.", form.IconHint);
+        Assert.True(form.CanResetIcon);
+        Assert.True(form.ResetIconCommand.CanExecute(null));
+        Assert.Equal(FakeShortcutIcons.ChosenIcon(image), form.ToShortcut().Icon);
+    }
+
+    [Fact]
+    public async Task ChoosingNoImage_ChangesNothing()
+    {
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory);
+
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        Assert.Empty(_icons.ReadFiles);
+        Assert.Null(form.Icon);
+    }
+
+    [Theory]
+    [InlineData(typeof(InvalidDataException))]
+    [InlineData(typeof(FileNotFoundException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    public async Task AnImageThatCannotBeUsed_ShowsWhy_AndKeepsTheIcon(Type failure)
+    {
+        ShortcutIcon kept = new("kept", IsCustom: true);
+        _picker.NextImageFile = _temp.Combine("broken.png");
+        _icons.ReadFailure = (Exception)Activator.CreateInstance(failure, "This file is not an image the launchpad can show.")!;
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: kept));
+
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        Assert.Equal("This file is not an image the launchpad can show.", form.IconError);
+        Assert.Equal(kept, form.Icon);
+        Assert.True(form.IsValid);
+    }
+
+    [Fact]
+    public async Task GivingUpAChosenImage_LeavesNoIcon_AndClearsTheError()
+    {
+        _picker.NextImageFile = _temp.Combine("logo.png");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Application);
+        await form.ChooseIconCommand.ExecuteAsync(null);
+        _icons.ReadFailure = new InvalidDataException("Not an image.");
+        await form.ChooseIconCommand.ExecuteAsync(null);
+
+        form.ResetIconCommand.Execute(null);
+
+        Assert.Null(form.Icon);
+        Assert.False(form.HasIconPreview);
+        Assert.Null(form.IconError);
+        Assert.False(form.CanResetIcon);
+        Assert.False(form.ResetIconCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void AnIconFoundFromTheTarget_IsSetAside_WhileTheTargetDiffers_AndComesBack()
+    {
+        ShortcutIcon found = new("found");
+        ShortcutEditorViewModel form = Form(ShortcutKind.Directory, new Shortcut(Guid.NewGuid(), "Temp", _temp.Path, Icon: found));
+
+        form.Target = _temp.Combine("elsewhere");
+
+        Assert.Null(form.Icon);
+        Assert.False(form.HasIconPreview);
+
+        form.Target = _temp.Path;
+
+        Assert.Equal(found, form.Icon);
+        Assert.True(form.HasIconPreview);
+    }
+
+    [Fact]
     public async Task Browse_FillsTheTarget_AndTheNameWhenItIsEmpty()
     {
         string program = Path.Combine(_temp.Path, "Editor.exe");
@@ -268,7 +385,7 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
         Assert.Equal(string.Empty, form.Name);
     }
 
-    private ShortcutEditorViewModel Form(ShortcutKind kind, Shortcut? existing = null) => new(kind, existing, _validator, _picker);
+    private ShortcutEditorViewModel Form(ShortcutKind kind, Shortcut? existing = null) => new(kind, existing, _validator, _picker, _icons);
 
     private string Program(string name)
     {

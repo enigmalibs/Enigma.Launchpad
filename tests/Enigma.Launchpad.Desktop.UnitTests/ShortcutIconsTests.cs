@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
@@ -102,6 +103,68 @@ public sealed class ShortcutIconsTests
     [Fact]
     public async Task NothingFound_GivesNoIcon()
         => Assert.Null(await _icons.FindAsync(ShortcutKind.Application, Program, TestContext.Current.CancellationToken));
+
+    [Theory]
+    [InlineData("png", 32, 32)]
+    [InlineData("png", 100, 48)]
+    [InlineData("jpg", 64, 48)]
+    [InlineData("ico", 32, 32)]
+    [InlineData("ico", 256, 48)]
+    public void AnImageFile_IsReadAsAChosenIcon_NoLargerThanTheMaximum(string format, int size, int expected)
+        => _fixture.RunAsync(async () =>
+        {
+            using TempDirectory folder = new();
+            string path = folder.Combine($"icon.{format}");
+            await File.WriteAllBytesAsync(path, format switch
+            {
+                "png" => TestImages.Png(size, size),
+                "jpg" => TestImages.Jpeg(size, size),
+                _ => TestImages.Ico(size),
+            });
+
+            IconImage read = await _icons.ReadFileAsync(path);
+
+            Assert.True(read.Icon.IsCustom);
+            Assert.True(read.Icon.TryReadBytes(out byte[]? png));
+            Assert.Equal(new PixelSize(expected, expected), TestImages.SizeOf(png));
+            Assert.Equal(new PixelSize(expected, expected), Assert.IsType<Bitmap>(read.Image).PixelSize);
+        });
+
+    [Fact]
+    public async Task AFileThatIsNoImage_IsRefused_SayingSo()
+    {
+        using TempDirectory folder = new();
+        string path = folder.Combine("notes.png");
+        await File.WriteAllTextAsync(path, "not an image", TestContext.Current.CancellationToken);
+
+        InvalidDataException refusal = await Assert.ThrowsAsync<InvalidDataException>(() => _icons.ReadFileAsync(path, TestContext.Current.CancellationToken));
+
+        Assert.Equal("This file is not an image the launchpad can show.", refusal.Message);
+    }
+
+    [Fact]
+    public async Task AFileOverTheLimit_IsRefused_WithoutBeingRead()
+    {
+        using TempDirectory folder = new();
+        string path = folder.Combine("huge.png");
+
+        await using (FileStream file = File.Create(path))
+        {
+            file.SetLength(ShortcutIcons.MaxFileBytes + 1);
+        }
+
+        InvalidDataException refusal = await Assert.ThrowsAsync<InvalidDataException>(() => _icons.ReadFileAsync(path, TestContext.Current.CancellationToken));
+
+        Assert.Equal("This file is larger than 10 MB, too large for an icon.", refusal.Message);
+    }
+
+    [Fact]
+    public async Task AMissingFile_LetsTheIoErrorThrough()
+    {
+        using TempDirectory folder = new();
+
+        await Assert.ThrowsAsync<FileNotFoundException>(() => _icons.ReadFileAsync(folder.Combine("missing.png"), TestContext.Current.CancellationToken));
+    }
 
     [Fact]
     public void AFoundIconThatDoesNotDecode_GivesNoIcon()

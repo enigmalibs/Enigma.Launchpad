@@ -38,8 +38,9 @@ application-data folder:
 It holds every profile and remembers the one in use. A file written before profiles existed is read into a
 single *Default* profile, and saved in the current format on the next change.
 
-Each shortcut keeps its icon in it too, as a small PNG image: a program's or a website's icon, saved there the
-first time it is found and shown, so it is back at the next start without asking the system or the site again.
+Each shortcut keeps its icon in it too, as a small PNG image: the image you chose in its form, or a program's or a
+website's icon, saved there the first time it is found and shown, so it is back at the next start without asking
+the system or the site again.
 
 The file is written atomically. If it ever cannot be read, it is kept as
 `launchpad.corrupt-<timestamp>.json` beside the original, and the launchpad starts empty; nothing is overwritten.
