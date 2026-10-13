@@ -216,6 +216,42 @@ public sealed class WebsiteIconsTests
         });
 
     [Fact]
+    public void ARefresh_AsksTheSite_EvenWithAFreshStoredIcon_AndStoresTheAnswer()
+        => _fixture.RunAsync(async () =>
+        {
+            byte[] newer = Png(32, 32);
+            _store.Entries[Site] = new StoredWebsiteIcon(Png(16, 16), IsFresh: true);
+            Assert.Equal(new PixelSize(16, 16), SizeOf(await _icons.GetAsync("https://example.com/")));
+            _fetcher.Answer = _ => newer;
+
+            byte[]? icon = await _icons.RefreshAsync("https://example.com/page");
+
+            Assert.Equal(new PixelSize(32, 32), SizeOf(icon));
+            Assert.Single(_fetcher.Requests);
+            Assert.Same(newer, _store.Entries[Site].Bytes);
+            Assert.Equal(new PixelSize(32, 32), SizeOf(await _icons.GetAsync("https://example.com/")));
+        });
+
+    [Fact]
+    public void ARefreshThatBringsNothing_StillAnswersTheStoredIcon()
+        => _fixture.RunAsync(async () =>
+        {
+            _store.Entries[Site] = new StoredWebsiteIcon(Png(16, 16), IsFresh: true);
+
+            byte[]? icon = await _icons.RefreshAsync("https://example.com/");
+
+            Assert.Equal(new PixelSize(16, 16), SizeOf(icon));
+            Assert.Single(_fetcher.Requests);
+        });
+
+    [Fact]
+    public async Task ARefreshOfAnAddressThatIsNoWebsite_FetchesNothing()
+    {
+        Assert.Null(await _icons.RefreshAsync("ftp://example.com/file", TestContext.Current.CancellationToken));
+        Assert.Empty(_fetcher.Requests);
+    }
+
+    [Fact]
     public void AnIconFetchedOnce_IsShownAfterARestart_WithoutAskingTheSite()
         => _fixture.RunAsync(async () =>
         {

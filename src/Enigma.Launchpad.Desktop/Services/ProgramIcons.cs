@@ -24,6 +24,16 @@ public interface IProgramIcons
     /// <returns>The icon as a PNG file no larger than <see cref="IconPng.MaxSize"/>, or <see langword="null"/> when
     /// there is none to show.</returns>
     Task<byte[]?> GetAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the icon of a program again, rather than answering what was read earlier in the session; a read
+    /// already underway is shared rather than started twice.
+    /// </summary>
+    /// <param name="path">The program's path.</param>
+    /// <param name="cancellationToken">Stops this wait only: the icon is still read for whoever asks next.</param>
+    /// <returns>The icon as a PNG file no larger than <see cref="IconPng.MaxSize"/>, or <see langword="null"/> when
+    /// there is none to show.</returns>
+    Task<byte[]?> RefreshAsync(string path, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -68,16 +78,23 @@ public sealed class ProgramIcons : IProgramIcons
 
     /// <inheritdoc />
     public Task<byte[]?> GetAsync(string path, CancellationToken cancellationToken = default)
+        => Get(path, refresh: false, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<byte[]?> RefreshAsync(string path, CancellationToken cancellationToken = default)
+        => Get(path, refresh: true, cancellationToken);
+
+    private Task<byte[]?> Get(string path, bool refresh, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         lock (_sync)
         {
-            if (!_icons.TryGetValue(path, out Task<byte[]?>? icon))
+            if (!_icons.TryGetValue(path, out Task<byte[]?>? icon) || (refresh && icon.IsCompleted))
             {
                 // The read is shared by every caller, so no caller's token may cancel it.
                 icon = IsNetworkPath(path) ? NoIcon : Task.Run(() => Read(path), CancellationToken.None);
-                _icons.Add(path, icon);
+                _icons[path] = icon;
             }
 
             return icon.WaitAsync(cancellationToken);

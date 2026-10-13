@@ -21,9 +21,9 @@ internal sealed class PageHarness
         ShortcutValidator validator = new();
         Page = kind switch
         {
-            ShortcutKind.Application => new ApplicationsPageViewModel(Session, validator, Dialogs, Actions, Icons),
-            ShortcutKind.Directory => new DirectoriesPageViewModel(Session, validator, Dialogs, Actions, Icons),
-            _ => new UrlsPageViewModel(Session, validator, Dialogs, Actions, Icons),
+            ShortcutKind.Application => new ApplicationsPageViewModel(Session, validator, Dialogs, Actions, Icons, Notifications),
+            ShortcutKind.Directory => new DirectoriesPageViewModel(Session, validator, Dialogs, Actions, Icons, Notifications),
+            _ => new UrlsPageViewModel(Session, validator, Dialogs, Actions, Icons, Notifications),
         };
     }
 

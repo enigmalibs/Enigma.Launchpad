@@ -18,12 +18,14 @@ public sealed class UrlsPageViewModel : CategoryPageViewModel
     /// <param name="dialogs">The questions asked of the user.</param>
     /// <param name="actions">Opens shortcuts, shows them in their folder, copies their targets.</param>
     /// <param name="icons">The icons of the tiles: kept with the shortcuts, or the websites' own.</param>
+    /// <param name="notifications">Where a failed icon lookup is reported.</param>
     public UrlsPageViewModel(
         ILaunchpadSession session,
         IShortcutValidator validator,
         ILaunchpadDialogs dialogs,
         IShortcutActions actions,
-        IShortcutIcons icons)
+        IShortcutIcons icons,
+        IUserNotifications notifications)
         : base(
             ShortcutKind.Url,
             "URLs",
@@ -33,7 +35,8 @@ public sealed class UrlsPageViewModel : CategoryPageViewModel
             validator,
             dialogs,
             actions,
-            icons)
+            icons,
+            notifications)
     {
     }
 }

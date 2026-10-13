@@ -101,6 +101,21 @@ public sealed class ShortcutIconsTests
     }
 
     [Fact]
+    public void ARefresh_AsksTheSourcesAgain()
+        => _fixture.RunAsync(async () =>
+        {
+            _programIcons.Answer = _ => TestImages.Png(16, 16);
+            _websiteIcons.Answer = _ => TestImages.Png(16, 16);
+
+            Assert.NotNull(await _icons.RefreshAsync(ShortcutKind.Application, Program));
+            Assert.NotNull(await _icons.RefreshAsync(ShortcutKind.Url, Link));
+            Assert.Null(await _icons.RefreshAsync(ShortcutKind.Directory, @"C:\Docs"));
+
+            Assert.Equal([Program], _programIcons.Refreshes);
+            Assert.Equal([Link], _websiteIcons.Refreshes);
+        });
+
+    [Fact]
     public async Task NothingFound_GivesNoIcon()
         => Assert.Null(await _icons.FindAsync(ShortcutKind.Application, Program, TestContext.Current.CancellationToken));
 

@@ -128,6 +128,41 @@ public sealed class ProgramIconsTests : IDisposable
     }
 
     [Fact]
+    public async Task ARefresh_ReadsTheProgramAgain()
+    {
+        string program = Program("tool.exe");
+        await _icons.GetAsync(program, TestContext.Current.CancellationToken);
+
+        await _icons.RefreshAsync(program, TestContext.Current.CancellationToken);
+        await _icons.GetAsync(program, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, _reader.Reads.Count);
+    }
+
+    [Fact]
+    public async Task ARefreshWhileAReadIsUnderway_SharesIt()
+    {
+        string program = Program("tool.exe");
+        using ManualResetEventSlim gate = new();
+        _reader.Gate = gate;
+
+        Task<byte[]?> first = _icons.GetAsync(program, TestContext.Current.CancellationToken);
+        Task<byte[]?> refreshed = _icons.RefreshAsync(program, TestContext.Current.CancellationToken);
+
+        gate.Set();
+        await Task.WhenAll(first, refreshed);
+
+        Assert.Single(_reader.Reads);
+    }
+
+    [Fact]
+    public async Task ARefresh_NeverReadsANetworkPath()
+    {
+        Assert.Null(await _icons.RefreshAsync(@"\\server\share\tool.exe", TestContext.Current.CancellationToken));
+        Assert.Empty(_reader.Reads);
+    }
+
+    [Fact]
     public async Task OnWindows_OneProgramUnderTwoSpellings_IsReadOnce()
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Only Windows paths ignore case.");

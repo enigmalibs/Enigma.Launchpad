@@ -19,12 +19,14 @@ public sealed class DirectoriesPageViewModel : CategoryPageViewModel
     /// <param name="actions">Opens shortcuts, shows them in their folder, copies their targets.</param>
     /// <param name="icons">The icons of the tiles: only ever the ones the user chose, since a folder has none to
     /// find.</param>
+    /// <param name="notifications">Where a failed icon lookup would be reported; a folder never looks one up.</param>
     public DirectoriesPageViewModel(
         ILaunchpadSession session,
         IShortcutValidator validator,
         ILaunchpadDialogs dialogs,
         IShortcutActions actions,
-        IShortcutIcons icons)
+        IShortcutIcons icons,
+        IUserNotifications notifications)
         : base(
             ShortcutKind.Directory,
             "Directories",
@@ -34,7 +36,8 @@ public sealed class DirectoriesPageViewModel : CategoryPageViewModel
             validator,
             dialogs,
             actions,
-            icons)
+            icons,
+            notifications)
     {
     }
 }

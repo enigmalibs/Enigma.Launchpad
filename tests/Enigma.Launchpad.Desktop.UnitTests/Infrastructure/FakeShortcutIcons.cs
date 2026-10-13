@@ -32,6 +32,11 @@ internal sealed class FakeShortcutIcons : IShortcutIcons
     public List<string> Requests { get; } = [];
 
     /// <summary>
+    /// The targets whose icon was looked for again, in order; they are in <see cref="Requests"/> too.
+    /// </summary>
+    public List<string> Refreshes { get; } = [];
+
+    /// <summary>
     /// The kept icons that were shown, in order.
     /// </summary>
     public List<ShortcutIcon> Shown { get; } = [];
@@ -81,6 +86,12 @@ internal sealed class FakeShortcutIcons : IShortcutIcons
         TaskCompletionSource<IconImage?> answer = new();
         _held.Add((target, answer));
         return answer.Task;
+    }
+
+    public Task<IconImage?> RefreshAsync(ShortcutKind kind, string target, CancellationToken cancellationToken = default)
+    {
+        Refreshes.Add(target);
+        return FindAsync(kind, target, cancellationToken);
     }
 
     public Task<IconImage> ReadFileAsync(string path, CancellationToken cancellationToken = default)
