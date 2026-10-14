@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.WorkspaceEditorView"
+             x:DataType="vm:WorkspaceEditorViewModel"
+             MinWidth="460">
+  <StackPanel Spacing="14">
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Title" Classes="fieldLabel" />
+      <TextBox x:Name="TitleBox"
+               Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               MaxLength="200"
+               AutomationProperties.Name="Title" />
+      <TextBlock Text="{Binding VisibleTitleError}"
+                 IsVisible="{Binding VisibleTitleError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Description (optional)" Classes="fieldLabel" />
+      <TextBox x:Name="DescriptionBox"
+               Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               TextWrapping="Wrap"
+               MaxLength="400"
+               PlaceholderText="What it is for"
+               AutomationProperties.Name="Description" />
+      <TextBlock Text="{Binding VisibleDescriptionError}"
+                 IsVisible="{Binding VisibleDescriptionError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldError" />
+      <TextBlock Text="Shown on the workspace's card, under its title." Classes="fieldHint" />
+    </StackPanel>
+
+    <!-- The glyphs wrap in rows; the arrow keys move between them, as in any list. -->
+    <StackPanel Spacing="4">
+      <TextBlock Text="Icon" Classes="fieldLabel" />
+      <ListBox x:Name="GlyphList"
+               Classes="glyphPicker"
+               ItemsSource="{Binding Choices}"
+               SelectedItem="{Binding SelectedGlyph, Mode=TwoWay}"
+               MaxHeight="196"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               AutomationProperties.Name="Icon">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:GlyphOption">
+            <ei:Icon Kind="{Binding Glyph}"
+                     Classes="tileIcon"
+                     ToolTip.Tip="{Binding Name}"
+                     AutomationProperties.Name="{Binding Name}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

@@ -46,6 +46,6 @@
 | FEATURE-1F8C | Commands as application targets     | DONE        | docs/plan/FEATURE-1F8C.md |
 | FEATURE-1C0D | Workspaces                          | IN PROGRESS | docs/plan/FEATURE-1C0D.md |
 | - PHASE01    | Workspace model & storage           | DONE        | (in FEATURE-1C0D.md)      |
-| - PHASE02    | Workspaces page                     | TODO        | (in FEATURE-1C0D.md)      |
+| - PHASE02    | Workspaces page                     | DONE        | (in FEATURE-1C0D.md)      |
 | - PHASE03    | Open workspace, mixed groups        | TODO        | (in FEATURE-1C0D.md)      |
 | FEATURE-1FA9 | Documents                           | TODO        | docs/plan/FEATURE-1FA9.md |
