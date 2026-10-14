@@ -6,10 +6,10 @@ using Enigma.Launchpad.Core.Shortcuts;
 namespace Enigma.Launchpad.Desktop.DragAndDrop;
 
 /// <summary>
-/// What travels with a dragged group or shortcut: its category and its identity, and nothing else. The
-/// category comes along so a drop can refuse an item that does not belong on the page it lands on.
+/// What travels with a dragged group or shortcut: its kind and its identity, and nothing else. The kind comes along
+/// so the payload says what it carries; where it may land is the page's to say.
 /// </summary>
-/// <param name="Kind">The category the dragged item belongs to.</param>
+/// <param name="Kind">The kind of the dragged group or shortcut.</param>
 /// <param name="Id">The dragged item's identity.</param>
 public sealed record DragPayload(ShortcutKind Kind, Guid Id)
 {

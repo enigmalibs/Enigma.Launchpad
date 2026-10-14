@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.WorkspaceChoiceView"
+             x:DataType="vm:WorkspaceChoiceViewModel"
+             MinWidth="420">
+  <StackPanel Spacing="10">
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+
+    <ListBox x:Name="WorkspaceList"
+             ItemsSource="{Binding Choices}"
+             SelectedItem="{Binding Selected, Mode=TwoWay}"
+             MaxHeight="300"
+             AutomationProperties.Name="Workspaces">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:WorkspaceOption">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <ei:Icon Kind="{Binding Glyph}" Classes="row" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </StackPanel>
+</UserControl>

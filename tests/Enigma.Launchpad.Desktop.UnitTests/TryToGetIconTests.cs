@@ -135,7 +135,7 @@ public sealed class TryToGetIconTests
         string target = kind == ShortcutKind.Url ? Docs : CodePath;
         PageHarness harness = new(PageHarness.WithShortcuts(kind, ("Group", [PageHarness.Shortcut("Item", target)])), kind);
 
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.All(page.Groups.SelectMany(group => group.Shortcuts), tile => Assert.Equal(offered, tile.CanFindIcon));
     }

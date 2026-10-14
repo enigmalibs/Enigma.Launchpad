@@ -11,7 +11,7 @@
     <!-- Capped so the dialog stays inside the window: a long list scrolls in the tree. -->
     <Border Classes="selectionTree">
       <TreeView x:Name="SelectionTree"
-                ItemsSource="{Binding Categories}"
+                ItemsSource="{Binding Workspaces}"
                 MaxHeight="340"
                 AutomationProperties.Name="What to include">
         <TreeView.Styles>

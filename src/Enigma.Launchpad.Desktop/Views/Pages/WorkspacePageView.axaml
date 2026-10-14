@@ -2,34 +2,82 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ei="https://github.com/josueclement/Enigma.Icons"
              xmlns:pages="using:Enigma.Launchpad.Desktop.ViewModels.Pages"
-             x:Class="Enigma.Launchpad.Desktop.Views.Pages.CategoryPageView"
-             x:DataType="pages:CategoryPageViewModel"
+             xmlns:core="using:Enigma.Launchpad.Core.Shortcuts"
+             x:Class="Enigma.Launchpad.Desktop.Views.Pages.WorkspacePageView"
+             x:DataType="pages:WorkspacePageViewModel"
              DragDrop.AllowDrop="True">
 
   <DockPanel>
-    <!-- Page header: the category's icon, title and what it holds, and the way to add a group. -->
+    <!-- Page header: the way back to the list, the workspace's glyph, title and what it is for, and the way to add a
+         group of any kind. -->
     <Grid DockPanel.Dock="Top"
-          ColumnDefinitions="Auto,*,Auto"
-          Margin="32,28,32,16">
-      <Border Grid.Column="0" Classes="pageIcon" VerticalAlignment="Center">
-        <ei:Icon Kind="{Binding Icon}" Classes="pageIcon" />
+          ColumnDefinitions="Auto,Auto,*,Auto"
+          Margin="20,28,32,16">
+      <Button x:Name="BackButton"
+              Grid.Column="0"
+              Classes="ghost"
+              VerticalAlignment="Center"
+              Margin="0,0,8,0"
+              Command="{Binding BackCommand}"
+              HotKey="Alt+Left"
+              ToolTip.Tip="Back to the workspaces"
+              AutomationProperties.Name="Back to the workspaces">
+        <ei:Icon Kind="ArrowLeft" Classes="toolbar" />
+      </Button>
+      <Border Grid.Column="1" Classes="pageIcon" VerticalAlignment="Center">
+        <ei:Icon Kind="{Binding Glyph}" Classes="pageIcon" />
       </Border>
-      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2" Margin="14,0,0,0">
-        <TextBlock Text="{Binding Title}" Classes="pageTitle" />
-        <TextBlock Text="{Binding Description}" Classes="pageDescription" />
+      <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2" Margin="14,0,0,0">
+        <TextBlock x:Name="WorkspaceTitle" Text="{Binding Title}" Classes="pageTitle" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding Description}"
+                   Classes="pageDescription"
+                   TextTrimming="CharacterEllipsis"
+                   IsVisible="{Binding HasDescription}" />
       </StackPanel>
       <Button x:Name="NewGroupButton"
-              Grid.Column="2"
+              Grid.Column="3"
               Classes="accent"
               VerticalAlignment="Center"
-              Command="{Binding NewGroupCommand}"
               IsVisible="{Binding !IsEmpty}"
-              ToolTip.Tip="Create a group in this category"
+              ToolTip.Tip="Create a group of applications, folders, links or documents in this workspace"
               AutomationProperties.Name="New group">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <ei:Icon Kind="Plus" Classes="toolbar" VerticalAlignment="Center" />
           <TextBlock Text="New group" VerticalAlignment="Center" />
+          <ei:Icon Kind="CaretDown" Classes="row" VerticalAlignment="Center" />
         </StackPanel>
+        <Button.Flyout>
+          <MenuFlyout Placement="BottomEdgeAlignedRight">
+            <MenuItem Header="Applications"
+                      Command="{Binding NewGroupCommand}"
+                      CommandParameter="{x:Static core:ShortcutKind.Application}">
+              <MenuItem.Icon>
+                <ei:Icon Kind="AppWindow" Classes="menu" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Folders"
+                      Command="{Binding NewGroupCommand}"
+                      CommandParameter="{x:Static core:ShortcutKind.Directory}">
+              <MenuItem.Icon>
+                <ei:Icon Kind="Folder" Classes="menu" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Links"
+                      Command="{Binding NewGroupCommand}"
+                      CommandParameter="{x:Static core:ShortcutKind.Url}">
+              <MenuItem.Icon>
+                <ei:Icon Kind="Globe" Classes="menu" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Documents"
+                      Command="{Binding NewGroupCommand}"
+                      CommandParameter="{x:Static core:ShortcutKind.Document}">
+              <MenuItem.Icon>
+                <ei:Icon Kind="FileText" Classes="menu" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuFlyout>
+        </Button.Flyout>
       </Button>
     </Grid>
 
@@ -72,6 +120,10 @@
                           <ei:Icon Kind="CaretDown" Classes="row" IsVisible="{Binding IsExpanded}" />
                           <ei:Icon Kind="CaretRight" Classes="row" IsVisible="{Binding !IsExpanded}" />
                         </Panel>
+                        <ei:Icon Kind="{Binding KindGlyph}"
+                                 Classes="row groupKind"
+                                 VerticalAlignment="Center"
+                                 ToolTip.Tip="{Binding KindTitle}" />
                         <TextBlock Text="{Binding Name}" Classes="groupName" VerticalAlignment="Center" />
                         <Border Classes="countBadge" VerticalAlignment="Center">
                           <TextBlock Text="{Binding Count}" />
@@ -111,6 +163,11 @@
                               <ei:Icon Kind="ArrowDown" Classes="menu" />
                             </MenuItem.Icon>
                           </MenuItem>
+                          <MenuItem Header="Move to workspace…" Command="{Binding MoveToWorkspaceCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="ArrowSquareRight" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
                           <Separator />
                           <MenuItem Header="Delete…" Command="{Binding DeleteCommand}">
                             <MenuItem.Icon>
@@ -124,7 +181,7 @@
 
                   <!-- Body: the shortcuts, or a word on how the group fills up. -->
                   <Panel IsVisible="{Binding IsExpanded}" Margin="0,10,0,2">
-                    <TextBlock Text="No shortcuts in this group yet. Add one with +."
+                    <TextBlock Text="{Binding EmptyText}"
                                Classes="groupEmpty"
                                IsVisible="{Binding !HasShortcuts}" />
                     <ItemsControl Classes="tiles"
@@ -146,7 +203,7 @@
                                   ToolTip.Tip="{Binding ToolTip}"
                                   AutomationProperties.Name="{Binding Name}">
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12">
-                              <!-- The target's own icon — a program's, a website's — when there is one, else the category's glyph. -->
+                              <!-- The target's own icon — a program's, a website's — when there is one, else its kind's glyph. -->
                               <Border Grid.Column="0" Classes="tileIcon">
                                 <Panel>
                                   <ei:Icon Kind="{Binding Icon}" Classes="tileIcon" IsVisible="{Binding !HasTargetIcon}" />
@@ -278,7 +335,7 @@
         </ItemsControl>
       </ScrollViewer>
 
-      <!-- Empty category: an invitation rather than a blank page. -->
+      <!-- Empty workspace: an invitation rather than a blank page. -->
       <StackPanel x:Name="EmptyState"
                   IsVisible="{Binding IsEmpty}"
                   HorizontalAlignment="Center"
@@ -291,20 +348,49 @@
                    Foreground="{DynamicResource EnigmaForegroundSecondaryBrush}" />
         </Border>
         <TextBlock Text="No groups yet" Classes="emptyTitle" HorizontalAlignment="Center" />
-        <TextBlock Text="Groups keep related shortcuts together. Create one to start filling this category."
+        <TextBlock Text="Groups keep related shortcuts together: applications, folders, links or documents. Create one to start filling this workspace."
                    Classes="emptyState"
                    TextAlignment="Center"
                    TextWrapping="Wrap" />
-        <Button Classes="accent"
-                HorizontalAlignment="Center"
-                Margin="0,8,0,0"
-                Command="{Binding NewGroupCommand}"
-                AutomationProperties.Name="Create a group">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <ei:Icon Kind="Plus" Classes="toolbar" VerticalAlignment="Center" />
-            <TextBlock Text="Create a group" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
+        <!-- One button per kind: the kind is chosen once, when the group is created. -->
+        <StackPanel x:Name="EmptyKinds" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,8,0,0">
+          <Button Classes="accent"
+                  Command="{Binding NewGroupCommand}"
+                  CommandParameter="{x:Static core:ShortcutKind.Application}"
+                  AutomationProperties.Name="Create a group of applications">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ei:Icon Kind="AppWindow" Classes="toolbar" VerticalAlignment="Center" />
+              <TextBlock Text="Applications" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="accent"
+                  Command="{Binding NewGroupCommand}"
+                  CommandParameter="{x:Static core:ShortcutKind.Directory}"
+                  AutomationProperties.Name="Create a group of folders">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ei:Icon Kind="Folder" Classes="toolbar" VerticalAlignment="Center" />
+              <TextBlock Text="Folders" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="accent"
+                  Command="{Binding NewGroupCommand}"
+                  CommandParameter="{x:Static core:ShortcutKind.Url}"
+                  AutomationProperties.Name="Create a group of links">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ei:Icon Kind="Globe" Classes="toolbar" VerticalAlignment="Center" />
+              <TextBlock Text="Links" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="accent"
+                  Command="{Binding NewGroupCommand}"
+                  CommandParameter="{x:Static core:ShortcutKind.Document}"
+                  AutomationProperties.Name="Create a group of documents">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ei:Icon Kind="FileText" Classes="toolbar" VerticalAlignment="Center" />
+              <TextBlock Text="Documents" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
       </StackPanel>
     </Panel>
   </DockPanel>

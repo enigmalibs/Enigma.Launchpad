@@ -33,9 +33,10 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(ShortcutKind.Application, "Program", true, true)]
+    [InlineData(ShortcutKind.Application, "Program or command", true, true)]
     [InlineData(ShortcutKind.Directory, "Folder", true, false)]
     [InlineData(ShortcutKind.Url, "Address", false, false)]
+    [InlineData(ShortcutKind.Document, "File", true, false)]
     public void TheFieldsFollowTheKind(ShortcutKind kind, string label, bool canBrowse, bool hasArguments)
     {
         ShortcutEditorViewModel form = Form(kind);
@@ -45,6 +46,22 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
         Assert.Equal(canBrowse, form.BrowseCommand.CanExecute(null));
         Assert.Equal(hasArguments, form.HasArguments);
         Assert.False(string.IsNullOrWhiteSpace(form.TargetPlaceholder));
+    }
+
+    [Theory]
+    [InlineData(ShortcutKind.Application, true)]
+    [InlineData(ShortcutKind.Directory, false)]
+    [InlineData(ShortcutKind.Url, false)]
+    public void OnlyAnApplication_SaysItsTargetMayBeACommand(ShortcutKind kind, bool hasHint)
+    {
+        ShortcutEditorViewModel form = Form(kind);
+
+        Assert.Equal(hasHint, form.TargetHint is not null);
+
+        if (hasHint)
+        {
+            Assert.Contains("command found on the PATH", form.TargetHint, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -371,6 +388,35 @@ public sealed class ShortcutEditorViewModelTests : IDisposable
         Assert.Equal("Scratch", form.Name);
         Assert.Equal(_temp.Path, form.Target);
         Assert.Equal(("Folder", (string?)@"C:\Somewhere"), Assert.Single(_picker.Requests));
+    }
+
+    [Fact]
+    public async Task Browse_ForADocument_PicksAFile_AndNamesItWithoutItsExtension()
+    {
+        string report = Program("Budget 2026.xlsx");
+        _picker.NextFile = report;
+        ShortcutEditorViewModel form = Form(ShortcutKind.Document);
+
+        await form.BrowseCommand.ExecuteAsync(null);
+
+        Assert.Equal(report, form.Target);
+        Assert.Equal("Budget 2026", form.Name);
+        Assert.True(form.IsValid);
+        Assert.Equal("File", Assert.Single(_picker.Requests).Kind);
+    }
+
+    [Fact]
+    public void ADocumentsForm_SaysItsIconIsTheFiles_AndRefusesAFolder()
+    {
+        ShortcutEditorViewModel form = Form(ShortcutKind.Document);
+
+        Assert.Equal("The file's own icon, when it can be found, unless you choose an image.", form.IconHint);
+        Assert.Equal(Enigma.Icons.Phosphor.PhosphorIcon.FileText, form.KindGlyph);
+        Assert.False(form.HasArguments);
+
+        form.Target = _temp.Path;
+
+        Assert.Equal("This is a folder, not a file. Add it to a folders group instead.", form.VisibleTargetError);
     }
 
     [Fact]

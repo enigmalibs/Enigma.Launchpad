@@ -30,8 +30,8 @@ public sealed class ProfileExportImportTests : IDisposable
     {
         LaunchpadData data = PageHarness.WorkAndHome();
         Profile work = data.Profiles[0]
-            .With(ShortcutKind.Application, [new ShortcutGroup(Guid.NewGuid(), "Dev tools", [PageHarness.Shortcut("Code", CodePath, "--new-window")])])
-            .With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "Docs", [PageHarness.Shortcut("Avalonia", "https://docs.avaloniaui.net")])]);
+            .With(ShortcutKind.Application, [new ShortcutGroup(Guid.NewGuid(), "Dev tools", ShortcutKind.Application, [PageHarness.Shortcut("Code", CodePath, "--new-window")])])
+            .With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "Docs", ShortcutKind.Application, [PageHarness.Shortcut("Avalonia", "https://docs.avaloniaui.net")])]);
 
         _store = new FakeLaunchpadStore(data with { Profiles = [work, data.Profiles[1]] });
         _session = new LaunchpadSession(_store, new RecordingNotifications(), NullLogger<LaunchpadSession>.Instance);
@@ -52,7 +52,8 @@ public sealed class ProfileExportImportTests : IDisposable
         _picker.NextJsonFileToSave = path;
         _dialogs.SelectionAnswers.Enqueue(dialog =>
         {
-            dialog.Categories[1].IsChecked = false;
+            // The workspace's second group: the links.
+            dialog.Workspaces[0].Children[1].IsChecked = false;
             return dialog.ToProfile();
         });
 
@@ -60,17 +61,17 @@ public sealed class ProfileExportImportTests : IDisposable
 
         (string title, string message, string confirm, Profile content) = Assert.Single(_dialogs.Selections);
         Assert.Equal("Export “Work”", title);
-        Assert.Equal("Tick the groups and shortcuts of “Work” to write to the file.", message);
+        Assert.Equal("Tick the workspaces, groups and shortcuts of “Work” to write to the file.", message);
         Assert.Equal("Export…", confirm);
         Assert.Equal(_session.Profiles[0].Id, content.Id);
         Assert.Equal(("Export “Work”", "Work shortcuts.json"), Assert.Single(_picker.JsonRequests));
 
         ShortcutImport written = await _exchange.ReadAsync(path, TestContext.Current.CancellationToken);
-        Shortcut code = Assert.Single(Assert.Single(written.Content.Applications).Shortcuts);
+        Shortcut code = Assert.Single(Assert.Single(written.Content.GroupsOf(ShortcutKind.Application)).Shortcuts);
         Assert.Equal(("Code", CodePath, "--new-window"), (code.Name, code.Target, code.Arguments));
-        Assert.Empty(written.Content.Urls);
+        Assert.Empty(written.Content.GroupsOf(ShortcutKind.Url));
 
-        Assert.Equal(("Success", "“Work” exported", $"1 group · 1 shortcut written to {path}."), Assert.Single(_notifications.Shown));
+        Assert.Equal(("Success", "“Work” exported", $"1 workspace · 1 shortcut written to {path}."), Assert.Single(_notifications.Shown));
     }
 
     [Fact]
@@ -99,7 +100,7 @@ public sealed class ProfileExportImportTests : IDisposable
     }
 
     [Fact]
-    public async Task Export_IsNotOffered_ForAProfileWithNoGroup()
+    public async Task Export_IsNotOffered_ForAProfileWithNoWorkspace()
     {
         await _page.OnAppearingAsync();
         _session.AddProfile("Lab");
@@ -130,11 +131,12 @@ public sealed class ProfileExportImportTests : IDisposable
     {
         await _page.OnAppearingAsync();
         _picker.NextJsonFileToOpen = await ExportFileAsync(Profile.Create("Shared")
-            .With(ShortcutKind.Application, [new ShortcutGroup(Guid.NewGuid(), "games", [PageHarness.Shortcut("Chess", CodePath)]), new ShortcutGroup(Guid.NewGuid(), "Emulators", [])])
-            .With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "News", [PageHarness.Shortcut("Example", "https://example.com")])]));
+            .With(ShortcutKind.Application, [new ShortcutGroup(Guid.NewGuid(), "games", ShortcutKind.Application, [PageHarness.Shortcut("Chess", CodePath)]), new ShortcutGroup(Guid.NewGuid(), "Emulators", ShortcutKind.Application, [])])
+            .With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "News", ShortcutKind.Application, [PageHarness.Shortcut("Example", "https://example.com")])]));
         _dialogs.SelectionAnswers.Enqueue(dialog =>
         {
-            dialog.Categories[1].IsChecked = false;
+            // The workspace's third group: the links.
+            dialog.Workspaces[0].Children[2].IsChecked = false;
             return dialog.ToProfile();
         });
 
@@ -145,20 +147,21 @@ public sealed class ProfileExportImportTests : IDisposable
         (string title, string message, string confirm, _) = Assert.Single(_dialogs.Selections);
         Assert.Equal("Import into “Home”", title);
         Assert.Equal(
-            "Tick what to add to “Home” from “Shared”. A group named like one of its own adds its shortcuts to it, and shortcuts it already has are skipped.",
+            "Tick what to add to “Home” from “Shared”. A workspace titled like one of its own adds its groups to it, a group "
+                + "named like one of that workspace's adds its shortcuts to it, and shortcuts already there are skipped.",
             message);
         Assert.Equal("Import", confirm);
 
         LaunchpadData saved = _store.LastSaved ?? throw new InvalidOperationException("Nothing saved.");
         Profile home = saved.Profiles[1];
-        Assert.Equal(["Games", "Emulators"], home.Applications.Select(group => group.Name));
-        Assert.Equal(["Chess"], home.Applications[0].Shortcuts.Select(shortcut => shortcut.Name));
-        Assert.Empty(home.Urls);
-        Assert.Equal(["Dev tools"], saved.Profiles[0].Applications.Select(group => group.Name));
+        Assert.Equal(["Games", "Emulators"], home.GroupsOf(ShortcutKind.Application).Select(group => group.Name));
+        Assert.Equal(["Chess"], home.GroupsOf(ShortcutKind.Application)[0].Shortcuts.Select(shortcut => shortcut.Name));
+        Assert.Empty(home.GroupsOf(ShortcutKind.Url));
+        Assert.Equal(["Dev tools"], saved.Profiles[0].GroupsOf(ShortcutKind.Application).Select(group => group.Name));
         Assert.Equal("Work", saved.ActiveProfile.Name);
 
         Assert.Equal(("Success", "Imported into “Home”", "1 shortcut and 1 new group added."), Assert.Single(_notifications.Shown));
-        Assert.Equal("2 groups · 1 shortcut", Home.Summary);
+        Assert.Equal("1 workspace · 1 shortcut", Home.Summary);
     }
 
     [Fact]
@@ -224,7 +227,7 @@ public sealed class ProfileExportImportTests : IDisposable
     }
 
     [Theory]
-    [InlineData("[]", "The file holds no group.")]
+    [InlineData("[]", "The file holds no workspace.")]
     [InlineData("""[{ "name": "", "shortcuts": [{ "name": "Lost", "target": "https://example.com" }] }]""", "2 entries of the file were left out because they are not valid. Nothing else is in it.")]
     public async Task Import_OfAFileWithNothingToTake_Warns_WithoutAsking(string urls, string expected)
     {
@@ -262,12 +265,14 @@ public sealed class ProfileExportImportTests : IDisposable
         => Assert.Equal(expected, ProfilesPageViewModel.ExportFileName(profile));
 
     [Theory]
-    [InlineData(0, 0, "Everything ticked was already there.")]
-    [InlineData(0, 1, "1 shortcut added.")]
-    [InlineData(2, 0, "2 new groups added.")]
-    [InlineData(1, 3, "3 shortcuts and 1 new group added.")]
-    public void Added_WordsWhatAnImportAdded(int groups, int shortcuts, string expected)
-        => Assert.Equal(expected, ProfilesPageViewModel.Added(groups, shortcuts));
+    [InlineData(0, 0, 0, "Everything ticked was already there.")]
+    [InlineData(0, 0, 1, "1 shortcut added.")]
+    [InlineData(0, 2, 0, "2 new groups added.")]
+    [InlineData(0, 1, 3, "3 shortcuts and 1 new group added.")]
+    [InlineData(1, 0, 0, "1 new workspace added.")]
+    [InlineData(2, 3, 4, "4 shortcuts, 3 new groups and 2 new workspaces added.")]
+    public void Added_WordsWhatAnImportAdded(int workspaces, int groups, int shortcuts, string expected)
+        => Assert.Equal(expected, ProfilesPageViewModel.Added(workspaces, groups, shortcuts));
 
     private async Task<string> ExportFileAsync(Profile content)
     {

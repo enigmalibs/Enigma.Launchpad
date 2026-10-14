@@ -67,15 +67,12 @@ public sealed class CompositionRootTests
         Assert.NotNull(provider.GetRequiredService(serviceType));
     }
 
-    [Theory]
-    [InlineData(typeof(ApplicationsPageViewModel))]
-    [InlineData(typeof(DirectoriesPageViewModel))]
-    [InlineData(typeof(UrlsPageViewModel))]
-    public void Container_ResolvesEveryPageViewModel(Type viewModelType)
+    [Fact]
+    public void Container_KeepsOneWorkspacesPageViewModel()
     {
         using ServiceProvider provider = BuildProvider();
 
-        Assert.IsAssignableFrom<CategoryPageViewModel>(provider.GetRequiredService(viewModelType));
+        Assert.Same(provider.GetRequiredService<WorkspacesPageViewModel>(), provider.GetRequiredService<WorkspacesPageViewModel>());
     }
 
     [Theory]
@@ -95,6 +92,7 @@ public sealed class CompositionRootTests
     [InlineData(typeof(SettingsPageViewModel))]
     [InlineData(typeof(ProfileSwitcherViewModel))]
     [InlineData(typeof(ProfilesPageViewModel))]
+    [InlineData(typeof(WorkspacesPageViewModel))]
     public void Container_ResolvesEveryApplicationService(Type serviceType)
     {
         using ServiceProvider provider = BuildProvider();

@@ -28,7 +28,7 @@ public sealed class ProfileSwitcherViewTests
         {
             LaunchpadData data = PageHarness.WorkAndHome();
             using WindowHarness harness = new(data.WithActiveProfile(data.Profiles[1].Id));
-            CategoryPageView page = await harness.LoadedPageAsync();
+            WorkspacePageView page = await harness.LoadedPageAsync();
 
             ComboBox profiles = ProfileChoice(harness);
             Assert.Equal(2, profiles.ItemCount);
@@ -41,11 +41,14 @@ public sealed class ProfileSwitcherViewTests
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(PageHarness.WorkAndHome());
-            CategoryPageView page = await harness.LoadedPageAsync();
+            await harness.LoadedPageAsync();
             ComboBox profiles = ProfileChoice(harness);
 
+            // The open workspace belongs to the profile left behind: the list comes back, showing the new one's.
             profiles.SelectedIndex = 1;
-            await WindowHarness.WaitUntilAsync(() => GroupNames(page).SequenceEqual(["Games"]));
+            await WindowHarness.WaitUntilAsync(() => harness.OpenPage is null);
+            WorkspacePageView page = await harness.LoadedPageAsync();
+            Assert.Equal(["Games"], GroupNames(page));
 
             await harness.Provider.GetRequiredService<ILaunchpadSession>().FlushAsync();
             JsonLaunchpadStore store = new(new AppPaths(harness.DataDirectory), TimeProvider.System, NullLogger<JsonLaunchpadStore>.Instance);
@@ -56,7 +59,7 @@ public sealed class ProfileSwitcherViewTests
     private static ComboBox ProfileChoice(WindowHarness harness)
         => harness.Window.FindControl<ComboBox>("ProfileChoice") ?? throw new InvalidOperationException("No profile list.");
 
-    private static string[] GroupNames(CategoryPageView page)
+    private static string[] GroupNames(WorkspacePageView page)
     {
         page.UpdateLayout();
 

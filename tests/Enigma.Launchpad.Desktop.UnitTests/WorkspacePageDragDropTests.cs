@@ -9,13 +9,13 @@ using Xunit;
 
 namespace Enigma.Launchpad.Desktop.UnitTests;
 
-public sealed class CategoryPageDragDropTests
+public sealed class WorkspacePageDragDropTests
 {
     [Fact]
     public async Task DropGroup_MovesItNextToTheTarget_AndSaves()
     {
         PageHarness harness = new(PageHarness.Data("A", "B", "C", "D"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.True(page.DropGroup(Payload(page, page.Groups[0].Id), page.Groups[2], DropPosition.After));
 
@@ -28,7 +28,7 @@ public sealed class CategoryPageDragDropTests
     public async Task DropGroup_WhereItAlreadyIs_DoesNothing()
     {
         PageHarness harness = new(PageHarness.Data("A", "B", "C"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.False(page.DropGroup(Payload(page, page.Groups[1].Id), page.Groups[0], DropPosition.After));
         await harness.Session.FlushAsync();
@@ -38,24 +38,28 @@ public sealed class CategoryPageDragDropTests
     }
 
     [Fact]
-    public async Task AGroup_CannotBeDroppedOnItself_OrOnAnotherCategorysPage()
+    public async Task AGroup_CannotBeDroppedOnItself_OrWhenUnknown_ButMovesPastAGroupOfAnyKind()
     {
-        PageHarness harness = new(PageHarness.Data("A", "B"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        LaunchpadData data = PageHarness.Data("A", "B").With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "C", ShortcutKind.Url, [])]);
+        PageHarness harness = new(data);
+        WorkspacePageViewModel page = await harness.LoadAsync();
         Guid a = page.Groups[0].Id;
 
         Assert.False(page.CanDropGroup(Payload(page, a), page.Groups[0]));
-        Assert.False(page.CanDropGroup(new DragPayload(ShortcutKind.Url, a), page.Groups[1]));
         Assert.False(page.CanDropGroup(Payload(page, Guid.NewGuid()), page.Groups[1]));
         Assert.True(page.CanDropGroup(Payload(page, a), page.Groups[1]));
-        Assert.False(page.DropGroup(new DragPayload(ShortcutKind.Url, a), page.Groups[1], DropPosition.After));
+        Assert.True(page.CanDropGroup(Payload(page, a), page.Groups[2]));
+
+        Assert.True(page.DropGroup(Payload(page, a), page.Groups[2], DropPosition.After));
+
+        Assert.Equal(["B", "C", "A"], Names(page));
     }
 
     [Fact]
     public async Task DropShortcut_OnATileOfItsOwnGroup_Reorders()
     {
         PageHarness harness = new(Shortcuts(("Dev", ["A", "B", "C"])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         GroupViewModel dev = page.Groups[0];
 
         Assert.True(page.DropShortcut(Payload(page, dev.Shortcuts[2].Id), dev, dev.Shortcuts[0], DropPosition.Before));
@@ -68,7 +72,7 @@ public sealed class CategoryPageDragDropTests
     public async Task DropShortcut_OnItsOwnGroupsEmptySpace_MovesItToTheEnd()
     {
         PageHarness harness = new(Shortcuts(("Dev", ["A", "B", "C"])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         GroupViewModel dev = page.Groups[0];
 
         Assert.True(page.DropShortcut(Payload(page, dev.Shortcuts[0].Id), dev, null, DropPosition.After));
@@ -80,7 +84,7 @@ public sealed class CategoryPageDragDropTests
     public async Task DropShortcut_OnTheLastPlaceItAlreadyHas_DoesNothing()
     {
         PageHarness harness = new(Shortcuts(("Dev", ["A", "B"])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         GroupViewModel dev = page.Groups[0];
 
         Assert.False(page.DropShortcut(Payload(page, dev.Shortcuts[1].Id), dev, null, DropPosition.After));
@@ -95,7 +99,7 @@ public sealed class CategoryPageDragDropTests
     public async Task DropShortcut_OnATileOfAnotherGroup_MovesItThere(DropPosition position, string[] expected)
     {
         PageHarness harness = new(Shortcuts(("Dev", ["A", "B"]), ("Tools", ["X", "Y"])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         GroupViewModel dev = page.Groups[0];
         GroupViewModel tools = page.Groups[1];
         ShortcutViewModel a = dev.Shortcuts[0];
@@ -116,11 +120,11 @@ public sealed class CategoryPageDragDropTests
         LaunchpadData data = LaunchpadData.Empty.With(
             ShortcutKind.Application,
             [
-                new ShortcutGroup(Guid.NewGuid(), "Dev", [PageHarness.Shortcut("A")]),
-                new ShortcutGroup(Guid.NewGuid(), "Empty", [], IsCollapsed: true),
+                new ShortcutGroup(Guid.NewGuid(), "Dev", ShortcutKind.Application, [PageHarness.Shortcut("A")]),
+                new ShortcutGroup(Guid.NewGuid(), "Empty", ShortcutKind.Application, [], IsCollapsed: true),
             ]);
         PageHarness harness = new(data);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         GroupViewModel empty = page.Groups[1];
 
         Assert.True(page.DropShortcut(Payload(page, page.Groups[0].Shortcuts[0].Id), empty, null, DropPosition.After));
@@ -135,7 +139,7 @@ public sealed class CategoryPageDragDropTests
     public async Task AMovedShortcut_ThenMovesWithinItsNewGroup()
     {
         PageHarness harness = new(Shortcuts(("Dev", ["A"]), ("Tools", ["X", "Y"])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel a = page.Groups[0].Shortcuts[0];
         page.DropShortcut(Payload(page, a.Id), page.Groups[1], null, DropPosition.After);
 
@@ -148,25 +152,31 @@ public sealed class CategoryPageDragDropTests
     }
 
     [Fact]
-    public async Task AShortcut_IsRefused_OnItsOwnTile_FromAnotherCategory_OrOnATileOfAnotherGroup()
+    public async Task AShortcut_IsRefused_OnItsOwnTile_InAGroupOfAnotherKind_OrOnATileOfAnotherGroup()
     {
-        PageHarness harness = new(Shortcuts(("Dev", ["A", "B"]), ("Tools", ["X"])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        LaunchpadData data = Shortcuts(("Dev", ["A", "B"]), ("Tools", ["X"]))
+            .With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "Links", ShortcutKind.Url, [PageHarness.Shortcut("L", "https://example.com")])]);
+        PageHarness harness = new(data);
+        WorkspacePageViewModel page = await harness.LoadAsync();
         GroupViewModel dev = page.Groups[0];
+        GroupViewModel links = page.Groups[2];
         ShortcutViewModel a = dev.Shortcuts[0];
 
         Assert.False(page.CanDropShortcut(Payload(page, a.Id), dev, a));
-        Assert.False(page.CanDropShortcut(new DragPayload(ShortcutKind.Directory, a.Id), dev, dev.Shortcuts[1]));
         Assert.False(page.CanDropShortcut(Payload(page, a.Id), dev, page.Groups[1].Shortcuts[0]));
         Assert.False(page.CanDropShortcut(Payload(page, Guid.NewGuid()), dev, null));
+        Assert.False(page.CanDropShortcut(Payload(page, a.Id), links, null));
+        Assert.False(page.CanDropShortcut(new DragPayload(ShortcutKind.Url, a.Id), links, links.Shortcuts[0]));
+        Assert.False(page.DropShortcut(Payload(page, a.Id), links, null, DropPosition.After));
         Assert.True(page.CanDropShortcut(Payload(page, a.Id), dev, dev.Shortcuts[1]));
+        Assert.True(page.CanDropShortcut(Payload(page, a.Id), page.Groups[1], null));
     }
 
     [Fact]
     public async Task ClearDragState_ClearsEveryHintAndMark()
     {
         PageHarness harness = new(Shortcuts(("Dev", ["A", "B"])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         page.Groups[0].DropHint = DropHint.Inside;
         page.Groups[0].IsDragging = true;
         page.Groups[0].Shortcuts[1].DropHint = DropHint.After;
@@ -181,11 +191,10 @@ public sealed class CategoryPageDragDropTests
     }
 
     [Fact]
-    public void DropHint_DrivesTheIndicatorFlags()
+    public async Task DropHint_DrivesTheIndicatorFlags()
     {
-        GroupViewModel group = new PageHarness().Page is { } page
-            ? new GroupViewModel(page, new ShortcutGroup(Guid.NewGuid(), "G", []))
-            : throw new InvalidOperationException();
+        WorkspacePageViewModel page = await new PageHarness().LoadAsync();
+        GroupViewModel group = new(page, new ShortcutGroup(Guid.NewGuid(), "G", ShortcutKind.Application, []));
 
         group.DropHint = DropHint.Before;
         Assert.True(group.IsDropBefore);
@@ -196,9 +205,9 @@ public sealed class CategoryPageDragDropTests
         Assert.False(group.IsDropBefore || group.IsDropAfter);
     }
 
-    private static DragPayload Payload(CategoryPageViewModel page, Guid id) => new(page.Kind, id);
+    private static DragPayload Payload(WorkspacePageViewModel page, Guid id) => new(ShortcutKind.Application, id);
 
-    private static string[] Names(CategoryPageViewModel page) => page.Groups.Select(group => group.Name).ToArray();
+    private static string[] Names(WorkspacePageViewModel page) => page.Groups.Select(group => group.Name).ToArray();
 
     private static string[] Names(GroupViewModel group) => group.Shortcuts.Select(shortcut => shortcut.Name).ToArray();
 

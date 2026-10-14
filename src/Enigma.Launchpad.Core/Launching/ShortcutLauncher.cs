@@ -16,8 +16,9 @@ namespace Enigma.Launchpad.Core.Launching;
 public interface IShortcutLauncher
 {
     /// <summary>
-    /// Opens a shortcut: starts the application, opens the directory in the file manager, or opens the
-    /// address in the browser.
+    /// Opens a shortcut: starts the application — a program's path, or a command found on the <c>PATH</c> — opens
+    /// the directory in the file manager, opens the address in the browser, or opens the document in the application
+    /// the system associates with it.
     /// </summary>
     /// <param name="kind">The shortcut's kind.</param>
     /// <param name="shortcut">The shortcut.</param>
@@ -65,7 +66,8 @@ internal enum DesktopPlatform
 /// makes one call work on all three platforms — ShellExecute on Windows, <c>open</c> on macOS, the
 /// freedesktop handler on Linux — and what lets an application shortcut point at a document or a
 /// <c>.lnk</c> as well as at an executable. An address is re-checked before it is opened, so a document
-/// edited by hand cannot turn a URL shortcut into a launcher for another scheme.
+/// edited by hand cannot turn a URL shortcut into a launcher for another scheme. An application whose target is a
+/// command is looked up on the <c>PATH</c> when it is opened, and the program found is started.
 /// </remarks>
 public sealed class ShortcutLauncher : IShortcutLauncher
 {
@@ -76,19 +78,23 @@ public sealed class ShortcutLauncher : IShortcutLauncher
     private static readonly string[] LinuxTerminals = ["x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"];
 
     private readonly IProcessStarter _starter;
+    private readonly ICommandResolver _commands;
     private readonly ILogger<ShortcutLauncher> _logger;
 
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
     /// <param name="starter">Starts the processes.</param>
+    /// <param name="commands">Finds the programs commands name.</param>
     /// <param name="logger">Where failures are reported.</param>
-    public ShortcutLauncher(IProcessStarter starter, ILogger<ShortcutLauncher> logger)
+    public ShortcutLauncher(IProcessStarter starter, ICommandResolver commands, ILogger<ShortcutLauncher> logger)
     {
         ArgumentNullException.ThrowIfNull(starter);
+        ArgumentNullException.ThrowIfNull(commands);
         ArgumentNullException.ThrowIfNull(logger);
 
         _starter = starter;
+        _commands = commands;
         _logger = logger;
     }
 
@@ -96,6 +102,13 @@ public sealed class ShortcutLauncher : IShortcutLauncher
     public LaunchResult Launch(ShortcutKind kind, Shortcut shortcut)
     {
         ArgumentNullException.ThrowIfNull(shortcut);
+
+        if (IsCommand(kind, shortcut.Target))
+        {
+            return _commands.Resolve(shortcut.Target) is { } program
+                ? Start(BuildCommandStartInfo(program, shortcut.Arguments), shortcut)
+                : CommandMissing(shortcut.Target);
+        }
 
         LaunchResult? refusal = CheckTarget(kind, shortcut.Target);
 
@@ -110,6 +123,13 @@ public sealed class ShortcutLauncher : IShortcutLauncher
         if (kind == ShortcutKind.Url)
         {
             return new LaunchResult(LaunchOutcome.Refused, "A web address has no folder to show.");
+        }
+
+        if (IsCommand(kind, shortcut.Target))
+        {
+            return _commands.Resolve(shortcut.Target) is { } program
+                ? Start(BuildRevealStartInfo(CurrentPlatform, program), shortcut)
+                : CommandMissing(shortcut.Target);
         }
 
         LaunchResult? refusal = CheckTarget(kind, shortcut.Target);
@@ -193,9 +213,43 @@ public sealed class ShortcutLauncher : IShortcutLauncher
                 UrlNormalizer.TryParse(shortcut.Target, out Uri? address, out _);
                 return new ProcessStartInfo(address?.AbsoluteUri ?? shortcut.Target) { UseShellExecute = true };
 
+            case ShortcutKind.Document:
+                return new ProcessStartInfo(shortcut.Target)
+                {
+                    UseShellExecute = true,
+
+                    // The application opening it starts beside it, so its File › Open does too.
+                    WorkingDirectory = Path.GetDirectoryName(shortcut.Target) ?? string.Empty,
+                };
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown shortcut kind.");
         }
+    }
+
+    /// <summary>
+    /// How a command's program is started, once found on the <c>PATH</c>.
+    /// </summary>
+    /// <param name="program">The program's full path.</param>
+    /// <param name="arguments">The shortcut's arguments, if any.</param>
+    /// <returns>The start information: in the user's home folder, where a desktop launcher or a terminal starts a
+    /// command, rather than wherever the program happens to be installed.</returns>
+    internal static ProcessStartInfo BuildCommandStartInfo(string program, string? arguments)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(program);
+
+        ProcessStartInfo command = new(program)
+        {
+            UseShellExecute = true,
+            WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        };
+
+        if (!string.IsNullOrWhiteSpace(arguments))
+        {
+            command.Arguments = arguments.Trim();
+        }
+
+        return command;
     }
 
     /// <summary>
@@ -236,6 +290,15 @@ public sealed class ShortcutLauncher : IShortcutLauncher
             : OperatingSystem.IsMacOS() ? DesktopPlatform.MacOS : DesktopPlatform.Linux;
 
     /// <summary>
+    /// Whether an application's target is a command to look up on the <c>PATH</c> rather than a program's path.
+    /// </summary>
+    private static bool IsCommand(ShortcutKind kind, string target)
+        => (kind == ShortcutKind.Application) && !Path.IsPathFullyQualified(target.Trim()) && PathCommandResolver.IsCommandName(target);
+
+    private static LaunchResult CommandMissing(string command)
+        => new(LaunchOutcome.TargetMissing, $"No program called “{command.Trim()}” was found on the PATH.");
+
+    /// <summary>
     /// Whether the target can be opened at all, before anything is started.
     /// </summary>
     private static LaunchResult? CheckTarget(ShortcutKind kind, string target)
@@ -245,6 +308,8 @@ public sealed class ShortcutLauncher : IShortcutLauncher
                 => new LaunchResult(LaunchOutcome.TargetMissing, $"The program no longer exists: {target}"),
             ShortcutKind.Directory when !Directory.Exists(target)
                 => new LaunchResult(LaunchOutcome.TargetMissing, $"The folder no longer exists: {target}"),
+            ShortcutKind.Document when !File.Exists(target)
+                => new LaunchResult(LaunchOutcome.TargetMissing, $"The document no longer exists: {target}"),
             ShortcutKind.Url when !UrlNormalizer.TryParse(target, out _, out string? error)
                 => new LaunchResult(LaunchOutcome.Refused, error),
             _ => null,

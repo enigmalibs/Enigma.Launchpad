@@ -4,13 +4,14 @@ using System.Collections.Specialized;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Desktop.DragAndDrop;
 
 namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 
 /// <summary>
-/// One group on a category page: its name, whether it is folded, and its shortcuts.
+/// One group of an open workspace: its name, its kind, whether it is folded, and its shortcuts.
 /// </summary>
 /// <remarks>
 /// A group's commands act on the page it belongs to — a rename is checked against its siblings, a move
@@ -18,7 +19,7 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 /// </remarks>
 public sealed class GroupViewModel : ObservableObject
 {
-    private readonly CategoryPageViewModel _page;
+    private readonly WorkspacePageViewModel _page;
     private readonly bool _isInitialised;
 
     /// <summary>
@@ -26,13 +27,14 @@ public sealed class GroupViewModel : ObservableObject
     /// </summary>
     /// <param name="page">The page the group is on.</param>
     /// <param name="group">The group as stored.</param>
-    public GroupViewModel(CategoryPageViewModel page, ShortcutGroup group)
+    public GroupViewModel(WorkspacePageViewModel page, ShortcutGroup group)
     {
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(group);
 
         _page = page;
         Id = group.Id;
+        Kind = group.Kind;
         Name = group.Name;
         IsExpanded = !group.IsCollapsed;
         Shortcuts = new ObservableCollection<ShortcutViewModel>(group.Shortcuts.Select(shortcut => new ShortcutViewModel(page, this, shortcut)));
@@ -41,6 +43,7 @@ public sealed class GroupViewModel : ObservableObject
         AddShortcutCommand = new AsyncRelayCommand(() => _page.AddShortcutAsync(this));
 
         RenameCommand = new AsyncRelayCommand(() => _page.RenameGroupAsync(this));
+        MoveToWorkspaceCommand = new AsyncRelayCommand(() => _page.MoveGroupToWorkspaceAsync(this));
         DeleteCommand = new AsyncRelayCommand(() => _page.DeleteGroupAsync(this));
         MoveUpCommand = new RelayCommand(() => _page.MoveGroup(this, -1), () => _page.CanMoveGroup(this, -1));
         MoveDownCommand = new RelayCommand(() => _page.MoveGroup(this, 1), () => _page.CanMoveGroup(this, 1));
@@ -52,6 +55,26 @@ public sealed class GroupViewModel : ObservableObject
     /// Gets the group's identity.
     /// </summary>
     public Guid Id { get; }
+
+    /// <summary>
+    /// Gets the kind of every shortcut in the group.
+    /// </summary>
+    public ShortcutKind Kind { get; }
+
+    /// <summary>
+    /// Gets the glyph of the group's kind, beside its name.
+    /// </summary>
+    public PhosphorIcon KindGlyph => Glyphs.OfKind(Kind);
+
+    /// <summary>
+    /// Gets what the group's kind is called, for its glyph's tooltip.
+    /// </summary>
+    public string KindTitle => new GroupKindOption(Kind).Title;
+
+    /// <summary>
+    /// Gets what an empty group says about how it fills up.
+    /// </summary>
+    public string EmptyText => $"No {GroupKindOption.Noun(Kind)} in this group yet. Add one with +.";
 
     /// <summary>
     /// Gets or sets the group's name.
@@ -136,6 +159,11 @@ public sealed class GroupViewModel : ObservableObject
     public AsyncRelayCommand RenameCommand { get; }
 
     /// <summary>
+    /// Gets the command moving the group, with its shortcuts, to another workspace.
+    /// </summary>
+    public AsyncRelayCommand MoveToWorkspaceCommand { get; }
+
+    /// <summary>
     /// Gets the command deleting the group, after confirmation.
     /// </summary>
     public AsyncRelayCommand DeleteCommand { get; }
@@ -154,7 +182,7 @@ public sealed class GroupViewModel : ObservableObject
     /// Gets the group as it should be stored.
     /// </summary>
     /// <returns>The group.</returns>
-    public ShortcutGroup ToModel() => new(Id, Name, Shortcuts.Select(shortcut => shortcut.Model).ToArray(), !IsExpanded);
+    public ShortcutGroup ToModel() => new(Id, Name, Kind, Shortcuts.Select(shortcut => shortcut.Model).ToArray(), !IsExpanded);
 
     /// <summary>
     /// Re-evaluates the commands that depend on the group's position on the page.

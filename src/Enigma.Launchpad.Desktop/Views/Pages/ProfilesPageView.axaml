@@ -6,7 +6,7 @@
              x:DataType="pages:ProfilesPageViewModel">
 
   <DockPanel>
-    <!-- Page header, in the category pages' style, with the way to add a profile. -->
+    <!-- Page header, in the other pages' style, with the way to add a profile. -->
     <Grid DockPanel.Dock="Top"
           ColumnDefinitions="Auto,*,Auto"
           Margin="32,28,32,16">
@@ -15,7 +15,7 @@
       </Border>
       <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2" Margin="14,0,0,0">
         <TextBlock Text="Profiles" Classes="pageTitle" />
-        <TextBlock Text="Each profile keeps its own applications, directories and URLs." Classes="pageDescription" />
+        <TextBlock Text="Each profile keeps its own workspaces." Classes="pageDescription" />
       </StackPanel>
       <Button x:Name="NewProfileButton"
               Grid.Column="2"

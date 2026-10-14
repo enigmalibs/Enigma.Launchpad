@@ -1,0 +1,182 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ei="https://github.com/josueclement/Enigma.Icons"
+             xmlns:pages="using:Enigma.Launchpad.Desktop.ViewModels.Pages"
+             xmlns:views="using:Enigma.Launchpad.Desktop.Views.Pages"
+             x:Class="Enigma.Launchpad.Desktop.Views.Pages.WorkspacesPageView"
+             x:DataType="pages:WorkspacesPageViewModel">
+
+  <!-- The list, or the workspace opened from it in its place: a drill-in, so the rail stays on Workspaces. -->
+  <Panel>
+  <DockPanel x:Name="WorkspaceListPage" IsVisible="{Binding !IsWorkspaceOpen}">
+    <!-- Page header, in the other pages' style, with the way to add a workspace. -->
+    <Grid DockPanel.Dock="Top"
+          ColumnDefinitions="Auto,*,Auto"
+          Margin="32,28,32,16">
+      <Border Grid.Column="0" Classes="pageIcon" VerticalAlignment="Center">
+        <ei:Icon Kind="SquaresFour" Classes="pageIcon" />
+      </Border>
+      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2" Margin="14,0,0,0">
+        <TextBlock Text="Workspaces" Classes="pageTitle" />
+        <TextBlock Text="The workspaces of this profile, each with its own groups." Classes="pageDescription" />
+      </StackPanel>
+      <Button x:Name="NewWorkspaceButton"
+              Grid.Column="2"
+              Classes="accent"
+              VerticalAlignment="Center"
+              Command="{Binding NewWorkspaceCommand}"
+              IsVisible="{Binding !IsEmpty}"
+              ToolTip.Tip="Create a workspace in this profile"
+              AutomationProperties.Name="New workspace">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ei:Icon Kind="Plus" Classes="toolbar" VerticalAlignment="Center" />
+          <TextBlock Text="New workspace" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+    </Grid>
+
+    <!-- The search, live on titles and descriptions. -->
+    <TextBox x:Name="SearchBox"
+             DockPanel.Dock="Top"
+             Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+             IsVisible="{Binding HasWorkspaces}"
+             PlaceholderText="Search workspaces"
+             HorizontalAlignment="Left"
+             Width="360"
+             Margin="32,0,32,12"
+             AutomationProperties.Name="Search workspaces">
+      <TextBox.InnerLeftContent>
+        <ei:Icon Kind="MagnifyingGlass" Classes="row" Margin="10,0,0,0" VerticalAlignment="Center"
+                 Foreground="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+      </TextBox.InnerLeftContent>
+    </TextBox>
+
+    <Panel>
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="32,4,32,32" Spacing="8">
+          <TextBlock x:Name="NoMatch"
+                     Text="{Binding NoMatchText}"
+                     IsVisible="{Binding HasNoMatch}"
+                     Classes="emptyState" />
+
+          <ItemsControl x:Name="WorkspaceList" ItemsSource="{Binding Workspaces}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Spacing="8" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="pages:WorkspaceItemViewModel">
+                <!-- A click or Enter opens the workspace; the menu button inside does the rest. -->
+                <Button Classes="workspaceCard"
+                        Command="{Binding OpenCommand}"
+                        ToolTip.Tip="Open this workspace"
+                        AutomationProperties.Name="{Binding Title}">
+                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Border Grid.Column="0" Classes="tileIcon" VerticalAlignment="Center">
+                      <ei:Icon Kind="{Binding Glyph}" Classes="tileIcon" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock Text="{Binding Title}" Classes="groupName" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Description}"
+                                 Classes="pageDescription"
+                                 TextTrimming="CharacterEllipsis"
+                                 IsVisible="{Binding HasDescription}" />
+                      <TextBlock Text="{Binding Summary}" Classes="workspaceSummary" />
+                    </StackPanel>
+
+                    <Button Grid.Column="2"
+                            Classes="ghost"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Workspace actions"
+                            AutomationProperties.Name="Workspace actions">
+                      <ei:Icon Kind="DotsThreeOutline" Classes="toolbar" />
+                      <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                          <MenuItem Header="Open" Command="{Binding OpenCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="ArrowSquareOut" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <MenuItem Header="Edit…" Command="{Binding EditCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="PencilSimple" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <MenuItem Header="Duplicate…" Command="{Binding DuplicateCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="Copy" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <Separator />
+                          <MenuItem Header="Move up" Command="{Binding MoveUpCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="ArrowUp" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <MenuItem Header="Move down" Command="{Binding MoveDownCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="ArrowDown" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                          <Separator />
+                          <MenuItem Header="Delete…" Command="{Binding DeleteCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="Trash" Classes="menu" />
+                            </MenuItem.Icon>
+                          </MenuItem>
+                        </MenuFlyout>
+                      </Button.Flyout>
+                    </Button>
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- No workspace yet: an invitation rather than a blank page. -->
+      <StackPanel x:Name="EmptyState"
+                  IsVisible="{Binding IsEmpty}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="12"
+                  Margin="32,0,32,64"
+                  MaxWidth="420">
+        <Border Classes="emptyIcon" HorizontalAlignment="Center">
+          <ei:Icon Kind="SquaresFour" Size="32" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+        </Border>
+        <TextBlock Text="No workspaces yet" Classes="emptyTitle" HorizontalAlignment="Center" />
+        <TextBlock Text="A workspace gathers the applications, folders and links you use together, in groups. Create one to start."
+                   Classes="emptyState"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap" />
+        <Button Classes="accent"
+                HorizontalAlignment="Center"
+                Margin="0,8,0,0"
+                Command="{Binding NewWorkspaceCommand}"
+                AutomationProperties.Name="Create a workspace">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ei:Icon Kind="Plus" Classes="toolbar" VerticalAlignment="Center" />
+            <TextBlock Text="Create a workspace" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </Panel>
+  </DockPanel>
+
+  <ContentControl x:Name="OpenWorkspaceHost"
+                  Content="{Binding OpenWorkspace}"
+                  IsVisible="{Binding IsWorkspaceOpen}">
+    <ContentControl.DataTemplates>
+      <DataTemplate DataType="pages:WorkspacePageViewModel" x:DataType="pages:WorkspacePageViewModel">
+        <views:WorkspacePageView />
+      </DataTemplate>
+    </ContentControl.DataTemplates>
+  </ContentControl>
+  </Panel>
+</UserControl>

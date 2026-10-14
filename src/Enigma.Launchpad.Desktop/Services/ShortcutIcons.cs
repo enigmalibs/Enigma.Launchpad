@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
+using Enigma.Launchpad.Core.Launching;
 using Enigma.Launchpad.Core.Shortcuts;
 using Microsoft.Extensions.Logging;
 
@@ -21,11 +22,11 @@ public sealed record IconImage(IImage Image, ShortcutIcon Icon);
 public interface IShortcutIcons
 {
     /// <summary>
-    /// Whether a kind of shortcut can have its icon found from its target: a program's, a website's. A folder's
-    /// cannot; it only ever has the icon the user chose.
+    /// Whether a kind of shortcut can have its icon found from its target: a program's, a website's, a document's.
+    /// A folder's cannot; it only ever has the icon the user chose.
     /// </summary>
     /// <param name="kind">The kind of shortcut.</param>
-    /// <returns><see langword="true"/> for applications and URLs.</returns>
+    /// <returns><see langword="true"/> for applications, URLs and documents.</returns>
     bool CanFind(ShortcutKind kind);
 
     /// <summary>
@@ -36,7 +37,8 @@ public interface IShortcutIcons
     IImage? Show(ShortcutIcon icon);
 
     /// <summary>
-    /// Finds the icon of a shortcut's target: the program's own, or its website's.
+    /// Finds the icon of a shortcut's target: the program's own — a command's is the program the <c>PATH</c> leads
+    /// to — or its website's.
     /// </summary>
     /// <param name="kind">The kind of shortcut.</param>
     /// <param name="target">Its target.</param>
@@ -85,6 +87,7 @@ public sealed class ShortcutIcons : IShortcutIcons
 
     private readonly IProgramIcons _programIcons;
     private readonly IWebsiteIcons _websiteIcons;
+    private readonly ICommandResolver _commands;
     private readonly ILogger<ShortcutIcons> _logger;
 
     /// <summary>
@@ -92,20 +95,23 @@ public sealed class ShortcutIcons : IShortcutIcons
     /// </summary>
     /// <param name="programIcons">Finds programs' icons.</param>
     /// <param name="websiteIcons">Finds websites' icons.</param>
+    /// <param name="commands">Finds the programs commands name.</param>
     /// <param name="logger">Where an icon that cannot be shown is reported.</param>
-    public ShortcutIcons(IProgramIcons programIcons, IWebsiteIcons websiteIcons, ILogger<ShortcutIcons> logger)
+    public ShortcutIcons(IProgramIcons programIcons, IWebsiteIcons websiteIcons, ICommandResolver commands, ILogger<ShortcutIcons> logger)
     {
         ArgumentNullException.ThrowIfNull(programIcons);
         ArgumentNullException.ThrowIfNull(websiteIcons);
+        ArgumentNullException.ThrowIfNull(commands);
         ArgumentNullException.ThrowIfNull(logger);
 
         _programIcons = programIcons;
         _websiteIcons = websiteIcons;
+        _commands = commands;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public bool CanFind(ShortcutKind kind) => kind is ShortcutKind.Application or ShortcutKind.Url;
+    public bool CanFind(ShortcutKind kind) => kind is ShortcutKind.Application or ShortcutKind.Url or ShortcutKind.Document;
 
     /// <inheritdoc />
     public IImage? Show(ShortcutIcon icon)
@@ -150,10 +156,24 @@ public sealed class ShortcutIcons : IShortcutIcons
     {
         ArgumentNullException.ThrowIfNull(target);
 
+        if ((kind == ShortcutKind.Application) && !Path.IsPathFullyQualified(target.Trim()))
+        {
+            // Off the UI thread: finding a command probes every directory of the PATH.
+            if (await Task.Run(() => _commands.Resolve(target), cancellationToken) is not { } program)
+            {
+                return null;
+            }
+
+            target = program;
+        }
+
         Task<byte[]?> lookup = kind switch
         {
             ShortcutKind.Application => refresh ? _programIcons.RefreshAsync(target, cancellationToken) : _programIcons.GetAsync(target, cancellationToken),
             ShortcutKind.Url => refresh ? _websiteIcons.RefreshAsync(target, cancellationToken) : _websiteIcons.GetAsync(target, cancellationToken),
+
+            // The shell gives any file an image — its type's, or a thumbnail of its own — as it does a program.
+            ShortcutKind.Document => refresh ? _programIcons.RefreshAsync(target, cancellationToken) : _programIcons.GetAsync(target, cancellationToken),
             _ => Task.FromResult<byte[]?>(null),
         };
 

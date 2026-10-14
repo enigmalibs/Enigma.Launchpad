@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -53,6 +54,26 @@ public interface ILaunchpadDialogs
     /// <param name="existing">The shortcut to edit; <see langword="null"/> to add one.</param>
     /// <returns>The shortcut as entered, with a normalised target; <see langword="null"/> when the user cancelled.</returns>
     Task<Shortcut?> EditShortcutAsync(ShortcutKind kind, Shortcut? existing);
+
+    /// <summary>
+    /// Shows the form creating or editing a workspace — its title, description and glyph; the confirm button is
+    /// enabled only for a valid form.
+    /// </summary>
+    /// <param name="existing">The workspace to edit; <see langword="null"/> to create one.</param>
+    /// <param name="otherTitles">The titles of the profile's other workspaces, which the title may not repeat.</param>
+    /// <returns>What was entered; <see langword="null"/> when the user cancelled.</returns>
+    Task<WorkspaceDetails?> EditWorkspaceAsync(Workspace? existing, IEnumerable<string> otherTitles);
+
+    /// <summary>
+    /// Asks which workspace to take, from a list where nothing is chosen at first; the confirm button is enabled once
+    /// one is.
+    /// </summary>
+    /// <param name="title">The dialog's title.</param>
+    /// <param name="message">What the dialog says above the list.</param>
+    /// <param name="confirmText">The confirm button's text.</param>
+    /// <param name="workspaces">The workspaces to choose from, in the order to show them.</param>
+    /// <returns>The chosen workspace; <see langword="null"/> when the user cancelled.</returns>
+    Task<Workspace?> ChooseWorkspaceAsync(string title, string message, string confirmText, IReadOnlyList<Workspace> workspaces);
 
     /// <summary>
     /// Asks which arguments to run an application with this once, starting from its default arguments.
@@ -127,6 +148,7 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
         {
             ShortcutKind.Application => "application",
             ShortcutKind.Directory => "folder",
+            ShortcutKind.Document => "document",
             _ => "link",
         };
 
@@ -138,6 +160,32 @@ public sealed class LaunchpadDialogs : ILaunchpadDialogs
             () => model.IsValid);
 
         return confirmed && model.IsValid ? model.ToShortcut() : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<WorkspaceDetails?> EditWorkspaceAsync(Workspace? existing, IEnumerable<string> otherTitles)
+    {
+        WorkspaceEditorViewModel model = new(existing, otherTitles, _validator);
+
+        bool confirmed = await ShowFormAsync(
+            existing is null ? "New workspace" : "Edit workspace",
+            existing is null ? "Create" : "Save",
+            new WorkspaceEditorView { DataContext = model },
+            model,
+            () => model.IsValid);
+
+        return confirmed && model.IsValid ? model.ToDetails() : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<Workspace?> ChooseWorkspaceAsync(string title, string message, string confirmText, IReadOnlyList<Workspace> workspaces)
+    {
+        ArgumentNullException.ThrowIfNull(workspaces);
+
+        WorkspaceChoiceViewModel model = new(message, workspaces);
+        bool confirmed = await ShowFormAsync(title, confirmText, new WorkspaceChoiceView { DataContext = model }, model, () => model.HasSelection);
+
+        return confirmed ? model.Selected?.Workspace : null;
     }
 
     /// <inheritdoc />

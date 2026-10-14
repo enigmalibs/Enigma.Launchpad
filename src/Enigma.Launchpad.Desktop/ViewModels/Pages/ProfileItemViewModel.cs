@@ -31,12 +31,12 @@ public sealed class ProfileItemViewModel : ObservableObject
         Id = profile.Id;
         Name = profile.Name;
         IsActive = isActive;
-        Summary = Summarise(profile.CountGroups(), profile.CountShortcuts());
+        Summary = Summarise(profile.CountWorkspaces(), profile.CountShortcuts());
 
         UseCommand = new RelayCommand(() => page.Use(this), () => !IsActive);
         RenameCommand = new AsyncRelayCommand(() => page.RenameAsync(this));
         DuplicateCommand = new AsyncRelayCommand(() => page.DuplicateAsync(this));
-        ExportCommand = new AsyncRelayCommand(() => page.ExportAsync(this), () => profile.CountGroups() > 0);
+        ExportCommand = new AsyncRelayCommand(() => page.ExportAsync(this), () => profile.CountWorkspaces() > 0);
         ImportCommand = new AsyncRelayCommand(() => page.ImportAsync(this));
         DeleteCommand = new AsyncRelayCommand(() => page.DeleteAsync(this), () => canDelete);
         MoveUpCommand = new RelayCommand(() => page.Move(this, -1), () => canMoveUp);
@@ -79,12 +79,13 @@ public sealed class ProfileItemViewModel : ObservableObject
     public AsyncRelayCommand DuplicateCommand { get; }
 
     /// <summary>
-    /// Gets the command writing the groups and shortcuts the user picks to a file; not for a profile with no group.
+    /// Gets the command writing the workspaces, groups and shortcuts the user picks to a file; not for a profile with
+    /// no workspace.
     /// </summary>
     public AsyncRelayCommand ExportCommand { get; }
 
     /// <summary>
-    /// Gets the command adding the groups and shortcuts the user picks from a file to the profile.
+    /// Gets the command adding the workspaces, groups and shortcuts the user picks from a file to the profile.
     /// </summary>
     public AsyncRelayCommand ImportCommand { get; }
 
@@ -106,11 +107,11 @@ public sealed class ProfileItemViewModel : ObservableObject
     /// <summary>
     /// Words what a profile holds.
     /// </summary>
-    /// <param name="groups">How many groups it has.</param>
+    /// <param name="workspaces">How many workspaces it has.</param>
     /// <param name="shortcuts">How many shortcuts they hold.</param>
-    /// <returns>"No groups yet", or the two counts.</returns>
-    internal static string Summarise(int groups, int shortcuts)
-        => groups == 0
-            ? "No groups yet"
-            : $"{groups} {(groups == 1 ? "group" : "groups")} · {shortcuts} {(shortcuts == 1 ? "shortcut" : "shortcuts")}";
+    /// <returns>"No workspaces yet", or the two counts.</returns>
+    internal static string Summarise(int workspaces, int shortcuts)
+        => workspaces == 0
+            ? "No workspaces yet"
+            : $"{workspaces} {(workspaces == 1 ? "workspace" : "workspaces")} · {shortcuts} {(shortcuts == 1 ? "shortcut" : "shortcuts")}";
 }

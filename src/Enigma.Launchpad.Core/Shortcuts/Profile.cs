@@ -5,19 +5,13 @@ using System.Linq;
 namespace Enigma.Launchpad.Core.Shortcuts;
 
 /// <summary>
-/// One set of shortcuts the user switches between — say "Work" and "Home": its own groups in each category.
+/// One set of shortcuts the user switches between — say "Work" and "Home": its own workspaces.
 /// </summary>
 /// <param name="Id">Stable identity, used to find the profile again across renames and moves.</param>
 /// <param name="Name">What the profile is called; unique among the profiles, ignoring case.</param>
-/// <param name="Applications">The groups of the applications category.</param>
-/// <param name="Directories">The groups of the directories category.</param>
-/// <param name="Urls">The groups of the URLs category.</param>
-public sealed record Profile(
-    Guid Id,
-    string Name,
-    IReadOnlyList<ShortcutGroup> Applications,
-    IReadOnlyList<ShortcutGroup> Directories,
-    IReadOnlyList<ShortcutGroup> Urls)
+/// <param name="Workspaces">The profile's workspaces, in display order.</param>
+/// <remarks>Every operation returns a new profile and leaves this one as it was.</remarks>
+public sealed record Profile(Guid Id, string Name, IReadOnlyList<Workspace> Workspaces)
 {
     /// <summary>
     /// The name of the profile a new launchpad starts with, and that an older file's shortcuts are moved into.
@@ -25,51 +19,116 @@ public sealed record Profile(
     public const string DefaultName = "Default";
 
     /// <summary>
-    /// Creates a profile with no group in any category.
+    /// Creates a profile with no workspace.
     /// </summary>
     /// <param name="name">What the profile is called.</param>
     /// <returns>The profile, with a new identity.</returns>
     public static Profile Create(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return new Profile(Guid.NewGuid(), name, [], [], []);
+        return new Profile(Guid.NewGuid(), name, []);
     }
 
     /// <summary>
-    /// Gets the groups of one category.
+    /// Finds a workspace by identity.
     /// </summary>
-    /// <param name="kind">The category.</param>
-    /// <returns>Its groups, in display order.</returns>
-    public IReadOnlyList<ShortcutGroup> GroupsOf(ShortcutKind kind)
-        => kind switch
-        {
-            ShortcutKind.Application => Applications,
-            ShortcutKind.Directory => Directories,
-            ShortcutKind.Url => Urls,
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown shortcut kind."),
-        };
+    /// <param name="id">The workspace's identity.</param>
+    /// <returns>The workspace, or <see langword="null"/>.</returns>
+    public Workspace? FindWorkspace(Guid id) => Workspaces.FirstOrDefault(workspace => workspace.Id == id);
 
     /// <summary>
-    /// Returns a copy of this profile with one category's groups replaced.
+    /// Returns a copy of this profile with a workspace added.
     /// </summary>
-    /// <param name="kind">The category to replace.</param>
-    /// <param name="groups">Its new groups, in display order.</param>
+    /// <param name="workspace">The workspace to add.</param>
+    /// <param name="index">Where it goes in the list; at the end when omitted.</param>
     /// <returns>The new profile.</returns>
-    public Profile With(ShortcutKind kind, IReadOnlyList<ShortcutGroup> groups)
+    /// <exception cref="ArgumentException">A workspace with the same identity is already there.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is outside the list.</exception>
+    public Profile AddWorkspace(Workspace workspace, int? index = null)
     {
-        ArgumentNullException.ThrowIfNull(groups);
+        ArgumentNullException.ThrowIfNull(workspace);
 
-        return kind switch
+        if (FindWorkspace(workspace.Id) is not null)
         {
-            ShortcutKind.Application => this with { Applications = groups },
-            ShortcutKind.Directory => this with { Directories = groups },
-            ShortcutKind.Url => this with { Urls = groups },
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown shortcut kind."),
-        };
+            throw new ArgumentException("A workspace with this identity is already in the profile.", nameof(workspace));
+        }
+
+        int at = index ?? Workspaces.Count;
+        ArgumentOutOfRangeException.ThrowIfNegative(at, nameof(index));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(at, Workspaces.Count, nameof(index));
+
+        List<Workspace> workspaces = [.. Workspaces];
+        workspaces.Insert(at, workspace);
+
+        return this with { Workspaces = workspaces };
     }
 
     /// <summary>
-    /// Copies this profile under another name. The copy, its groups and its shortcuts all get new identities,
+    /// Returns a copy of this profile with a workspace replaced by another version of itself.
+    /// </summary>
+    /// <param name="workspace">The workspace, with the identity of the one it replaces.</param>
+    /// <returns>The new profile.</returns>
+    /// <exception cref="ArgumentException">No workspace has this identity.</exception>
+    public Profile ReplaceWorkspace(Workspace workspace)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+        RequireWorkspace(workspace.Id);
+
+        return this with { Workspaces = Workspaces.Select(existing => existing.Id == workspace.Id ? workspace : existing).ToArray() };
+    }
+
+    /// <summary>
+    /// Returns a copy of this profile without a workspace.
+    /// </summary>
+    /// <param name="id">The workspace to remove.</param>
+    /// <returns>The new profile.</returns>
+    /// <exception cref="ArgumentException">No workspace has this identity.</exception>
+    public Profile RemoveWorkspace(Guid id)
+    {
+        RequireWorkspace(id);
+        return this with { Workspaces = Workspaces.Where(workspace => workspace.Id != id).ToArray() };
+    }
+
+    /// <summary>
+    /// Whether a workspace can move by an offset without leaving the list.
+    /// </summary>
+    /// <param name="id">The workspace.</param>
+    /// <param name="offset">How many places, negative for up.</param>
+    /// <returns><see langword="true"/> when the move stays in the list.</returns>
+    public bool CanMoveWorkspace(Guid id, int offset)
+    {
+        int index = IndexOfWorkspace(id);
+        int target = index + offset;
+
+        return (index >= 0) && (offset != 0) && (target >= 0) && (target < Workspaces.Count);
+    }
+
+    /// <summary>
+    /// Returns a copy of this profile with a workspace moved by an offset.
+    /// </summary>
+    /// <param name="id">The workspace.</param>
+    /// <param name="offset">How many places, negative for up.</param>
+    /// <returns>The new profile.</returns>
+    /// <exception cref="ArgumentException">The workspace is unknown, or the move would leave the list.</exception>
+    public Profile MoveWorkspace(Guid id, int offset)
+    {
+        Workspace workspace = RequireWorkspace(id);
+
+        if (!CanMoveWorkspace(id, offset))
+        {
+            throw new ArgumentException("The workspace cannot move this far.", nameof(offset));
+        }
+
+        int index = IndexOfWorkspace(id);
+        List<Workspace> workspaces = [.. Workspaces];
+        workspaces.RemoveAt(index);
+        workspaces.Insert(index + offset, workspace);
+
+        return this with { Workspaces = workspaces };
+    }
+
+    /// <summary>
+    /// Copies this profile under another name. The copy, its workspaces, groups and shortcuts all get new identities,
     /// so no identity is ever shared between two profiles.
     /// </summary>
     /// <param name="name">What the copy is called.</param>
@@ -78,44 +137,85 @@ public sealed record Profile(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return new Profile(Guid.NewGuid(), name, Copy(Applications), Copy(Directories), Copy(Urls));
+        return new Profile(Guid.NewGuid(), name, Workspaces.Select(Copy).ToArray());
     }
 
     /// <summary>
-    /// Returns a copy of this profile with another profile's groups and shortcuts added to it. A group whose name
-    /// matches one of the same category, ignoring case, adds its shortcuts at that group's end; any other group is
-    /// added, unfolded, at the end of its category. A shortcut identical to one already in the group it would join —
-    /// same name and target, ignoring case, and same arguments — is left out, so importing the same content twice
-    /// adds nothing the second time.
+    /// Copies a workspace under new identities — its own, its groups' and its shortcuts'.
+    /// </summary>
+    /// <param name="workspace">The workspace to copy.</param>
+    /// <returns>The copy, with the same title, description, icon and content.</returns>
+    public static Workspace Copy(Workspace workspace)
+    {
+        ArgumentNullException.ThrowIfNull(workspace);
+
+        return workspace with
+        {
+            Id = Guid.NewGuid(),
+            Groups = workspace.Groups
+                .Select(group => group with
+                {
+                    Id = Guid.NewGuid(),
+                    Shortcuts = group.Shortcuts.Select(shortcut => shortcut with { Id = Guid.NewGuid() }).ToArray(),
+                })
+                .ToArray(),
+        };
+    }
+
+    /// <summary>
+    /// Returns a copy of this profile with another profile's workspaces, groups and shortcuts added to it.
     /// </summary>
     /// <param name="source">What to add.</param>
     /// <returns>The new profile; its identity and name are this one's.</returns>
-    /// <remarks>Everything added gets a new identity, so no identity is ever shared with the source.</remarks>
+    /// <remarks>
+    /// <para>
+    /// A workspace whose title matches one of this profile's, ignoring case, adds its groups to it; any other
+    /// workspace is added at the end, with its description and icon. Within a workspace, a group whose name and kind
+    /// match one already there adds its shortcuts at that group's end; any other group is added, unfolded, at the
+    /// end. A shortcut identical to one already in the group it would join — same name and target, ignoring case,
+    /// and same arguments — is left out, so importing the same content twice adds nothing the second time.
+    /// </para>
+    /// <para>Everything added gets a new identity, so no identity is ever shared with the source.</para>
+    /// </remarks>
     public Profile Import(Profile source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        Profile result = this;
+        List<Workspace> workspaces = [.. Workspaces];
 
-        foreach (ShortcutKind kind in Enum.GetValues<ShortcutKind>())
+        foreach (Workspace incoming in source.Workspaces)
         {
-            result = result.With(kind, Merge(GroupsOf(kind), source.GroupsOf(kind)));
+            int index = workspaces.FindIndex(existing => SameText(existing.Title, incoming.Title));
+
+            if (index < 0)
+            {
+                workspaces.Add(incoming with { Id = Guid.NewGuid(), Groups = [] });
+                index = workspaces.Count - 1;
+            }
+
+            workspaces[index] = workspaces[index] with { Groups = Merge(workspaces[index].Groups, incoming.Groups) };
         }
 
-        return result;
+        return this with { Workspaces = workspaces };
     }
 
     /// <summary>
-    /// Counts the profile's groups, in every category.
+    /// Counts the profile's workspaces.
     /// </summary>
-    /// <returns>The number of groups.</returns>
-    public int CountGroups() => Applications.Count + Directories.Count + Urls.Count;
+    /// <returns>The number of workspaces.</returns>
+    public int CountWorkspaces() => Workspaces.Count;
 
     /// <summary>
-    /// Counts the profile's shortcuts, in every group of every category.
+    /// Counts the profile's groups, in every workspace.
+    /// </summary>
+    /// <returns>The number of groups.</returns>
+    public int CountGroups() => Workspaces.Sum(workspace => workspace.Groups.Count);
+
+    /// <summary>
+    /// Counts the profile's shortcuts, in every group of every workspace.
     /// </summary>
     /// <returns>The number of shortcuts.</returns>
-    public int CountShortcuts() => Applications.Concat(Directories).Concat(Urls).Sum(group => group.Shortcuts.Count);
+    public int CountShortcuts() => Workspaces.Sum(workspace => workspace.Groups.Sum(group => group.Shortcuts.Count));
 
     private static ShortcutGroup[] Merge(IReadOnlyList<ShortcutGroup> groups, IReadOnlyList<ShortcutGroup> incoming)
     {
@@ -123,11 +223,11 @@ public sealed record Profile(
 
         foreach (ShortcutGroup group in incoming)
         {
-            int index = merged.FindIndex(existing => SameText(existing.Name, group.Name));
+            int index = merged.FindIndex(existing => (existing.Kind == group.Kind) && SameText(existing.Name, group.Name));
 
             if (index < 0)
             {
-                merged.Add(new ShortcutGroup(Guid.NewGuid(), group.Name, []));
+                merged.Add(new ShortcutGroup(Guid.NewGuid(), group.Name, group.Kind, []));
                 index = merged.Count - 1;
             }
 
@@ -158,12 +258,19 @@ public sealed record Profile(
     private static string? ArgumentsOf(Shortcut shortcut)
         => string.IsNullOrWhiteSpace(shortcut.Arguments) ? null : shortcut.Arguments.Trim();
 
-    private static ShortcutGroup[] Copy(IReadOnlyList<ShortcutGroup> groups)
-        => groups
-            .Select(group => group with
+    private Workspace RequireWorkspace(Guid id)
+        => FindWorkspace(id) ?? throw new ArgumentException("No workspace has this identity.", nameof(id));
+
+    private int IndexOfWorkspace(Guid id)
+    {
+        for (int index = 0; index < Workspaces.Count; index++)
+        {
+            if (Workspaces[index].Id == id)
             {
-                Id = Guid.NewGuid(),
-                Shortcuts = group.Shortcuts.Select(shortcut => shortcut with { Id = Guid.NewGuid() }).ToArray(),
-            })
-            .ToArray();
+                return index;
+            }
+        }
+
+        return -1;
+    }
 }
