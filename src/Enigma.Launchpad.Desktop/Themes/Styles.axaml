@@ -276,7 +276,8 @@
     description; its content sits at the top, padded so a tile without one keeps its icon row centred in 62 px,
     and every tile of a row stretches to the tallest, so the icon rows stay aligned.
   -->
-  <Style Selector="Panel.tileSlot">
+  <Style Selector="StackPanel.tileSlot">
+    <Setter Property="Orientation" Value="Horizontal" />
     <Setter Property="Margin" Value="0,0,8,8" />
   </Style>
 
@@ -397,9 +398,10 @@
   </Style>
 
   <!--
-    Drag and drop. The item being dragged fades; the accent bar shows where a drop lands, between
-    two cards or two tiles; a group receiving a shortcut at its end is framed in the accent colour.
-    The grip is the handle groups are dragged by.
+    Drag and drop. The item being dragged fades; where it would land, a dashed placeholder opens in the
+    gap — a small bar between two cards, a dashed tile among the tiles — and the cards or tiles after it
+    make room. A group receiving a tile at its end while it shows none is framed in dashes. The grip is
+    the handle groups are dragged by.
   -->
   <Style Selector="Border.grip">
     <Setter Property="Background" Value="Transparent" />
@@ -422,26 +424,92 @@
     <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
   </Style>
 
-  <Style Selector="Border.dropBar">
+  <Style Selector="Panel.placeholder, Rectangle.dropFrame">
     <Setter Property="IsHitTestVisible" Value="False" />
-    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+
+  <Style Selector="Panel.placeholder > Border">
     <Setter Property="Background" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Opacity" Value="0.08" />
   </Style>
 
-  <Style Selector="Border.dropBar.horizontal">
-    <Setter Property="Height" Value="3" />
+  <Style Selector="Panel.placeholder > Rectangle, Rectangle.dropFrame">
+    <Setter Property="Stroke" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="StrokeThickness" Value="1.5" />
+    <Setter Property="StrokeDashArray" Value="4,3" />
   </Style>
 
-  <Style Selector="Border.dropBar.vertical">
-    <Setter Property="Width" Value="3" />
+  <!-- Between two group cards: a small bar, whatever the size of the card it stands for. -->
+  <Style Selector="Panel.placeholder.group">
+    <Setter Property="Height" Value="48" />
   </Style>
 
-  <Style Selector="Border.groupCard.dropInside">
-    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+  <Style Selector="Panel.placeholder.group.before">
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.group.after">
+    <Setter Property="Margin" Value="0,12,0,0" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.group > Border">
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.group > Rectangle, Rectangle.dropFrame">
+    <Setter Property="RadiusX" Value="10" />
+    <Setter Property="RadiusY" Value="10" />
+  </Style>
+
+  <!-- Among the tiles: a dashed tile as wide as a tile and as high as its row. -->
+  <Style Selector="Panel.placeholder.tile">
+    <Setter Property="Width" Value="248" />
+    <Setter Property="MinHeight" Value="62" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile.before">
+    <Setter Property="Margin" Value="0,0,8,0" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile.after">
+    <Setter Property="Margin" Value="8,0,0,0" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile > Border">
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile > Rectangle">
+    <Setter Property="RadiusX" Value="8" />
+    <Setter Property="RadiusY" Value="8" />
   </Style>
 
   <Style Selector="Border.groupCard.dragging, Button.tile.dragging">
     <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!--
+    The copy a drag carries under the pointer: lifted off the page by a shadow, and never faded like the
+    original it copies. A tile's copy is the tile alone, without the room its slot keeps around it.
+  -->
+  <Style Selector="ContentControl.ghost">
+    <Setter Property="Opacity" Value="0.92" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Border.groupCard">
+    <Setter Property="BoxShadow" Value="0 6 18 0 #50000000" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Button.tile /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="0 6 18 0 #50000000" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Button.tile.dragging">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost StackPanel.tileSlot">
+    <Setter Property="Margin" Value="0" />
   </Style>
 
   <!-- Dialog forms. -->
