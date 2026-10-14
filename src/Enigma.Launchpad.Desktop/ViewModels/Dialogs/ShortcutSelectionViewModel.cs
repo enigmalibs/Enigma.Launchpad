@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Desktop.ViewModels.Pages;
 
@@ -10,11 +9,11 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Dialogs;
 
 /// <summary>
 /// A dialog choosing part of a profile's shortcuts — what to export, or what to import — as a tree of checkboxes:
-/// the categories, their groups, and the groups' shortcuts.
+/// the workspaces, their groups, and the groups' shortcuts.
 /// </summary>
 /// <remarks>
 /// Everything starts chosen, since taking it all is the common case, and open, so every shortcut is in view without
-/// unfolding anything; a long tree scrolls. A category with no group is not shown.
+/// unfolding anything; a long tree scrolls.
 /// </remarks>
 public sealed class ShortcutSelectionViewModel : ObservableObject
 {
@@ -33,9 +32,8 @@ public sealed class ShortcutSelectionViewModel : ObservableObject
         Message = message;
         _content = content;
 
-        Categories = Enum.GetValues<ShortcutKind>()
-            .Where(kind => content.GroupsOf(kind).Count > 0)
-            .Select(kind => SelectionNodeViewModel.ForCategory(kind, TitleOf(kind), IconOf(kind), content.GroupsOf(kind), Recount))
+        Workspaces = content.Workspaces
+            .Select(workspace => SelectionNodeViewModel.ForWorkspace(workspace, Recount))
             .ToArray();
 
         Recount();
@@ -47,9 +45,9 @@ public sealed class ShortcutSelectionViewModel : ObservableObject
     public string Message { get; }
 
     /// <summary>
-    /// Gets the categories that have groups, in the rail's order.
+    /// Gets the workspaces, in the content's order.
     /// </summary>
-    public IReadOnlyList<SelectionNodeViewModel> Categories { get; }
+    public IReadOnlyList<SelectionNodeViewModel> Workspaces { get; }
 
     /// <summary>
     /// Gets a value indicating whether anything is chosen.
@@ -62,59 +60,42 @@ public sealed class ShortcutSelectionViewModel : ObservableObject
     public string Summary { get; private set => SetProperty(ref field, value); } = string.Empty;
 
     /// <summary>
-    /// Returns the content reduced to what is chosen, in its order: a group with shortcuts when any of them is chosen,
-    /// with those only; an empty group when it is chosen itself.
+    /// Returns the content reduced to what is chosen, in its order: a workspace or a group with content when any of
+    /// it is chosen, with that only; an empty one when it is chosen itself.
     /// </summary>
     /// <returns>The chosen part, under the content's identity and name.</returns>
     public Profile ToProfile()
-    {
-        Profile chosen = _content;
-
-        foreach (ShortcutKind kind in Enum.GetValues<ShortcutKind>())
+        => _content with
         {
-            chosen = chosen.With(kind, ChosenGroups(kind).ToArray());
-        }
-
-        return chosen;
-    }
-
-    private static string TitleOf(ShortcutKind kind)
-        => kind switch
-        {
-            ShortcutKind.Application => "Applications",
-            ShortcutKind.Directory => "Directories",
-            _ => "URLs",
+            Workspaces = Workspaces
+                .Where(workspace => workspace.IsIncluded)
+                .Select(workspace => (workspace.Workspace ?? throw new InvalidOperationException("A workspace line has no workspace.")) with
+                {
+                    Groups = workspace.Children
+                        .Where(group => group.IsIncluded)
+                        .Select(group => (group.Group ?? throw new InvalidOperationException("A group line has no group.")) with
+                        {
+                            Shortcuts = group.Children
+                                .Where(shortcut => shortcut.IsIncluded)
+                                .Select(shortcut => shortcut.Shortcut ?? throw new InvalidOperationException("A shortcut line has no shortcut."))
+                                .ToArray(),
+                        })
+                        .ToArray(),
+                })
+                .ToArray(),
         };
-
-    private static PhosphorIcon IconOf(ShortcutKind kind)
-        => kind switch
-        {
-            ShortcutKind.Application => PhosphorIcon.AppWindow,
-            ShortcutKind.Directory => PhosphorIcon.Folder,
-            _ => PhosphorIcon.Globe,
-        };
-
-    private IEnumerable<ShortcutGroup> ChosenGroups(ShortcutKind kind)
-        => Categories
-            .Where(category => category.Kind == kind)
-            .SelectMany(category => category.Children)
-            .Where(group => group.IsIncluded)
-            .Select(group => (group.Group ?? throw new InvalidOperationException("A group line has no group.")) with
-            {
-                Shortcuts = group.Children
-                    .Where(shortcut => shortcut.IsIncluded)
-                    .Select(shortcut => shortcut.Shortcut ?? throw new InvalidOperationException("A shortcut line has no shortcut."))
-                    .ToArray(),
-            });
 
     private void Recount()
     {
-        SelectionNodeViewModel[] groups = Categories.SelectMany(category => category.Children).Where(group => group.IsIncluded).ToArray();
-        int shortcuts = groups.Sum(group => group.Children.Count(shortcut => shortcut.IsIncluded));
+        SelectionNodeViewModel[] workspaces = Workspaces.Where(workspace => workspace.IsIncluded).ToArray();
+        int shortcuts = workspaces
+            .SelectMany(workspace => workspace.Children)
+            .Where(group => group.IsIncluded)
+            .Sum(group => group.Children.Count(shortcut => shortcut.IsIncluded));
 
-        HasSelection = groups.Length > 0;
+        HasSelection = workspaces.Length > 0;
         Summary = HasSelection
-            ? $"{ProfileItemViewModel.Summarise(groups.Length, shortcuts)} selected"
+            ? $"{ProfileItemViewModel.Summarise(workspaces.Length, shortcuts)} selected"
             : "Nothing selected";
     }
 }

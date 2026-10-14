@@ -24,7 +24,7 @@ public sealed class ProfilesPageViewModelTests
         LaunchpadData data = PageHarness.WorkAndHome();
         Profile work = data.Profiles[0].With(
             ShortcutKind.Url,
-            [new ShortcutGroup(Guid.NewGuid(), "Docs", [PageHarness.Shortcut("Avalonia", "https://docs.avaloniaui.net"), PageHarness.Shortcut("Repo", "https://example.com")])]);
+            [new ShortcutGroup(Guid.NewGuid(), "Docs", ShortcutKind.Application, [PageHarness.Shortcut("Avalonia", "https://docs.avaloniaui.net"), PageHarness.Shortcut("Repo", "https://example.com")])]);
 
         _store = new FakeLaunchpadStore(data with { Profiles = [work, data.Profiles[1]] });
         _session = new LaunchpadSession(_store, new RecordingNotifications(), NullLogger<LaunchpadSession>.Instance);
@@ -44,27 +44,27 @@ public sealed class ProfilesPageViewModelTests
         Assert.Equal(["Work", "Home"], _page.Profiles.Select(profile => profile.Name));
         Assert.True(Work.IsActive);
         Assert.False(Home.IsActive);
-        Assert.Equal("2 groups · 2 shortcuts", Work.Summary);
-        Assert.Equal("1 group · 0 shortcuts", Home.Summary);
+        Assert.Equal("1 workspace · 2 shortcuts", Work.Summary);
+        Assert.Equal("1 workspace · 0 shortcuts", Home.Summary);
     }
 
     [Fact]
     public async Task OnAppearing_AgainLater_PicksUpEditsMadeOnTheCategoryPages()
     {
         await _page.OnAppearingAsync();
-        _session.Update(ShortcutKind.Directory, [new ShortcutGroup(Guid.NewGuid(), "Projects", [])]);
+        _session.Update(ShortcutKind.Directory, [new ShortcutGroup(Guid.NewGuid(), "Projects", ShortcutKind.Directory, [PageHarness.Shortcut("Repo", @"C:\Repo")])]);
 
         await _page.OnAppearingAsync();
 
-        Assert.Equal("3 groups · 2 shortcuts", Work.Summary);
+        Assert.Equal("1 workspace · 3 shortcuts", Work.Summary);
     }
 
     [Theory]
-    [InlineData(0, 0, "No groups yet")]
-    [InlineData(1, 1, "1 group · 1 shortcut")]
-    [InlineData(4, 12, "4 groups · 12 shortcuts")]
-    public void Summarise_CountsInWords(int groups, int shortcuts, string expected)
-        => Assert.Equal(expected, ProfileItemViewModel.Summarise(groups, shortcuts));
+    [InlineData(0, 0, "No workspaces yet")]
+    [InlineData(1, 1, "1 workspace · 1 shortcut")]
+    [InlineData(4, 12, "4 workspaces · 12 shortcuts")]
+    public void Summarise_CountsInWords(int workspaces, int shortcuts, string expected)
+        => Assert.Equal(expected, ProfileItemViewModel.Summarise(workspaces, shortcuts));
 
     [Fact]
     public async Task NewProfile_IsAddedAtTheEnd_WithoutSwitching()
@@ -132,7 +132,7 @@ public sealed class ProfilesPageViewModelTests
 
         Assert.Equal("Work (copy)", Assert.Single(_dialogs.NamePrompts).InitialName);
         Assert.Equal(["Work", "Work (copy)", "Home"], _page.Profiles.Select(profile => profile.Name));
-        Assert.Equal("2 groups · 2 shortcuts", _page.Profiles[1].Summary);
+        Assert.Equal("1 workspace · 2 shortcuts", _page.Profiles[1].Summary);
         Assert.False(_page.Profiles[1].IsActive);
     }
 
@@ -164,7 +164,7 @@ public sealed class ProfilesPageViewModelTests
 
         (string title, string message, string confirm) = Assert.Single(_dialogs.Confirmations);
         Assert.Equal("Delete the profile “Work”?", title);
-        Assert.Equal("Its 2 groups · 2 shortcuts will be deleted with it. This cannot be undone. Another profile will be put in use.", message);
+        Assert.Equal("Its 1 workspace · 2 shortcuts will be deleted with it. This cannot be undone. Another profile will be put in use.", message);
         Assert.Equal("Delete", confirm);
         Assert.Equal(2, _session.Profiles.Count);
     }

@@ -22,7 +22,7 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 /// <remarks>
 /// The page keeps no state of its own beyond the cards: every change goes to the session, and the cards are built
 /// again from the session whenever the profiles change — here, or from the profile list at the top of the window —
-/// and whenever the page appears, so the counts follow edits made on the category pages.
+/// and whenever the page appears, so the counts follow edits made in the workspaces.
 /// </remarks>
 public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewModel
 {
@@ -139,13 +139,13 @@ public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewMod
     }
 
     /// <summary>
-    /// Writes the groups and shortcuts of a profile the user ticks to a file the user chooses.
+    /// Writes the workspaces, groups and shortcuts of a profile the user ticks to a file the user chooses.
     /// </summary>
     /// <param name="profile">The profile to export from.</param>
     /// <returns>A task that completes once the file is written, or the user has cancelled.</returns>
     internal async Task ExportAsync(ProfileItemViewModel profile)
     {
-        if ((Stored(profile) is not { } stored) || (stored.CountGroups() == 0))
+        if ((Stored(profile) is not { } stored) || (stored.CountWorkspaces() == 0))
         {
             return;
         }
@@ -153,7 +153,7 @@ public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewMod
         string title = $"Export “{stored.Name}”";
         Profile? chosen = await _dialogs.SelectShortcutsAsync(
             title,
-            $"Tick the groups and shortcuts of “{stored.Name}” to write to the file.",
+            $"Tick the workspaces, groups and shortcuts of “{stored.Name}” to write to the file.",
             "Export…",
             stored);
 
@@ -181,12 +181,13 @@ public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewMod
 
         _notifications.ShowSuccess(
             $"“{stored.Name}” exported",
-            $"{ProfileItemViewModel.Summarise(chosen.CountGroups(), chosen.CountShortcuts())} written to {path}.");
+            $"{ProfileItemViewModel.Summarise(chosen.CountWorkspaces(), chosen.CountShortcuts())} written to {path}.");
     }
 
     /// <summary>
-    /// Reads a file the user chooses and adds the groups and shortcuts the user ticks to a profile: a group named like
-    /// one of the profile's own adds its shortcuts to it, and a shortcut already there is skipped.
+    /// Reads a file the user chooses and adds the workspaces, groups and shortcuts the user ticks to a profile: a
+    /// workspace titled like one of the profile's own adds its groups to it, a group named like one of that
+    /// workspace's groups of the same kind adds its shortcuts to it, and a shortcut already there is skipped.
     /// </summary>
     /// <param name="profile">The profile to import into.</param>
     /// <returns>A task that completes once the import is done, refused, or cancelled.</returns>
@@ -222,16 +223,17 @@ public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewMod
             return;
         }
 
-        if (import.Content.CountGroups() == 0)
+        if (import.Content.CountWorkspaces() == 0)
         {
             _notifications.ShowWarning(
                 "Nothing to import",
-                import.SkippedEntries == 0 ? "The file holds no group." : $"{LeftOut(import.SkippedEntries)} Nothing else is in it.");
+                import.SkippedEntries == 0 ? "The file holds no workspace." : $"{LeftOut(import.SkippedEntries)} Nothing else is in it.");
             return;
         }
 
-        string message = $"Tick what to add to “{target.Name}” from “{import.Content.Name}”. A group named like one of its "
-            + "own adds its shortcuts to it, and shortcuts it already has are skipped.";
+        string message = $"Tick what to add to “{target.Name}” from “{import.Content.Name}”. A workspace titled like one of "
+            + "its own adds its groups to it, a group named like one of that workspace's adds its shortcuts to it, and "
+            + "shortcuts already there are skipped.";
 
         if (import.SkippedEntries > 0)
         {
@@ -251,7 +253,10 @@ public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewMod
         Profile after = Stored(profile) ?? before;
         _notifications.ShowSuccess(
             $"Imported into “{after.Name}”",
-            Added(after.CountGroups() - before.CountGroups(), after.CountShortcuts() - before.CountShortcuts()));
+            Added(
+                after.CountWorkspaces() - before.CountWorkspaces(),
+                after.CountGroups() - before.CountGroups(),
+                after.CountShortcuts() - before.CountShortcuts()));
     }
 
     /// <summary>
@@ -273,9 +278,9 @@ public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewMod
             return;
         }
 
-        string message = stored.CountGroups() == 0
+        string message = stored.CountWorkspaces() == 0
             ? "This cannot be undone."
-            : $"Its {ProfileItemViewModel.Summarise(stored.CountGroups(), stored.CountShortcuts())} will be deleted with it. This cannot be undone.";
+            : $"Its {ProfileItemViewModel.Summarise(stored.CountWorkspaces(), stored.CountShortcuts())} will be deleted with it. This cannot be undone.";
 
         if (profile.IsActive)
         {
@@ -339,17 +344,29 @@ public sealed class ProfilesPageViewModel : ObservableObject, INavigationViewMod
     /// <summary>
     /// Words what an import added.
     /// </summary>
-    /// <param name="groups">How many groups were added.</param>
+    /// <param name="workspaces">How many workspaces were added.</param>
+    /// <param name="groups">How many groups were added, to new workspaces or to existing ones.</param>
     /// <param name="shortcuts">How many shortcuts were added, to new groups or to existing ones.</param>
     /// <returns>The sentence.</returns>
-    internal static string Added(int groups, int shortcuts)
-        => (groups, shortcuts) switch
+    internal static string Added(int workspaces, int groups, int shortcuts)
+    {
+        List<string> parts = [];
+
+        foreach ((int count, string noun) in new[] { (shortcuts, "shortcut"), (groups, "new group"), (workspaces, "new workspace") })
         {
-            (0, 0) => "Everything ticked was already there.",
-            (0, _) => $"{Count(shortcuts, "shortcut")} added.",
-            (_, 0) => $"{Count(groups, "new group")} added.",
-            _ => $"{Count(shortcuts, "shortcut")} and {Count(groups, "new group")} added.",
+            if (count > 0)
+            {
+                parts.Add(Count(count, noun));
+            }
+        }
+
+        return parts.Count switch
+        {
+            0 => "Everything ticked was already there.",
+            1 => $"{parts[0]} added.",
+            _ => $"{string.Join(", ", parts[..^1])} and {parts[^1]} added.",
         };
+    }
 
     private static string LeftOut(int entries)
         => entries == 1

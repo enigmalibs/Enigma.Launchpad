@@ -20,43 +20,22 @@ public sealed class LaunchpadDataTests
         Profile profile = Assert.Single(LaunchpadData.Empty.Profiles);
         Assert.Equal(Profile.DefaultName, profile.Name);
         Assert.Same(profile, LaunchpadData.Empty.ActiveProfile);
-
-        foreach (ShortcutKind kind in Enum.GetValues<ShortcutKind>())
-        {
-            Assert.Empty(LaunchpadData.Empty.GroupsOf(kind));
-        }
-    }
-
-    [Theory]
-    [InlineData(ShortcutKind.Application)]
-    [InlineData(ShortcutKind.Directory)]
-    [InlineData(ShortcutKind.Url)]
-    public void With_ReplacesOnlyTheGivenCategory_OfTheProfileInUse(ShortcutKind kind)
-    {
-        IReadOnlyList<ShortcutGroup> groups = [new ShortcutGroup(Guid.NewGuid(), "Group", [])];
-
-        LaunchpadData data = ThreeProfiles(active: Home).With(kind, groups);
-
-        foreach (ShortcutKind other in Enum.GetValues<ShortcutKind>())
-        {
-            if (other == kind)
-            {
-                Assert.Same(groups, data.GroupsOf(other));
-                Assert.Same(groups, data.FindProfile(Home.Id)?.GroupsOf(other));
-            }
-            else
-            {
-                Assert.Empty(data.GroupsOf(other));
-            }
-        }
-
-        Assert.Empty(data.FindProfile(Work.Id)?.GroupsOf(kind) ?? throw new InvalidOperationException());
-        Assert.Equal([Work.Id, Home.Id, Lab.Id], data.Profiles.Select(profile => profile.Id));
+        Assert.Empty(profile.Workspaces);
     }
 
     [Fact]
-    public void GroupsOf_RefusesAnUnknownKind()
-        => Assert.Throws<ArgumentOutOfRangeException>(() => LaunchpadData.Empty.GroupsOf((ShortcutKind)42));
+    public void WithProfile_ReplacesThatProfileOnly()
+    {
+        Profile changed = Home.AddWorkspace(Workspace.Create("Dev"));
+
+        LaunchpadData data = ThreeProfiles(active: Work).WithProfile(changed);
+
+        Assert.Same(changed, data.Profiles[1]);
+        Assert.Same(Work, data.Profiles[0]);
+        Assert.Same(Lab, data.Profiles[2]);
+        Assert.Equal(Work.Id, data.ActiveProfileId);
+        Assert.Throws<ArgumentException>(() => data.WithProfile(Profile.Create("Unknown")));
+    }
 
     [Fact]
     public void ActiveProfile_FallsBackToTheFirst_WhenTheIdentityIsUnknown()
@@ -119,13 +98,13 @@ public sealed class LaunchpadDataTests
     [Fact]
     public void ImportInto_ChangesOnlyTheNamedProfile_AndKeepsTheProfileInUse()
     {
-        Profile source = Profile.Create("Shared").With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "Docs", [])]);
+        Profile source = new(Guid.NewGuid(), "Shared", [new Workspace(Guid.NewGuid(), "Reading", [new ShortcutGroup(Guid.NewGuid(), "Docs", ShortcutKind.Url, [])])]);
 
         LaunchpadData data = ThreeProfiles(active: Work).ImportInto(Home.Id, source);
 
         Assert.Equal(Work.Id, data.ActiveProfile.Id);
         Assert.Equal(["Work", "Home", "Lab"], data.Profiles.Select(profile => profile.Name));
-        Assert.Equal("Docs", Assert.Single(data.Profiles[1].Urls).Name);
+        Assert.Equal("Docs", Assert.Single(Assert.Single(data.Profiles[1].Workspaces).Groups).Name);
         Assert.Same(Work, data.Profiles[0]);
         Assert.Same(Lab, data.Profiles[2]);
     }

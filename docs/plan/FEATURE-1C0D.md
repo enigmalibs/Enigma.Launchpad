@@ -1,6 +1,6 @@
 # FEATURE-1C0D — Workspaces
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-1c0d-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-14-workspaces-documents-commands
@@ -160,7 +160,7 @@ Replace the three fixed category pages (Applications, Directories, URLs) with **
 
 ### PHASE01 — Workspace model & storage
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Core model: `Workspace`, typed `ShortcutGroup`, `Profile` and `LaunchpadData` workspace operations, import merge,
