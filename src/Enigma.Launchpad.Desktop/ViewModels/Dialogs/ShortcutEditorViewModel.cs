@@ -15,13 +15,13 @@ namespace Enigma.Launchpad.Desktop.ViewModels.Dialogs;
 /// The form adding or editing one shortcut, checked as it is typed.
 /// </summary>
 /// <remarks>
-/// The fields depend on the kind: an application has arguments, an application or a folder can be picked
-/// with Browse…, a link has neither. An error appears under a field only once that field has been edited,
+/// The fields depend on the kind: an application has arguments, an application, a folder or a document can be
+/// picked with Browse…, a link has neither. An error appears under a field only once that field has been edited,
 /// so a new, empty form does not open with complaints; the confirm button still waits for a valid form.
 /// <para>
-/// Every kind can have an image of the user's own as its icon. An application's or a link's icon can also be
-/// found from its target; such an icon belongs to that target, so it is set aside while the target is changed,
-/// and the tile finds the new target's icon once the form is saved.
+/// Every kind can have an image of the user's own as its icon. An application's, a link's or a document's icon can
+/// also be found from its target; such an icon belongs to that target, so it is set aside while the target is
+/// changed, and the tile finds the new target's icon once the form is saved.
 /// </para>
 /// </remarks>
 public sealed class ShortcutEditorViewModel : ObservableObject
@@ -92,8 +92,9 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     /// </summary>
     public string TargetLabel => Kind switch
     {
-        ShortcutKind.Application => "Program",
+        ShortcutKind.Application => "Program or command",
         ShortcutKind.Directory => "Folder",
+        ShortcutKind.Document => "File",
         _ => "Address",
     };
 
@@ -102,15 +103,23 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     /// </summary>
     public string TargetPlaceholder => Kind switch
     {
-        ShortcutKind.Application => OperatingSystem.IsWindows() ? @"C:\Program Files\App\app.exe" : "/usr/bin/app",
+        ShortcutKind.Application => OperatingSystem.IsWindows() ? @"C:\Program Files\App\app.exe or notepad" : "/usr/bin/app or firefox",
         ShortcutKind.Directory => OperatingSystem.IsWindows() ? @"C:\Users\you\Projects" : "/home/you/Projects",
+        ShortcutKind.Document => OperatingSystem.IsWindows() ? @"C:\Users\you\Documents\report.docx" : "/home/you/Documents/report.pdf",
         _ => "https://example.com",
     };
 
     /// <summary>
+    /// Gets the line under the target field saying what it accepts; <see langword="null"/> when the label says enough.
+    /// </summary>
+    public string? TargetHint => Kind == ShortcutKind.Application
+        ? $"The full path of a program, or a command found on the PATH, such as {(OperatingSystem.IsWindows() ? "notepad" : "firefox")}."
+        : null;
+
+    /// <summary>
     /// Gets a value indicating whether the target can be picked with Browse….
     /// </summary>
-    public bool CanBrowse => Kind is ShortcutKind.Application or ShortcutKind.Directory;
+    public bool CanBrowse => Kind is ShortcutKind.Application or ShortcutKind.Directory or ShortcutKind.Document;
 
     /// <summary>
     /// Gets a value indicating whether the form has an arguments field.
@@ -267,12 +276,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     /// <summary>
     /// Gets the kind's glyph, which a tile shows when it has no icon of its own.
     /// </summary>
-    public PhosphorIcon KindGlyph => Kind switch
-    {
-        ShortcutKind.Application => PhosphorIcon.AppWindow,
-        ShortcutKind.Directory => PhosphorIcon.Folder,
-        _ => PhosphorIcon.Globe,
-    };
+    public PhosphorIcon KindGlyph => Glyphs.OfKind(Kind);
 
     /// <summary>
     /// Gets the line beside the icon saying where it comes from.
@@ -280,15 +284,8 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     public string IconHint => Icon switch
     {
         { IsCustom: true } => "Your image.",
-        not null => Kind switch
-        {
-            ShortcutKind.Application => "The program's own icon, found automatically.",
-            ShortcutKind.Url => "The website's own icon, found automatically.",
-            _ => "The icon it came with.",
-        },
-        null when _icons.CanFind(Kind) => Kind == ShortcutKind.Url
-            ? "The website's own icon, when it can be found, unless you choose an image."
-            : "The program's own icon, when it can be found, unless you choose an image.",
+        not null => IconSource is { } source ? $"The {source} own icon, found automatically." : "The icon it came with.",
+        null when IconSource is { } source => $"The {source} own icon, when it can be found, unless you choose an image.",
         _ => "The folder glyph, unless you choose an image.",
     };
 
@@ -321,6 +318,16 @@ public sealed class ShortcutEditorViewModel : ObservableObject
     /// Gets the command giving up the chosen image.
     /// </summary>
     public RelayCommand ResetIconCommand { get; }
+
+    // Whose icon can be found for the kind — "program's", "website's", "file's" — or null when none can.
+    private string? IconSource => _icons.CanFind(Kind)
+        ? Kind switch
+        {
+            ShortcutKind.Url => "website's",
+            ShortcutKind.Document => "file's",
+            _ => "program's",
+        }
+        : null;
 
     // Whether the target, as it would be saved, is no longer the one the shortcut had.
     private bool IsRetargeted => (_originalTarget is not null) && (_normalizedTarget != _originalTarget);
@@ -450,9 +457,12 @@ public sealed class ShortcutEditorViewModel : ObservableObject
 
     private async Task BrowseAsync()
     {
-        string? picked = Kind == ShortcutKind.Application
-            ? await _picker.PickFileAsync("Choose a program", Target)
-            : await _picker.PickFolderAsync("Choose a folder", Target);
+        string? picked = Kind switch
+        {
+            ShortcutKind.Application => await _picker.PickFileAsync("Choose a program", Target),
+            ShortcutKind.Document => await _picker.PickFileAsync("Choose a document", Target),
+            _ => await _picker.PickFolderAsync("Choose a folder", Target),
+        };
 
         if (picked is null)
         {
@@ -464,7 +474,7 @@ public sealed class ShortcutEditorViewModel : ObservableObject
         // A picked target names itself when the user has not named it yet.
         if (string.IsNullOrWhiteSpace(Name))
         {
-            Name = Kind == ShortcutKind.Application
+            Name = Kind is ShortcutKind.Application or ShortcutKind.Document
                 ? Path.GetFileNameWithoutExtension(picked)
                 : Path.GetFileName(Path.TrimEndingDirectorySeparator(picked)) is { Length: > 0 } folder ? folder : picked;
         }

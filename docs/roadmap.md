@@ -48,4 +48,4 @@
 | - PHASE01    | Workspace model & storage           | DONE   | (in FEATURE-1C0D.md)      |
 | - PHASE02    | Workspaces page                     | DONE   | (in FEATURE-1C0D.md)      |
 | - PHASE03    | Open workspace, mixed groups        | DONE   | (in FEATURE-1C0D.md)      |
-| FEATURE-1FA9 | Documents                           | TODO   | docs/plan/FEATURE-1FA9.md |
+| FEATURE-1FA9 | Documents                           | DONE   | docs/plan/FEATURE-1FA9.md |

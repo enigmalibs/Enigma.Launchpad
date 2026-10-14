@@ -1,6 +1,6 @@
 # FEATURE-1FA9 — Documents
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-1fa9-documents`
 **Run:** vibe/2026-10-14-workspaces-documents-commands
@@ -60,7 +60,7 @@ kind of group in a workspace. There is no documents page: documents live in work
 
 Single phase.
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Core: kind, validator, launcher, exchange.
