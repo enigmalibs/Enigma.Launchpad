@@ -43,7 +43,7 @@
 | - PHASE03    | Open in terminal                    | DONE   | (in FEATURE-2DA2.md)      |
 | FEATURE-200F | Linux installer                     | DONE   | docs/plan/FEATURE-200F.md |
 | FEATURE-10CE | Release 1.0.0                       | DONE   | docs/plan/FEATURE-10CE.md |
-| FEATURE-1F8C | Commands as application targets     | TODO   | docs/plan/FEATURE-1F8C.md |
+| FEATURE-1F8C | Commands as application targets     | DONE   | docs/plan/FEATURE-1F8C.md |
 | FEATURE-1C0D | Workspaces                          | TODO   | docs/plan/FEATURE-1C0D.md |
 | - PHASE01    | Workspace model & storage           | TODO   | (in FEATURE-1C0D.md)      |
 | - PHASE02    | Workspaces page                     | TODO   | (in FEATURE-1C0D.md)      |

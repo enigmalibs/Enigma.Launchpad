@@ -30,6 +30,7 @@ public sealed class ServiceCollectionExtensionsTests
     [InlineData(typeof(IShortcutValidator))]
     [InlineData(typeof(IShortcutExchange))]
     [InlineData(typeof(IProcessStarter))]
+    [InlineData(typeof(ICommandResolver))]
     [InlineData(typeof(IShortcutLauncher))]
     public void AddLaunchpadCore_RegistersEveryService(Type serviceType)
     {

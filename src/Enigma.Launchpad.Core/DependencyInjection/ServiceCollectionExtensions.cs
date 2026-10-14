@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IShortcutValidator, ShortcutValidator>();
             services.AddSingleton<IShortcutExchange, ShortcutExchange>();
             services.AddSingleton<IProcessStarter, ProcessStarter>();
+            services.AddSingleton<ICommandResolver, PathCommandResolver>();
             services.AddSingleton<IShortcutLauncher, ShortcutLauncher>();
 
             return services;
