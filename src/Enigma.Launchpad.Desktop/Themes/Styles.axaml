@@ -10,7 +10,7 @@
     The icon scale: an icon takes its size from the role it plays, so the application has one scale
     rather than a number per icon.
 
-      pageIcon  the category's icon in a page header
+      pageIcon  the page's or the workspace's icon in a page header
       header    a title's icon, beside the name of a group
       toolbar   an icon-only button, or the icon of a text button
       row       an icon on a line or in a tile
@@ -84,6 +84,59 @@
 
   <Style Selector="Border.profileCard.active">
     <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+  </Style>
+
+  <!-- Workspace cards: the profile cards' look, as buttons that open the workspace, lit like a tile on hover. -->
+  <Style Selector="Button.workspaceCard">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.workspaceCard /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+  </Style>
+
+  <Style Selector="Button.workspaceCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.workspaceCard:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!-- A group's kind, beside its name: quieter than the name. -->
+  <Style Selector="ei|Icon.groupKind">
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.workspaceSummary">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!-- The workspace form's glyphs: a grid of small squares, the chosen one in the selection colour. -->
+  <Style Selector="ListBox.glyphPicker">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.glyphPicker ListBoxItem">
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="Margin" Value="0,0,4,4" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="MinWidth" Value="0" />
   </Style>
 
   <Style Selector="Border.activeBadge">

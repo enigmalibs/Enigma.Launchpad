@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
+using Enigma.Launchpad.Core.Validation;
 using Enigma.Launchpad.Desktop.Services;
 using Enigma.Launchpad.Desktop.ViewModels.Dialogs;
 
@@ -33,6 +36,23 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
     /// </summary>
     public Queue<Func<ShortcutSelectionViewModel, Profile?>> SelectionAnswers { get; } = new();
 
+    /// <summary>
+    /// Each answer acts on the real workspace form, as the user would, and returns what the form would: its
+    /// <see cref="WorkspaceEditorViewModel.ToDetails"/>, or <see langword="null"/> to cancel. With no answer queued,
+    /// the form is cancelled.
+    /// </summary>
+    public Queue<Func<WorkspaceEditorViewModel, WorkspaceDetails?>> WorkspaceAnswers { get; } = new();
+
+    public List<(Workspace? Existing, string[] OtherTitles)> WorkspaceForms { get; } = [];
+
+    /// <summary>
+    /// The title of the workspace to choose, or <see langword="null"/> to cancel; with none queued, the dialog is
+    /// cancelled.
+    /// </summary>
+    public Queue<string?> WorkspaceChoiceAnswers { get; } = new();
+
+    public List<(string Title, string Message, Workspace[] Workspaces)> WorkspaceChoices { get; } = [];
+
     public List<NamePrompt> NamePrompts { get; } = [];
 
     public List<(string Title, string Message, string ConfirmText)> Confirmations { get; } = [];
@@ -50,6 +70,24 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
     /// The answer taking everything the dialog offers.
     /// </summary>
     public static Profile? SelectEverything(ShortcutSelectionViewModel dialog) => dialog.ToProfile();
+
+    /// <summary>
+    /// An answer filling the workspace form in and confirming it — or cancelling, as the dialog would leave its
+    /// confirm button disabled, when what it typed is not valid.
+    /// </summary>
+    public static Func<WorkspaceEditorViewModel, WorkspaceDetails?> FillWorkspace(string title, string? description = null, PhosphorIcon? glyph = null)
+        => form =>
+        {
+            form.Title = title;
+            form.Description = description ?? string.Empty;
+
+            if (glyph is { } chosen)
+            {
+                form.SelectedGlyph = form.Choices.First(option => option.Glyph == chosen);
+            }
+
+            return form.IsValid ? form.ToDetails() : null;
+        };
 
     public Task<string?> PromptNameAsync(string title, string label, string confirmText, string? initialName, Func<string?, string?> validate)
     {
@@ -73,6 +111,24 @@ internal sealed class ScriptedDialogs : ILaunchpadDialogs
     {
         ShortcutForms.Add((kind, existing));
         return Task.FromResult(ShortcutAnswers.Count > 0 ? ShortcutAnswers.Dequeue() : null);
+    }
+
+    public Task<WorkspaceDetails?> EditWorkspaceAsync(Workspace? existing, IEnumerable<string> otherTitles)
+    {
+        string[] titles = [.. otherTitles];
+        WorkspaceForms.Add((existing, titles));
+
+        return Task.FromResult(WorkspaceAnswers.Count > 0
+            ? WorkspaceAnswers.Dequeue()(new WorkspaceEditorViewModel(existing, titles, new ShortcutValidator()))
+            : null);
+    }
+
+    public Task<Workspace?> ChooseWorkspaceAsync(string title, string message, string confirmText, IReadOnlyList<Workspace> workspaces)
+    {
+        WorkspaceChoices.Add((title, message, [.. workspaces]));
+        string? answer = WorkspaceChoiceAnswers.Count > 0 ? WorkspaceChoiceAnswers.Dequeue() : null;
+
+        return Task.FromResult(answer is null ? null : workspaces.Single(workspace => workspace.Title == answer));
     }
 
     public Task<string?> PromptArgumentsAsync(Shortcut shortcut)

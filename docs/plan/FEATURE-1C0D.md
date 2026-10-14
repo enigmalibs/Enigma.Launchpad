@@ -191,7 +191,7 @@ Acceptance criteria:
 
 ### PHASE02 — Workspaces page
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Session workspace operations and `WorkspacesChanged`.
