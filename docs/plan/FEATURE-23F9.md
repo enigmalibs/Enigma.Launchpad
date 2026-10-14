@@ -1,6 +1,6 @@
 # FEATURE-23F9 — Workspace drag visuals
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-23f9-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-14-workspace-drag-visuals
@@ -57,7 +57,7 @@ Give the open workspace's drag and drop the look Enigma.GitClient's repository l
 
 ## PHASE01 — Dashed slot where it lands
 
-**Status:** TODO
+**Status:** DONE
 **Branch:** `feature/feature-23f9-phase01-dashed-slot`
 
 ### Steps

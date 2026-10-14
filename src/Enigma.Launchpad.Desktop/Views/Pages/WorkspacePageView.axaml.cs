@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -23,6 +25,12 @@ namespace Enigma.Launchpad.Desktop.Views.Pages;
 /// button marks the press as handled to capture the pointer, and a bubbling handler would never see the
 /// press a drag starts from; none of them marks anything handled, so clicks work exactly as before. A press on
 /// one of a tile's own buttons is a click on that button, never the start of a drag.
+/// </para>
+/// <para>
+/// Where a drop would land, a dashed placeholder opens in the gap and the cards or tiles after it make room.
+/// The gap is therefore found among the cards and tiles as they stand with no placeholder open
+/// (<see cref="DropPlacement.Stack"/>, <see cref="DropPlacement.Flow"/>): read from the moved items, it would
+/// move with them.
 /// </para>
 /// </remarks>
 public partial class WorkspacePageView : UserControl
@@ -56,7 +64,10 @@ public partial class WorkspacePageView : UserControl
         InitializeComponent();
 
         // Attached in code: XAML has no syntax for a handler on an attached routed event, nor for a
-        // tunnelling one.
+        // tunnelling one. A drag entering answers as one moving over: whenever the element under the pointer
+        // changes, the old one sees the drag leave and the new one sees it enter, in the same input pass, and
+        // answering the enter reopens the gap the leave closed before anything is drawn.
+        AddHandler(DragDrop.DragEnterEvent, OnDragOver);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
         AddHandler(DragDrop.DropEvent, OnDrop);
@@ -75,7 +86,8 @@ public partial class WorkspacePageView : UserControl
     /// <param name="source">The element under the pointer.</param>
     /// <param name="pointer">The pointer's position relative to a given control.</param>
     /// <param name="drop"><see langword="true"/> to carry the drop out; <see langword="false"/> to only show where it would land.</param>
-    /// <returns><see langword="true"/> when the drop is accepted there.</returns>
+    /// <returns><see langword="true"/> when the drop is accepted there — including next to the dragged item's own
+    /// place, where it is accepted and changes nothing.</returns>
     internal bool Resolve(IDataTransfer data, object? source, Func<Visual, Point> pointer, bool drop)
     {
         if (Page is not { } page)
@@ -85,58 +97,14 @@ public partial class WorkspacePageView : UserControl
 
         page.ClearDropHints();
 
-        if (FindAncestor(source, "groupCard") is not { DataContext: GroupViewModel group } card)
-        {
-            return false;
-        }
-
         if (DragPayload.TryParse(data.TryGetValue(GroupFormat), out DragPayload? groupPayload))
         {
-            if (!page.CanDropGroup(groupPayload, group))
-            {
-                return false;
-            }
-
-            DropPosition position = DropPlacement.Vertical(pointer(card).Y, card.Bounds.Height);
-
-            if (drop)
-            {
-                page.DropGroup(groupPayload, group, position);
-            }
-            else
-            {
-                group.DropHint = position == DropPosition.Before ? DropHint.Before : DropHint.After;
-            }
-
-            return true;
+            return ResolveGroup(page, groupPayload, pointer, drop);
         }
 
         if (DragPayload.TryParse(data.TryGetValue(ShortcutFormat), out DragPayload? shortcutPayload))
         {
-            Control? tile = FindAncestor(source, "tile");
-            ShortcutViewModel? target = tile?.DataContext as ShortcutViewModel;
-
-            if (!page.CanDropShortcut(shortcutPayload, group, target))
-            {
-                return false;
-            }
-
-            DropPosition position = (tile is not null) ? DropPlacement.Horizontal(pointer(tile).X, tile.Bounds.Width) : DropPosition.After;
-
-            if (drop)
-            {
-                page.DropShortcut(shortcutPayload, group, target, position);
-            }
-            else if (target is not null)
-            {
-                target.DropHint = position == DropPosition.Before ? DropHint.Before : DropHint.After;
-            }
-            else
-            {
-                group.DropHint = DropHint.Inside;
-            }
-
-            return true;
+            return ResolveShortcut(page, shortcutPayload, source, pointer, drop);
         }
 
         return false;
@@ -156,6 +124,162 @@ public partial class WorkspacePageView : UserControl
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The first control under an element that carries a style class.
+    /// </summary>
+    private static T? FindDescendant<T>(Visual root, string styleClass)
+        where T : Control
+        => root.GetVisualDescendants().OfType<T>().FirstOrDefault(control => control.Classes.Contains(styleClass));
+
+    /// <summary>
+    /// A dragged group: it lands in the gap between two cards the pointer is nearest to, wherever the pointer is on the
+    /// page.
+    /// </summary>
+    private bool ResolveGroup(WorkspacePageViewModel page, DragPayload payload, Func<Visual, Point> pointer, bool drop)
+    {
+        if ((page.FindGroup(payload.Id) is null) || (GroupRows(page.Groups.Count) is not { } rows))
+        {
+            return false;
+        }
+
+        int slot = DropPlacement.SlotFor(pointer(GroupList).Y, rows);
+        (GroupViewModel target, DropPosition position) = slot < page.Groups.Count
+            ? (page.Groups[slot], DropPosition.Before)
+            : (page.Groups[^1], DropPosition.After);
+
+        if (!page.MovesGroup(payload, target, position))
+        {
+            // Its own place: a drop there moves nothing, so nothing opens; nor is it refused.
+            return true;
+        }
+
+        if (drop)
+        {
+            page.DropGroup(payload, target, position);
+        }
+        else
+        {
+            target.DropHint = position == DropPosition.Before ? DropHint.Before : DropHint.After;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The group rows as they stand with no dashed bar open among them: from the first row's top, each card's height
+    /// and the spacing below it.
+    /// </summary>
+    /// <remarks>
+    /// The first row's top is where the rows start whatever is open: a dashed bar is laid out inside a row, never above
+    /// the first one.
+    /// </remarks>
+    private IReadOnlyList<(double Top, double Height)>? GroupRows(int count)
+    {
+        if ((count == 0) || (GroupList.ContainerFromIndex(0) is not { } first))
+        {
+            return null;
+        }
+
+        double spacing = (GroupList.ItemsPanelRoot as StackPanel)?.Spacing ?? 0;
+        List<double> heights = new(count);
+
+        for (int index = 0; index < count; index++)
+        {
+            if ((GroupList.ContainerFromIndex(index) is not { } row) || (FindDescendant<Border>(row, "groupCard") is not { } card))
+            {
+                return null;
+            }
+
+            heights.Add(card.Bounds.Height + spacing);
+        }
+
+        return DropPlacement.Stack(first.TranslatePoint(default, GroupList)?.Y ?? 0, heights);
+    }
+
+    /// <summary>
+    /// A dragged shortcut: it lands on the group under the pointer, in the gap of its tiles the pointer is over, or at
+    /// its end.
+    /// </summary>
+    private static bool ResolveShortcut(WorkspacePageViewModel page, DragPayload payload, object? source, Func<Visual, Point> pointer, bool drop)
+    {
+        if ((FindAncestor(source, "groupCard") is not { DataContext: GroupViewModel group } card)
+            || !page.CanDropShortcut(payload, group, null))
+        {
+            return false;
+        }
+
+        (ShortcutViewModel? target, DropPosition position) = TileSlot(card, group, pointer);
+
+        if (!page.MovesShortcut(payload, group, target, position))
+        {
+            // Its own place: a drop there moves nothing, so nothing opens; nor is it refused.
+            return true;
+        }
+
+        if (drop)
+        {
+            page.DropShortcut(payload, group, target, position);
+        }
+        else if (target is not null)
+        {
+            target.DropHint = position == DropPosition.Before ? DropHint.Before : DropHint.After;
+        }
+        else
+        {
+            group.DropHint = DropHint.Inside;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Where on a group a dragged tile would land: in the gap of its tiles under the pointer, found as they stand with no
+    /// dashed tile open among them; elsewhere on the card, at the group's end — after its last tile when it shows any,
+    /// else in the group itself.
+    /// </summary>
+    private static (ShortcutViewModel? Target, DropPosition Position) TileSlot(Control card, GroupViewModel group, Func<Visual, Point> pointer)
+    {
+        if ((FindDescendant<ItemsControl>(card, "tiles") is not { IsEffectivelyVisible: true, ItemsPanelRoot: { } flow } tiles)
+            || (group.Shortcuts.Count == 0))
+        {
+            return (null, DropPosition.After);
+        }
+
+        Point at = pointer(flow);
+
+        if ((at.Y < 0) || (at.Y > flow.Bounds.Height) || (TileSizes(tiles, group.Shortcuts.Count) is not { } sizes))
+        {
+            return (group.Shortcuts[^1], DropPosition.After);
+        }
+
+        (int index, DropPosition position) = DropPlacement.FlowSlot(at, DropPlacement.Flow(flow.Bounds.Width, sizes));
+        return (group.Shortcuts[index], position);
+    }
+
+    /// <summary>
+    /// The size each tile takes in its group's flow with no dashed tile open beside it: the tile and its slot's margins.
+    /// </summary>
+    private static List<Size>? TileSizes(ItemsControl tiles, int count)
+    {
+        List<Size> sizes = new(count);
+
+        for (int index = 0; index < count; index++)
+        {
+            if ((tiles.ContainerFromIndex(index) is not { } container)
+                || (FindDescendant<StackPanel>(container, "tileSlot") is not { } slot)
+                || (FindDescendant<Button>(slot, "tile") is not { } tile))
+            {
+                return null;
+            }
+
+            sizes.Add(new Size(
+                tile.DesiredSize.Width + slot.Margin.Left + slot.Margin.Right,
+                tile.DesiredSize.Height + slot.Margin.Top + slot.Margin.Bottom));
+        }
+
+        return sizes;
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
