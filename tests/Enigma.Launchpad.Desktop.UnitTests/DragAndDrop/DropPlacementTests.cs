@@ -105,6 +105,14 @@ public sealed class DropPlacementTests
         => Assert.Throws<ArgumentOutOfRangeException>(() => DropPlacement.FlowSlot(default, []));
 
     // A copy 60 high, held 20 below its top, on a layer 300 high.
+    [Theory]
+    [InlineData(100, 20, 60, 300, 80)]
+    [InlineData(10, 20, 60, 300, 0)]
+    [InlineData(290, 20, 60, 300, 240)]
+    [InlineData(50, 20, 400, 300, 0)]
+    public void GhostOffset_HoldsTheCopyWhereItIsGrabbed_InsideTheLayer(double pointer, double grab, double size, double layer, double expected)
+        => Assert.Equal(expected, DropPlacement.GhostOffset(pointer, grab, size, layer));
+
     private static Size Tile => new(256, 70);
 }
 

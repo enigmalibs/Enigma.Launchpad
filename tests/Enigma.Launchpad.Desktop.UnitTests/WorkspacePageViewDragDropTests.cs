@@ -271,6 +271,138 @@ public sealed class WorkspacePageViewDragDropTests
         });
 
     [Fact]
+    public void ADraggedTile_IsCarriedUnderThePointer_InBothDirections_NeitherFadedNorOpened()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Data(("Dev", ["A", "B"]), ("Tools", ["X"])));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            ShortcutViewModel a = page.Groups[0].Shortcuts[0];
+            a.IsDragging = true;
+            Canvas layer = Layer(view);
+            ContentControl copy = Copy(view, "TileGhost");
+            Point middle = new(layer.Bounds.Width / 2, layer.Bounds.Height / 2);
+            DataTransfer data = Carrying(WorkspacePageView.ShortcutFormat, ShortcutKind.Application, a.Id);
+
+            Raise(harness, At(harness, layer, middle.X, middle.Y), RawDragEventType.DragEnter, data);
+            Raise(harness, At(harness, layer, middle.X, middle.Y), RawDragEventType.DragOver, data);
+            harness.Window.UpdateLayout();
+
+            // A drag the page did not start holds the copy by its middle.
+            Assert.True(copy.IsVisible);
+            Assert.Same(a, copy.Content);
+            Assert.Equal(middle.X - (copy.Bounds.Width / 2), Canvas.GetLeft(copy), 3);
+            Assert.Equal(middle.Y - (copy.Bounds.Height / 2), Canvas.GetTop(copy), 3);
+            Assert.Equal(Tile(view, page.Groups[0].Shortcuts[1]).Bounds.Width, copy.Bounds.Width);
+            Assert.False(Copy(view, "GroupGhost").IsVisible);
+
+            Button tile = copy.GetVisualDescendants().OfType<Button>().First(button => button.Classes.Contains("tile"));
+            Button original = view.GetVisualDescendants().OfType<Button>()
+                .Single(button => button.Classes.Contains("tile") && (button.DataContext == a) && !copy.IsVisualAncestorOf(button));
+            Assert.Equal(1, tile.Opacity);
+            Assert.Equal(0.45, original.Opacity, 3);
+            Assert.All(copy.GetVisualDescendants().OfType<Panel>().Where(panel => panel.Classes.Contains("placeholder")), panel => Assert.False(panel.IsVisible));
+
+            double left = Canvas.GetLeft(copy);
+            double top = Canvas.GetTop(copy);
+
+            Raise(harness, At(harness, layer, middle.X + 37, middle.Y + 23), RawDragEventType.DragOver, data);
+
+            Assert.Equal(left + 37, Canvas.GetLeft(copy), 3);
+            Assert.Equal(top + 23, Canvas.GetTop(copy), 3);
+        });
+
+    [Fact]
+    public void ADraggedTilesCopy_StaysInsideTheLayer()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Data(("Dev", ["A", "B"])));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            Canvas layer = Layer(view);
+            ContentControl copy = Copy(view, "TileGhost");
+            DataTransfer data = Carrying(WorkspacePageView.ShortcutFormat, ShortcutKind.Application, page.Groups[0].Shortcuts[0].Id);
+
+            Raise(harness, At(harness, layer, 2, 2), RawDragEventType.DragEnter, data);
+            Raise(harness, At(harness, layer, 2, 2), RawDragEventType.DragOver, data);
+
+            Assert.Equal(0, Canvas.GetLeft(copy));
+            Assert.Equal(0, Canvas.GetTop(copy));
+
+            Raise(harness, At(harness, layer, layer.Bounds.Width - 2, layer.Bounds.Height - 2), RawDragEventType.DragOver, data);
+            harness.Window.UpdateLayout();
+
+            Assert.Equal(layer.Bounds.Width - copy.Bounds.Width, Canvas.GetLeft(copy), 3);
+            Assert.Equal(layer.Bounds.Height - copy.Bounds.Height, Canvas.GetTop(copy), 3);
+        });
+
+    [Fact]
+    public void ADraggedGroup_IsCarriedAsItsHeader_AlignedWithTheCards_UpAndDownOnly()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Data(("A", ["One", "Two"]), ("B", []), ("C", ["Three"])));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            GroupViewModel c = page.Groups[2];
+            Control card = Card(view, page.Groups[0]);
+            Canvas layer = Layer(view);
+            ContentControl copy = Copy(view, "GroupGhost");
+            Point point = At(harness, card, card.Bounds.Width / 2, card.Bounds.Height / 2);
+            DataTransfer data = Carrying(WorkspacePageView.GroupFormat, ShortcutKind.Application, c.Id);
+
+            Raise(harness, point, RawDragEventType.DragEnter, data);
+            Raise(harness, point, RawDragEventType.DragOver, data);
+            harness.Window.UpdateLayout();
+
+            Assert.True(copy.IsVisible);
+            Assert.Same(c, copy.Content);
+            Assert.False(Copy(view, "TileGhost").IsVisible);
+            Assert.Equal(card.TranslatePoint(default, layer)!.Value.X, Canvas.GetLeft(copy), 3);
+            Assert.Equal(card.Bounds.Width, copy.Bounds.Width, 3);
+            Assert.True(copy.Bounds.Height < card.Bounds.Height);
+            Assert.Contains(copy.GetVisualDescendants().OfType<TextBlock>(), text => text.Classes.Contains("groupName") && text.Text == "C");
+            Assert.DoesNotContain(copy.GetVisualDescendants().OfType<Button>(), button => button.Classes.Contains("tile"));
+
+            double left = Canvas.GetLeft(copy);
+            double top = Canvas.GetTop(copy);
+
+            Raise(harness, new Point(point.X + 50, point.Y + 30), RawDragEventType.DragOver, data);
+
+            Assert.Equal(left, Canvas.GetLeft(copy));
+            Assert.Equal(top + 30, Canvas.GetTop(copy), 3);
+        });
+
+    [Fact]
+    public void TheCopy_HidesWhileTheDragIsAway_AndIsGoneAfterTheDrop()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Data(("Dev", ["A", "B"])));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            Control tileB = Tile(view, page.Groups[0].Shortcuts[1]);
+            ContentControl copy = Copy(view, "TileGhost");
+            Point point = At(harness, tileB, tileB.Bounds.Width - 10, tileB.Bounds.Height / 2);
+            DataTransfer data = Carrying(WorkspacePageView.ShortcutFormat, ShortcutKind.Application, page.Groups[0].Shortcuts[0].Id);
+
+            Raise(harness, point, RawDragEventType.DragEnter, data);
+            Raise(harness, point, RawDragEventType.DragOver, data);
+            Assert.True(copy.IsVisible);
+
+            Raise(harness, point, RawDragEventType.DragLeave, data);
+            Assert.False(copy.IsVisible);
+
+            Raise(harness, point, RawDragEventType.DragEnter, data);
+            Raise(harness, point, RawDragEventType.DragOver, data);
+            Assert.True(copy.IsVisible);
+
+            Raise(harness, point, RawDragEventType.Drop, data);
+
+            Assert.False(copy.IsVisible);
+            Assert.Null(copy.Content);
+            Assert.Equal(["B", "A"], page.Groups[0].Shortcuts.Select(shortcut => shortcut.Name));
+        });
+
+    [Fact]
     public void ForeignData_IsRefused_AndChangesNothing()
         => _fixture.RunAsync(async () =>
         {
@@ -287,6 +419,10 @@ public sealed class WorkspacePageViewDragDropTests
             {
                 harness.Window.DragDrop(point, RawDragEventType.DragEnter, data, DragDropEffects.Move, RawInputModifiers.None);
                 harness.Window.DragDrop(point, RawDragEventType.DragOver, data, DragDropEffects.Move, RawInputModifiers.None);
+
+                Assert.False(Copy(view, "TileGhost").IsVisible);
+                Assert.False(Copy(view, "GroupGhost").IsVisible);
+
                 harness.Window.DragDrop(point, RawDragEventType.Drop, data, DragDropEffects.Move, RawInputModifiers.None);
             }
 
@@ -304,6 +440,12 @@ public sealed class WorkspacePageViewDragDropTests
             Assert.Equal(2, view.GetVisualDescendants().OfType<Border>().Count(border => border.Classes.Contains("grip")));
             Assert.True(DragDrop.GetAllowDrop(view));
         });
+
+    private static Canvas Layer(WorkspacePageView view)
+        => view.FindControl<Canvas>("DragLayer") ?? throw new InvalidOperationException("No drag layer.");
+
+    private static ContentControl Copy(WorkspacePageView view, string name)
+        => view.FindControl<ContentControl>(name) ?? throw new InvalidOperationException($"No {name}.");
 
     private static Control Card(WorkspacePageView view, GroupViewModel group)
         => view.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("groupCard") && border.DataContext == group);

@@ -1,6 +1,6 @@
 # FEATURE-23F9 — Workspace drag visuals
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-23f9-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-14-workspace-drag-visuals
@@ -108,7 +108,7 @@ Give the open workspace's drag and drop the look Enigma.GitClient's repository l
 
 ## PHASE02 — Dragged item follows the pointer
 
-**Status:** TODO
+**Status:** DONE
 **Branch:** `feature/feature-23f9-phase02-drag-ghost`
 
 ### Steps
