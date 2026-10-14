@@ -551,22 +551,36 @@ public sealed class WorkspacePageViewModel : ObservableObject
     /// <returns><see langword="true"/> when the order changed.</returns>
     internal bool DropGroup(DragPayload payload, GroupViewModel target, DropPosition position)
     {
+        if (!MovesGroup(payload, target, position) || (FindGroup(payload.Id) is not { } source))
+        {
+            return false;
+        }
+
+        int from = Groups.IndexOf(source);
+
+        Groups.Move(from, DropPlacement.MoveIndex(from, Groups.IndexOf(target), position));
+        Persist();
+        return true;
+    }
+
+    /// <summary>
+    /// Whether dropping a dragged group next to another one would change the order.
+    /// </summary>
+    /// <param name="payload">What the drag carries.</param>
+    /// <param name="target">The group it would be dropped next to.</param>
+    /// <param name="position">Which side of that group.</param>
+    /// <returns><see langword="true"/> when the drop is allowed and moves the group; <see langword="false"/> next to its
+    /// own place, where nothing would move.</returns>
+    internal bool MovesGroup(DragPayload payload, GroupViewModel target, DropPosition position)
+    {
         if (!CanDropGroup(payload, target) || (FindGroup(payload.Id) is not { } source))
         {
             return false;
         }
 
         int from = Groups.IndexOf(source);
-        int to = DropPlacement.MoveIndex(from, Groups.IndexOf(target), position);
 
-        if (to == from)
-        {
-            return false;
-        }
-
-        Groups.Move(from, to);
-        Persist();
-        return true;
+        return DropPlacement.MoveIndex(from, Groups.IndexOf(target), position) != from;
     }
 
     /// <summary>
@@ -594,7 +608,7 @@ public sealed class WorkspacePageViewModel : ObservableObject
     /// <returns><see langword="true"/> when anything moved.</returns>
     internal bool DropShortcut(DragPayload payload, GroupViewModel targetGroup, ShortcutViewModel? targetShortcut, DropPosition position)
     {
-        if (!CanDropShortcut(payload, targetGroup, targetShortcut) || (FindShortcut(payload.Id) is not { } source))
+        if (!MovesShortcut(payload, targetGroup, targetShortcut, position) || (FindShortcut(payload.Id) is not { } source))
         {
             return false;
         }
@@ -604,16 +618,7 @@ public sealed class WorkspacePageViewModel : ObservableObject
 
         if (sourceGroup == targetGroup)
         {
-            int to = targetShortcut is null
-                ? targetGroup.Shortcuts.Count - 1
-                : DropPlacement.MoveIndex(from, targetGroup.Shortcuts.IndexOf(targetShortcut), position);
-
-            if (to == from)
-            {
-                return false;
-            }
-
-            targetGroup.Shortcuts.Move(from, to);
+            targetGroup.Shortcuts.Move(from, IndexWithinItsGroup(from, targetGroup, targetShortcut, position));
         }
         else
         {
@@ -629,6 +634,32 @@ public sealed class WorkspacePageViewModel : ObservableObject
 
         Persist();
         return true;
+    }
+
+    /// <summary>
+    /// Whether dropping a dragged shortcut next to a tile, or at a group's end, would move it.
+    /// </summary>
+    /// <param name="payload">What the drag carries.</param>
+    /// <param name="targetGroup">The group it would be dropped on.</param>
+    /// <param name="targetShortcut">The tile it would be dropped next to; <see langword="null"/> for the group's end.</param>
+    /// <param name="position">Which side of the tile; ignored without one.</param>
+    /// <returns><see langword="true"/> when the drop is allowed and moves the shortcut; <see langword="false"/> next to
+    /// its own place, where nothing would move.</returns>
+    internal bool MovesShortcut(DragPayload payload, GroupViewModel targetGroup, ShortcutViewModel? targetShortcut, DropPosition position)
+    {
+        if (!CanDropShortcut(payload, targetGroup, targetShortcut) || (FindShortcut(payload.Id) is not { } source))
+        {
+            return false;
+        }
+
+        if (source.Group != targetGroup)
+        {
+            return true;
+        }
+
+        int from = targetGroup.Shortcuts.IndexOf(source);
+
+        return IndexWithinItsGroup(from, targetGroup, targetShortcut, position) != from;
     }
 
     /// <summary>
@@ -679,6 +710,14 @@ public sealed class WorkspacePageViewModel : ObservableObject
     /// <returns>The shortcut, or <see langword="null"/>.</returns>
     internal ShortcutViewModel? FindShortcut(Guid id)
         => Groups.SelectMany(group => group.Shortcuts).FirstOrDefault(shortcut => shortcut.Id == id);
+
+    /// <summary>
+    /// Where a shortcut moved within its own group ends up: next to a tile, or last.
+    /// </summary>
+    private static int IndexWithinItsGroup(int from, GroupViewModel group, ShortcutViewModel? target, DropPosition position)
+        => target is null
+            ? group.Shortcuts.Count - 1
+            : DropPlacement.MoveIndex(from, group.Shortcuts.IndexOf(target), position);
 
     private static bool SameName(string first, string second)
         => string.Equals(first.Trim(), second.Trim(), StringComparison.OrdinalIgnoreCase);

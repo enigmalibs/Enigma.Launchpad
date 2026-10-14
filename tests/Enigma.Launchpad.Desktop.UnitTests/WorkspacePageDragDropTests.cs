@@ -173,6 +173,40 @@ public sealed class WorkspacePageDragDropTests
     }
 
     [Fact]
+    public async Task MovesGroup_IsFalseNextToItsOwnPlace_AndTrueElsewhere()
+    {
+        PageHarness harness = new(PageHarness.Data("A", "B", "C"));
+        WorkspacePageViewModel page = await harness.LoadAsync();
+        DragPayload b = Payload(page, page.Groups[1].Id);
+
+        Assert.False(page.MovesGroup(b, page.Groups[0], DropPosition.After));
+        Assert.False(page.MovesGroup(b, page.Groups[2], DropPosition.Before));
+        Assert.False(page.MovesGroup(b, page.Groups[1], DropPosition.Before));
+        Assert.False(page.MovesGroup(Payload(page, Guid.NewGuid()), page.Groups[0], DropPosition.Before));
+        Assert.True(page.MovesGroup(b, page.Groups[0], DropPosition.Before));
+        Assert.True(page.MovesGroup(b, page.Groups[2], DropPosition.After));
+        Assert.Equal(["A", "B", "C"], Names(page));
+    }
+
+    [Fact]
+    public async Task MovesShortcut_IsFalseNextToItsOwnPlace_AndTrueElsewhere()
+    {
+        PageHarness harness = new(Shortcuts(("Dev", ["A", "B", "C"]), ("Tools", ["X"])));
+        WorkspacePageViewModel page = await harness.LoadAsync();
+        GroupViewModel dev = page.Groups[0];
+        DragPayload b = Payload(page, dev.Shortcuts[1].Id);
+
+        Assert.False(page.MovesShortcut(b, dev, dev.Shortcuts[0], DropPosition.After));
+        Assert.False(page.MovesShortcut(b, dev, dev.Shortcuts[2], DropPosition.Before));
+        Assert.False(page.MovesShortcut(b, dev, dev.Shortcuts[1], DropPosition.After));
+        Assert.False(page.MovesShortcut(Payload(page, dev.Shortcuts[2].Id), dev, null, DropPosition.After));
+        Assert.True(page.MovesShortcut(b, dev, dev.Shortcuts[0], DropPosition.Before));
+        Assert.True(page.MovesShortcut(b, dev, null, DropPosition.After));
+        Assert.True(page.MovesShortcut(b, page.Groups[1], null, DropPosition.After));
+        Assert.Equal(["A", "B", "C"], Names(dev));
+    }
+
+    [Fact]
     public async Task ClearDragState_ClearsEveryHintAndMark()
     {
         PageHarness harness = new(Shortcuts(("Dev", ["A", "B"])));

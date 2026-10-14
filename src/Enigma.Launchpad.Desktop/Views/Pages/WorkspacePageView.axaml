@@ -94,10 +94,15 @@
 
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="pages:GroupViewModel">
-              <!-- The card, and the accent bars that show where a dragged group would land. -->
+              <!-- The card, between the dashed bars that open where a dragged group would land: laid out in the list,
+                   so the cards below make room for them. -->
+              <StackPanel>
+              <Panel Classes="placeholder group before" IsVisible="{Binding IsDropBefore}">
+                <Border />
+                <Rectangle />
+              </Panel>
               <Panel>
               <Border Classes="groupCard"
-                      Classes.dropInside="{Binding IsDropInside}"
                       Classes.dragging="{Binding IsDragging}">
                 <DockPanel>
                   <!-- Header: fold toggle with the name and the count, then the group's actions. -->
@@ -195,8 +200,14 @@
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="pages:ShortcutViewModel">
-                          <!-- A tile: click or Enter opens it; the context menu (right-click, Shift+F10) does the rest. -->
-                          <Panel Classes="tileSlot">
+                          <!-- A tile: click or Enter opens it; the context menu (right-click, Shift+F10) does the rest.
+                               Either side of it, the dashed tiles that open where a dragged tile would land: laid out
+                               in the flow, so the tiles after them make room. -->
+                          <StackPanel Classes="tileSlot">
+                          <Panel Classes="placeholder tile before" IsVisible="{Binding IsDropBefore}">
+                            <Border />
+                            <Rectangle />
+                          </Panel>
                           <Button Classes="tile"
                                   Classes.dragging="{Binding IsDragging}"
                                   Command="{Binding OpenCommand}"
@@ -313,23 +324,25 @@
                               </ContextMenu>
                             </Button.ContextMenu>
                           </Button>
-                          <!-- Where a dragged tile would land: in the gap before or after this one. -->
-                          <Border Classes="dropBar vertical" HorizontalAlignment="Left" Margin="-5.5,6,0,6"
-                                  IsVisible="{Binding IsDropBefore}" />
-                          <Border Classes="dropBar vertical" HorizontalAlignment="Right" Margin="0,6,-5.5,6"
-                                  IsVisible="{Binding IsDropAfter}" />
+                          <Panel Classes="placeholder tile after" IsVisible="{Binding IsDropAfter}">
+                            <Border />
+                            <Rectangle />
                           </Panel>
+                          </StackPanel>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
                   </Panel>
                 </DockPanel>
               </Border>
-              <Border Classes="dropBar horizontal" VerticalAlignment="Top" Margin="8,-7.5,8,0"
-                      IsVisible="{Binding IsDropBefore}" />
-              <Border Classes="dropBar horizontal" VerticalAlignment="Bottom" Margin="8,0,8,-7.5"
-                      IsVisible="{Binding IsDropAfter}" />
+              <!-- A group that would receive a tile at its end while it shows none: framed in dashes. -->
+              <Rectangle Classes="dropFrame" IsVisible="{Binding IsDropInside}" />
               </Panel>
+              <Panel Classes="placeholder group after" IsVisible="{Binding IsDropAfter}">
+                <Border />
+                <Rectangle />
+              </Panel>
+              </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
