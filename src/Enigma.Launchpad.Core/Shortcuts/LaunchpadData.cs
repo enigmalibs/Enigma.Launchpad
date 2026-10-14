@@ -12,17 +12,15 @@ namespace Enigma.Launchpad.Core.Shortcuts;
 /// <param name="ActiveProfileId">The identity of the profile in use.</param>
 /// <param name="Profiles">The profiles, in display order; never empty once loaded.</param>
 /// <remarks>
-/// Every operation returns a new document and leaves this one as it was. The category accessors
-/// (<see cref="GroupsOf"/>, <see cref="With"/>) act on the profile in use, which is all the category pages ever
-/// see.
+/// Every operation returns a new document and leaves this one as it was.
 /// </remarks>
 public sealed record LaunchpadData(int Version, Guid ActiveProfileId, IReadOnlyList<Profile> Profiles)
 {
     /// <summary>
-    /// The format version this build writes. Version 1 — the three categories at the root, before profiles —
-    /// is still read.
+    /// The format version this build writes: profiles holding workspaces. Version 2 — profiles holding three
+    /// categories — and version 1 — the three categories at the root — are still read.
     /// </summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     /// <summary>
     /// Gets a new launchpad: one empty profile, in use.
@@ -50,20 +48,18 @@ public sealed record LaunchpadData(int Version, Guid ActiveProfileId, IReadOnlyL
     }
 
     /// <summary>
-    /// Gets the groups of one category of the profile in use.
+    /// Returns a copy of this document with a profile replaced by another version of itself.
     /// </summary>
-    /// <param name="kind">The category.</param>
-    /// <returns>Its groups, in display order.</returns>
-    public IReadOnlyList<ShortcutGroup> GroupsOf(ShortcutKind kind) => ActiveProfile.GroupsOf(kind);
-
-    /// <summary>
-    /// Returns a copy of this document with one category of the profile in use replaced.
-    /// </summary>
-    /// <param name="kind">The category to replace.</param>
-    /// <param name="groups">Its new groups, in display order.</param>
+    /// <param name="profile">The profile, with the identity of the one it replaces.</param>
     /// <returns>The new document.</returns>
-    public LaunchpadData With(ShortcutKind kind, IReadOnlyList<ShortcutGroup> groups)
-        => Replace(ActiveProfile.With(kind, groups));
+    /// <exception cref="ArgumentException">No profile has this identity.</exception>
+    public LaunchpadData WithProfile(Profile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        Require(profile.Id);
+
+        return this with { Profiles = Profiles.Select(existing => existing.Id == profile.Id ? profile : existing).ToArray() };
+    }
 
     /// <summary>
     /// Finds a profile by identity.
@@ -118,12 +114,12 @@ public sealed record LaunchpadData(int Version, Guid ActiveProfileId, IReadOnlyL
     public LaunchpadData RenameProfile(Guid id, string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return Replace(Require(id) with { Name = name });
+        return WithProfile(Require(id) with { Name = name });
     }
 
     /// <summary>
-    /// Returns a copy of this document with groups and shortcuts imported into one of its profiles, merged as
-    /// <see cref="Profile.Import"/> does. The profile in use does not change.
+    /// Returns a copy of this document with workspaces, groups and shortcuts imported into one of its profiles, merged
+    /// as <see cref="Profile.Import"/> does. The profile in use does not change.
     /// </summary>
     /// <param name="id">The profile receiving them.</param>
     /// <param name="source">What to import.</param>
@@ -132,7 +128,7 @@ public sealed record LaunchpadData(int Version, Guid ActiveProfileId, IReadOnlyL
     public LaunchpadData ImportInto(Guid id, Profile source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return Replace(Require(id).Import(source));
+        return WithProfile(Require(id).Import(source));
     }
 
     /// <summary>
@@ -237,7 +233,4 @@ public sealed record LaunchpadData(int Version, Guid ActiveProfileId, IReadOnlyL
 
         return -1;
     }
-
-    private LaunchpadData Replace(Profile profile)
-        => this with { Profiles = Profiles.Select(existing => existing.Id == profile.Id ? profile : existing).ToArray() };
 }

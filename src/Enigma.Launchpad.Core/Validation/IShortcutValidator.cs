@@ -4,7 +4,8 @@ using Enigma.Launchpad.Core.Shortcuts;
 namespace Enigma.Launchpad.Core.Validation;
 
 /// <summary>
-/// The rules a profile, a group or a shortcut must meet before it is stored. Every message is worded for the user.
+/// The rules a profile, a workspace, a group or a shortcut must meet before it is stored. Every message is worded for
+/// the user.
 /// </summary>
 public interface IShortcutValidator
 {
@@ -23,12 +24,28 @@ public interface IShortcutValidator
     string? ValidateDescription(string? description);
 
     /// <summary>
-    /// Checks a group's name against the other groups of its category.
+    /// Checks a group's name against the other groups of its kind in its workspace.
     /// </summary>
     /// <param name="name">The name as typed.</param>
-    /// <param name="otherGroupNames">The names of the category's other groups — not the one being renamed.</param>
+    /// <param name="otherGroupNames">The names of the workspace's other groups of the same kind — not the one being
+    /// renamed.</param>
     /// <returns>Why the name is refused, or <see langword="null"/> when it is accepted.</returns>
     string? ValidateGroupName(string? name, IEnumerable<string> otherGroupNames);
+
+    /// <summary>
+    /// Checks a workspace's title against the other workspaces of its profile.
+    /// </summary>
+    /// <param name="title">The title as typed.</param>
+    /// <param name="otherTitles">The titles of the profile's other workspaces — not the one being edited.</param>
+    /// <returns>Why the title is refused, or <see langword="null"/> when it is accepted.</returns>
+    string? ValidateWorkspaceTitle(string? title, IEnumerable<string> otherTitles);
+
+    /// <summary>
+    /// Checks a workspace's description, which may be left empty.
+    /// </summary>
+    /// <param name="description">The description as typed.</param>
+    /// <returns>Why the description is refused, or <see langword="null"/> when it is accepted.</returns>
+    string? ValidateWorkspaceDescription(string? description);
 
     /// <summary>
     /// Checks a profile's name against the other profiles.

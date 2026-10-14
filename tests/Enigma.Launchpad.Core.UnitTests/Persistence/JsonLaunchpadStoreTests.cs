@@ -14,6 +14,21 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 12, 8, 30, 15, TimeSpan.Zero);
 
+    private const string Version2File = """
+        {
+          "version": 2,
+          "activeProfileId": "44444444-4444-4444-4444-444444444444",
+          "profiles": [
+            { "id": "44444444-4444-4444-4444-444444444444", "name": "Work",
+              "applications": [ { "id": "11111111-1111-1111-1111-111111111111", "name": "Dev tools", "isCollapsed": true,
+                "shortcuts": [ { "id": "22222222-2222-2222-2222-222222222222", "name": "Code", "target": "C:\\Code.exe", "arguments": "-n" } ] } ],
+              "directories": [ { "id": "33333333-3333-3333-3333-333333333333", "name": "Dev tools", "shortcuts": [] } ],
+              "urls": [ { "id": "55555555-5555-5555-5555-555555555555", "name": "Docs", "shortcuts": [] } ] },
+            { "id": "66666666-6666-6666-6666-666666666666", "name": "Empty", "applications": [], "directories": [], "urls": [] }
+          ]
+        }
+        """;
+
     private readonly TempDirectory _temp = new();
     private readonly JsonLaunchpadStore _store;
 
@@ -36,7 +51,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveThenLoad_RoundTripsEveryProfileAndCategoryInOrder()
+    public async Task SaveThenLoad_RoundTripsEveryProfileWorkspaceAndGroupInOrder()
     {
         LaunchpadData data = SampleData();
 
@@ -54,15 +69,22 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
 
         string json = await File.ReadAllTextAsync(_store.FilePath, TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"version\": 2", json, StringComparison.Ordinal);
+        Assert.Contains("\"version\": 3", json, StringComparison.Ordinal);
         Assert.Contains("\"activeProfileId\": ", json, StringComparison.Ordinal);
         Assert.Contains("\"profiles\": [", json, StringComparison.Ordinal);
         Assert.Contains("\"name\": \"Work\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"workspaces\": [", json, StringComparison.Ordinal);
+        Assert.Contains("\"title\": \"Dev\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"icon\": \"Code\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"kind\": \"application\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"kind\": \"directory\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"kind\": \"url\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"kind\": \"document\"", json, StringComparison.Ordinal);
         Assert.Contains("\"description\": \"The editor\"", json, StringComparison.Ordinal);
         Assert.Contains($"\"png\": \"{Convert.ToBase64String(SamplePng.Bytes)}\"", json, StringComparison.Ordinal);
         Assert.Contains("\"isCustom\": true", json, StringComparison.Ordinal);
-        Assert.Contains("\"applications\": [", json, StringComparison.Ordinal);
         Assert.DoesNotContain("\"activeProfile\":", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"applications\":", json, StringComparison.Ordinal);
         Assert.Contains("\"isCollapsed\": true", json, StringComparison.Ordinal);
         Assert.Contains("\"arguments\": \"--new-window\"", json, StringComparison.Ordinal);
     }
@@ -75,7 +97,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
 
         LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.Data.GroupsOf(ShortcutKind.Application));
+        Assert.Empty(result.Data.ActiveProfile.Workspaces);
         Assert.Equal([_store.FilePath], Directory.GetFiles(_temp.Path));
     }
 
@@ -114,12 +136,18 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
     [InlineData("{ \"version\": 1, \"applications\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"shortcuts\": [] } ], \"directories\": [], \"urls\": [] }")]
     [InlineData("{ \"version\": 2, \"applications\": [], \"directories\": [], \"urls\": [] }")]
     [InlineData("{ \"version\": 0, \"applications\": [], \"directories\": [], \"urls\": [] }")]
-    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [] }")]
+    [InlineData("{ \"version\": 4, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [] }")]
     [InlineData("{ \"applications\": [], \"directories\": [], \"urls\": [] }")]
     [InlineData("{ \"version\": 2, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [null] }")]
     [InlineData("{ \"version\": 2, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": null }")]
     [InlineData("{ \"version\": 2, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"applications\": [null], \"directories\": [], \"urls\": [] } ] }")]
     [InlineData("{ \"version\": 2, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"applications\": [], \"directories\": [], \"urls\": [] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [null] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"applications\": [], \"directories\": [], \"urls\": [] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"kind\": \"spreadsheet\", \"shortcuts\": [] } ] } ] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"shortcuts\": [] } ] } ] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"kind\": 0, \"shortcuts\": [] } ] } ] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"groups\": [] } ] } ] }")]
     public async Task LoadAsync_MovesAnUnreadableFileAsideAndStartsEmpty(string contents)
     {
         await File.WriteAllTextAsync(_store.FilePath, contents, TestContext.Current.CancellationToken);
@@ -162,13 +190,13 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
         LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
 
         Assert.Null(result.UnreadableFileMovedTo);
-        ShortcutGroup group = Assert.Single(result.Data.GroupsOf(ShortcutKind.Url));
-        Assert.Equal("Docs", group.Name);
+        ShortcutGroup group = Assert.Single(Assert.Single(result.Data.ActiveProfile.Workspaces).Groups);
+        Assert.Equal(("Docs", ShortcutKind.Url), (group.Name, group.Kind));
         Assert.False(group.IsCollapsed);
     }
 
     [Fact]
-    public async Task LoadAsync_ReadsAVersion1File_IntoOneDefaultProfile_InUse()
+    public async Task LoadAsync_ReadsAVersion1File_IntoOneDefaultProfile_InUse_WithOneWorkspace()
     {
         const string json = """
             {
@@ -191,51 +219,110 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
         Assert.Equal(profile.Id, result.Data.ActiveProfileId);
         Assert.Equal(LaunchpadData.CurrentVersion, result.Data.Version);
 
-        ShortcutGroup tools = Assert.Single(profile.Applications);
+        Workspace workspace = Assert.Single(profile.Workspaces);
+        Assert.Equal(Workspace.DefaultTitle, workspace.Title);
+        Assert.Equal(
+            [("Dev tools", ShortcutKind.Application), ("Work", ShortcutKind.Directory)],
+            workspace.Groups.Select(group => (group.Name, group.Kind)));
+        ShortcutGroup tools = workspace.Groups[0];
         Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), tools.Id);
         Assert.True(tools.IsCollapsed);
         Assert.Equal(new Shortcut(Guid.Parse("22222222-2222-2222-2222-222222222222"), "Code", @"C:\Code.exe", "-n"), Assert.Single(tools.Shortcuts));
-        Assert.Equal("Work", Assert.Single(profile.Directories).Name);
-        Assert.Empty(profile.Urls);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ReadsAVersion2File_EachProfilesGroupsInOneWorkspace_TypedByTheirCategory()
+    {
+        await File.WriteAllTextAsync(_store.FilePath, Version2File, TestContext.Current.CancellationToken);
+
+        LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Null(result.UnreadableFileMovedTo);
+        Assert.Equal(Guid.Parse("44444444-4444-4444-4444-444444444444"), result.Data.ActiveProfileId);
+        Assert.Equal(["Work", "Empty"], result.Data.Profiles.Select(profile => profile.Name));
+
+        Workspace workspace = Assert.Single(result.Data.Profiles[0].Workspaces);
+        Assert.Equal(
+            (Workspace.DefaultTitle, Workspace.MigratedDescription, Workspace.MigratedIcon),
+            (workspace.Title, workspace.Description, workspace.Icon));
+        Assert.Equal(
+            [("Dev tools", ShortcutKind.Application), ("Dev tools", ShortcutKind.Directory), ("Docs", ShortcutKind.Url)],
+            workspace.Groups.Select(group => (group.Name, group.Kind)));
+        Assert.Equal(
+            [Guid.Parse("11111111-1111-1111-1111-111111111111"), Guid.Parse("33333333-3333-3333-3333-333333333333"), Guid.Parse("55555555-5555-5555-5555-555555555555")],
+            workspace.Groups.Select(group => group.Id));
+        Assert.True(workspace.Groups[0].IsCollapsed);
+        Assert.Equal("Code", Assert.Single(workspace.Groups[0].Shortcuts).Name);
+
+        Assert.Empty(result.Data.Profiles[1].Workspaces);
     }
 
     [Fact]
     public async Task LoadAsync_ReadsAShortcutWithoutADescriptionOrAnIcon_AsHavingNone()
     {
-        const string json = """
-            {
-              "version": 2,
-              "activeProfileId": "44444444-4444-4444-4444-444444444444",
-              "profiles": [ { "id": "44444444-4444-4444-4444-444444444444", "name": "Work", "directories": [], "urls": [],
-                "applications": [ { "id": "11111111-1111-1111-1111-111111111111", "name": "Dev tools",
-                  "shortcuts": [ { "id": "22222222-2222-2222-2222-222222222222", "name": "Code", "target": "C:\\Code.exe" } ] } ] } ]
-            }
-            """;
-        await File.WriteAllTextAsync(_store.FilePath, json, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(_store.FilePath, Version2File, TestContext.Current.CancellationToken);
 
         LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
 
-        Assert.Null(result.UnreadableFileMovedTo);
-        Shortcut shortcut = Assert.Single(Assert.Single(result.Data.GroupsOf(ShortcutKind.Application)).Shortcuts);
+        Shortcut shortcut = Assert.Single(result.Data.ActiveProfile.Workspaces[0].Groups[0].Shortcuts);
         Assert.Null(shortcut.Description);
         Assert.Null(shortcut.Icon);
     }
 
     [Fact]
-    public async Task AVersion1File_IsWrittenBackAsVersion2_OnTheNextSave()
+    public async Task LoadAsync_ReadsAWorkspaceWithoutADescriptionOrAnIcon_AsHavingNone()
     {
-        _temp.CreateFile(
-            JsonLaunchpadStore.FileName,
-            """{ "version": 1, "applications": [], "directories": [], "urls": [ { "id": "44444444-4444-4444-4444-444444444444", "name": "Docs", "shortcuts": [] } ] }""");
+        const string json = """
+            { "version": 3, "activeProfileId": "44444444-4444-4444-4444-444444444444",
+              "profiles": [ { "id": "44444444-4444-4444-4444-444444444444", "name": "Work",
+                "workspaces": [ { "id": "11111111-1111-1111-1111-111111111111", "title": "Dev", "groups": [] } ] } ] }
+            """;
+        await File.WriteAllTextAsync(_store.FilePath, json, TestContext.Current.CancellationToken);
+
+        LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
+
+        Workspace workspace = Assert.Single(result.Data.ActiveProfile.Workspaces);
+        Assert.Equal(("Dev", null, null), (workspace.Title, workspace.Description, workspace.Icon));
+    }
+
+    [Theory]
+    [InlineData(1, """{ "version": 1, "applications": [], "directories": [], "urls": [ { "id": "44444444-4444-4444-4444-444444444444", "name": "Docs", "shortcuts": [] } ] }""")]
+    [InlineData(2, Version2File)]
+    public async Task AnOlderFile_IsBackedUp_ThenWrittenBackAsTheCurrentVersion_OnTheNextSave(int version, string contents)
+    {
+        _temp.CreateFile(JsonLaunchpadStore.FileName, contents);
         LaunchpadLoadResult loaded = await _store.LoadAsync(TestContext.Current.CancellationToken);
 
         await _store.SaveAsync(loaded.Data, TestContext.Current.CancellationToken);
         string json = await File.ReadAllTextAsync(_store.FilePath, TestContext.Current.CancellationToken);
         LaunchpadLoadResult reloaded = await _store.LoadAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains("\"version\": 2", json, StringComparison.Ordinal);
+        Assert.Equal(contents, await File.ReadAllTextAsync(_temp.Combine($"launchpad.v{version}.backup.json"), TestContext.Current.CancellationToken));
+        Assert.Contains("\"version\": 3", json, StringComparison.Ordinal);
         Assert.Equal(loaded.Data.ActiveProfileId, reloaded.Data.ActiveProfileId);
-        Assert.Equal("Docs", Assert.Single(reloaded.Data.GroupsOf(ShortcutKind.Url)).Name);
+        Assert.Equal(loaded.Data.ActiveProfile.Workspaces[0].Id, reloaded.Data.ActiveProfile.Workspaces[0].Id);
+    }
+
+    [Fact]
+    public async Task ABackup_IsNeverReplaced()
+    {
+        string backup = _temp.CreateFile("launchpad.v2.backup.json", "kept from the first start");
+        _temp.CreateFile(JsonLaunchpadStore.FileName, Version2File);
+
+        LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Null(result.UnreadableFileMovedTo);
+        Assert.Equal("kept from the first start", await File.ReadAllTextAsync(backup, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ACurrentFile_IsNotBackedUp()
+    {
+        await _store.SaveAsync(SampleData(), TestContext.Current.CancellationToken);
+
+        await _store.LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([_store.FilePath], Directory.GetFiles(_temp.Path));
     }
 
     [Fact]
@@ -243,7 +330,7 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
     {
         _temp.CreateFile(
             JsonLaunchpadStore.FileName,
-            """{ "version": 2, "activeProfileId": "8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d", "profiles": [] }""");
+            """{ "version": 3, "activeProfileId": "8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d", "profiles": [] }""");
 
         LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
 
@@ -271,30 +358,36 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
             Guid.NewGuid(),
             "Work",
             [
-                new ShortcutGroup(
+                new Workspace(
                     Guid.NewGuid(),
-                    "Dev tools",
+                    "Dev",
                     [
-                        new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "--new-window", "The editor", ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: true)),
-                        new Shortcut(Guid.NewGuid(), "Terminal", @"C:\Tools\wt.exe"),
+                        new ShortcutGroup(
+                            Guid.NewGuid(),
+                            "Dev tools",
+                            ShortcutKind.Application,
+                            [
+                                new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "--new-window", "The editor", ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: true)),
+                                new Shortcut(Guid.NewGuid(), "Terminal", @"C:\Tools\wt.exe"),
+                            ],
+                            IsCollapsed: true),
+                        new ShortcutGroup(Guid.NewGuid(), "Work", ShortcutKind.Directory, [new Shortcut(Guid.NewGuid(), "Projects", @"C:\Projects")]),
+                        new ShortcutGroup(Guid.NewGuid(), "Papers", ShortcutKind.Document, [new Shortcut(Guid.NewGuid(), "Report", @"C:\Docs\report.pdf")]),
+                        new ShortcutGroup(
+                            Guid.NewGuid(),
+                            "Docs",
+                            ShortcutKind.Url,
+                            [new Shortcut(Guid.NewGuid(), "Avalonia", "https://docs.avaloniaui.net", Icon: ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: false))]),
                     ],
-                    IsCollapsed: true),
-            ],
-            [
-                new ShortcutGroup(Guid.NewGuid(), "Work", [new Shortcut(Guid.NewGuid(), "Projects", @"C:\Projects")]),
-                new ShortcutGroup(Guid.NewGuid(), "Empty", []),
-            ],
-            [
-                new ShortcutGroup(
-                    Guid.NewGuid(),
-                    "Docs",
-                    [new Shortcut(Guid.NewGuid(), "Avalonia", "https://docs.avaloniaui.net", Icon: ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: false))]),
+                    "Everything for coding",
+                    "Code"),
+                new Workspace(Guid.NewGuid(), "Empty", [new ShortcutGroup(Guid.NewGuid(), "Empty", ShortcutKind.Directory, [])]),
             ]);
 
-        Profile home = Profile.Create("Home") with
-        {
-            Urls = [new ShortcutGroup(Guid.NewGuid(), "News", [new Shortcut(Guid.NewGuid(), "Paper", "https://example.com")])],
-        };
+        Profile home = new(
+            Guid.NewGuid(),
+            "Home",
+            [new Workspace(Guid.NewGuid(), "News", [new ShortcutGroup(Guid.NewGuid(), "News", ShortcutKind.Url, [new Shortcut(Guid.NewGuid(), "Paper", "https://example.com")])])]);
 
         return new LaunchpadData(LaunchpadData.CurrentVersion, home.Id, [work, home]);
     }
@@ -307,18 +400,21 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
 
         foreach ((Profile left, Profile right) in expected.Profiles.Zip(actual.Profiles))
         {
-            Assert.Equal(left.Id, right.Id);
-            Assert.Equal(left.Name, right.Name);
+            Assert.Equal((left.Id, left.Name), (right.Id, right.Name));
+            Assert.Equal(left.Workspaces.Count, right.Workspaces.Count);
 
-            foreach (ShortcutKind kind in Enum.GetValues<ShortcutKind>())
+            foreach ((Workspace leftWorkspace, Workspace rightWorkspace) in left.Workspaces.Zip(right.Workspaces))
             {
-                Assert.Equal(left.GroupsOf(kind).Count, right.GroupsOf(kind).Count);
+                Assert.Equal(
+                    (leftWorkspace.Id, leftWorkspace.Title, leftWorkspace.Description, leftWorkspace.Icon),
+                    (rightWorkspace.Id, rightWorkspace.Title, rightWorkspace.Description, rightWorkspace.Icon));
+                Assert.Equal(leftWorkspace.Groups.Count, rightWorkspace.Groups.Count);
 
-                foreach ((ShortcutGroup leftGroup, ShortcutGroup rightGroup) in left.GroupsOf(kind).Zip(right.GroupsOf(kind)))
+                foreach ((ShortcutGroup leftGroup, ShortcutGroup rightGroup) in leftWorkspace.Groups.Zip(rightWorkspace.Groups))
                 {
-                    Assert.Equal(leftGroup.Id, rightGroup.Id);
-                    Assert.Equal(leftGroup.Name, rightGroup.Name);
-                    Assert.Equal(leftGroup.IsCollapsed, rightGroup.IsCollapsed);
+                    Assert.Equal(
+                        (leftGroup.Id, leftGroup.Name, leftGroup.Kind, leftGroup.IsCollapsed),
+                        (rightGroup.Id, rightGroup.Name, rightGroup.Kind, rightGroup.IsCollapsed));
                     Assert.Equal(leftGroup.Shortcuts, rightGroup.Shortcuts);
                 }
             }
