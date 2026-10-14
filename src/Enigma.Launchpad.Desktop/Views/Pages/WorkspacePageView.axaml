@@ -7,6 +7,141 @@
              x:DataType="pages:WorkspacePageViewModel"
              DragDrop.AllowDrop="True">
 
+  <UserControl.Resources>
+    <!-- One shortcut's tile, drawn by every group's tile list and by the copy a drag carries. -->
+    <DataTemplate x:Key="ShortcutTile" x:DataType="pages:ShortcutViewModel">
+      <!-- A tile: click or Enter opens it; the context menu (right-click, Shift+F10) does the rest.
+           Either side of it, the dashed tiles that open where a dragged tile would land: laid out in
+           the flow, so the tiles after them make room. -->
+      <StackPanel Classes="tileSlot">
+        <Panel Classes="placeholder tile before" IsVisible="{Binding IsDropBefore}">
+          <Border />
+          <Rectangle />
+        </Panel>
+        <Button Classes="tile"
+                Classes.dragging="{Binding IsDragging}"
+                Command="{Binding OpenCommand}"
+                ToolTip.Tip="{Binding ToolTip}"
+                AutomationProperties.Name="{Binding Name}">
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+            <!-- The target's own icon — a program's, a website's — when there is one, else its kind's glyph. -->
+            <Border Grid.Column="0" Classes="tileIcon">
+              <Panel>
+                <ei:Icon Kind="{Binding Icon}" Classes="tileIcon" IsVisible="{Binding !HasTargetIcon}" />
+                <Image Source="{Binding TargetIcon}"
+                       Classes="tileIcon"
+                       IsVisible="{Binding HasTargetIcon}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+              </Panel>
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+              <TextBlock Text="{Binding Name}" Classes="tileName" />
+              <TextBlock Text="{Binding Subtitle}" Classes="tileSubtitle" />
+            </StackPanel>
+            <!-- The tile's quick actions, over the end of its text while it is hovered or focused. -->
+            <StackPanel Grid.Column="1" Classes="tileActions">
+              <Button Classes="tileAction"
+                      Command="{Binding RunWithArgumentsCommand}"
+                      IsVisible="{Binding CanRunWithArguments}"
+                      ToolTip.Tip="Run with arguments…"
+                      AutomationProperties.Name="Run with arguments">
+                <ei:Icon Kind="PlayCircle" Classes="row" />
+              </Button>
+              <Button Classes="tileAction"
+                      Command="{Binding OpenInTerminalCommand}"
+                      IsVisible="{Binding CanOpenInTerminal}"
+                      ToolTip.Tip="Open in terminal"
+                      AutomationProperties.Name="Open in terminal">
+                <ei:Icon Kind="TerminalWindow" Classes="row" />
+              </Button>
+              <Button Classes="tileAction"
+                      Command="{Binding CopyTargetCommand}"
+                      IsVisible="{Binding CanCopyFromTile}"
+                      ToolTip.Tip="{Binding CopyTargetLabel}"
+                      AutomationProperties.Name="{Binding CopyTargetLabel}">
+                <ei:Icon Kind="Copy" Classes="row" />
+              </Button>
+            </StackPanel>
+            <!-- Under the icon row, across the tile: the description, when the shortcut has one. -->
+            <TextBlock Grid.Row="1"
+                       Grid.ColumnSpan="2"
+                       Text="{Binding Description}"
+                       Classes="tileDescription"
+                       IsVisible="{Binding HasDescription}" />
+          </Grid>
+          <Button.ContextMenu>
+            <ContextMenu>
+              <MenuItem Header="Open" Command="{Binding OpenCommand}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="ArrowSquareOut" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Run with arguments…"
+                        Command="{Binding RunWithArgumentsCommand}"
+                        IsVisible="{Binding CanRunWithArguments}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="PlayCircle" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Open in terminal"
+                        Command="{Binding OpenInTerminalCommand}"
+                        IsVisible="{Binding CanOpenInTerminal}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="TerminalWindow" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Edit…" Command="{Binding EditCommand}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="PencilSimple" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Try to get icon"
+                        Command="{Binding FindIconCommand}"
+                        IsVisible="{Binding CanFindIcon}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="ArrowsClockwise" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Copy target" Command="{Binding CopyTargetCommand}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="Copy" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Show in folder"
+                        Command="{Binding RevealCommand}"
+                        IsVisible="{Binding CanReveal}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="FolderOpen" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <Separator />
+              <MenuItem Header="Move earlier" Command="{Binding MoveUpCommand}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="ArrowLeft" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Move later" Command="{Binding MoveDownCommand}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="ArrowRight" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <Separator />
+              <MenuItem Header="Delete…" Command="{Binding DeleteCommand}">
+                <MenuItem.Icon>
+                  <ei:Icon Kind="Trash" Classes="menu" />
+                </MenuItem.Icon>
+              </MenuItem>
+            </ContextMenu>
+          </Button.ContextMenu>
+        </Button>
+        <Panel Classes="placeholder tile after" IsVisible="{Binding IsDropAfter}">
+          <Border />
+          <Rectangle />
+        </Panel>
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
+
   <DockPanel>
     <!-- Page header: the way back to the list, the workspace's glyph, title and what it is for, and the way to add a
          group of any kind. -->
@@ -191,6 +326,7 @@
                                IsVisible="{Binding !HasShortcuts}" />
                     <ItemsControl Classes="tiles"
                                   ItemsSource="{Binding Shortcuts}"
+                                  ItemTemplate="{StaticResource ShortcutTile}"
                                   IsVisible="{Binding HasShortcuts}"
                                   Margin="6,0,0,0">
                       <ItemsControl.ItemsPanel>
@@ -198,139 +334,6 @@
                           <WrapPanel />
                         </ItemsPanelTemplate>
                       </ItemsControl.ItemsPanel>
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="pages:ShortcutViewModel">
-                          <!-- A tile: click or Enter opens it; the context menu (right-click, Shift+F10) does the rest.
-                               Either side of it, the dashed tiles that open where a dragged tile would land: laid out
-                               in the flow, so the tiles after them make room. -->
-                          <StackPanel Classes="tileSlot">
-                          <Panel Classes="placeholder tile before" IsVisible="{Binding IsDropBefore}">
-                            <Border />
-                            <Rectangle />
-                          </Panel>
-                          <Button Classes="tile"
-                                  Classes.dragging="{Binding IsDragging}"
-                                  Command="{Binding OpenCommand}"
-                                  ToolTip.Tip="{Binding ToolTip}"
-                                  AutomationProperties.Name="{Binding Name}">
-                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12">
-                              <!-- The target's own icon — a program's, a website's — when there is one, else its kind's glyph. -->
-                              <Border Grid.Column="0" Classes="tileIcon">
-                                <Panel>
-                                  <ei:Icon Kind="{Binding Icon}" Classes="tileIcon" IsVisible="{Binding !HasTargetIcon}" />
-                                  <Image Source="{Binding TargetIcon}"
-                                         Classes="tileIcon"
-                                         IsVisible="{Binding HasTargetIcon}"
-                                         RenderOptions.BitmapInterpolationMode="HighQuality" />
-                                </Panel>
-                              </Border>
-                              <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-                                <TextBlock Text="{Binding Name}" Classes="tileName" />
-                                <TextBlock Text="{Binding Subtitle}" Classes="tileSubtitle" />
-                              </StackPanel>
-                              <!-- The tile's quick actions, over the end of its text while it is hovered or focused. -->
-                              <StackPanel Grid.Column="1" Classes="tileActions">
-                                <Button Classes="tileAction"
-                                        Command="{Binding RunWithArgumentsCommand}"
-                                        IsVisible="{Binding CanRunWithArguments}"
-                                        ToolTip.Tip="Run with arguments…"
-                                        AutomationProperties.Name="Run with arguments">
-                                  <ei:Icon Kind="PlayCircle" Classes="row" />
-                                </Button>
-                                <Button Classes="tileAction"
-                                        Command="{Binding OpenInTerminalCommand}"
-                                        IsVisible="{Binding CanOpenInTerminal}"
-                                        ToolTip.Tip="Open in terminal"
-                                        AutomationProperties.Name="Open in terminal">
-                                  <ei:Icon Kind="TerminalWindow" Classes="row" />
-                                </Button>
-                                <Button Classes="tileAction"
-                                        Command="{Binding CopyTargetCommand}"
-                                        IsVisible="{Binding CanCopyFromTile}"
-                                        ToolTip.Tip="{Binding CopyTargetLabel}"
-                                        AutomationProperties.Name="{Binding CopyTargetLabel}">
-                                  <ei:Icon Kind="Copy" Classes="row" />
-                                </Button>
-                              </StackPanel>
-                              <!-- Under the icon row, across the tile: the description, when the shortcut has one. -->
-                              <TextBlock Grid.Row="1"
-                                         Grid.ColumnSpan="2"
-                                         Text="{Binding Description}"
-                                         Classes="tileDescription"
-                                         IsVisible="{Binding HasDescription}" />
-                            </Grid>
-                            <Button.ContextMenu>
-                              <ContextMenu>
-                                <MenuItem Header="Open" Command="{Binding OpenCommand}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="ArrowSquareOut" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Run with arguments…"
-                                          Command="{Binding RunWithArgumentsCommand}"
-                                          IsVisible="{Binding CanRunWithArguments}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="PlayCircle" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Open in terminal"
-                                          Command="{Binding OpenInTerminalCommand}"
-                                          IsVisible="{Binding CanOpenInTerminal}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="TerminalWindow" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Edit…" Command="{Binding EditCommand}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="PencilSimple" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Try to get icon"
-                                          Command="{Binding FindIconCommand}"
-                                          IsVisible="{Binding CanFindIcon}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="ArrowsClockwise" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Copy target" Command="{Binding CopyTargetCommand}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="Copy" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Show in folder"
-                                          Command="{Binding RevealCommand}"
-                                          IsVisible="{Binding CanReveal}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="FolderOpen" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <Separator />
-                                <MenuItem Header="Move earlier" Command="{Binding MoveUpCommand}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="ArrowLeft" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Move later" Command="{Binding MoveDownCommand}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="ArrowRight" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                                <Separator />
-                                <MenuItem Header="Delete…" Command="{Binding DeleteCommand}">
-                                  <MenuItem.Icon>
-                                    <ei:Icon Kind="Trash" Classes="menu" />
-                                  </MenuItem.Icon>
-                                </MenuItem>
-                              </ContextMenu>
-                            </Button.ContextMenu>
-                          </Button>
-                          <Panel Classes="placeholder tile after" IsVisible="{Binding IsDropAfter}">
-                            <Border />
-                            <Rectangle />
-                          </Panel>
-                          </StackPanel>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
                     </ItemsControl>
                   </Panel>
                 </DockPanel>
@@ -347,6 +350,34 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </ScrollViewer>
+
+      <!-- The item being carried: a copy that follows the pointer over the groups, clipped to them. Never hit, so the
+           drag stays with the page underneath; empty between drags. A tile is copied whole; a group, only its
+           header, which is what it is and what it is held by. -->
+      <Canvas x:Name="DragLayer" IsHitTestVisible="False" ClipToBounds="True">
+        <ContentControl x:Name="TileGhost"
+                        Classes="ghost"
+                        ContentTemplate="{StaticResource ShortcutTile}"
+                        IsVisible="False" />
+        <ContentControl x:Name="GroupGhost" Classes="ghost" IsVisible="False">
+          <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="pages:GroupViewModel">
+              <Border Classes="groupCard">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <Border Classes="grip">
+                    <ei:Icon Kind="DotsSixVertical" Classes="row" />
+                  </Border>
+                  <ei:Icon Kind="{Binding KindGlyph}" Classes="row groupKind" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Name}" Classes="groupName" VerticalAlignment="Center" />
+                  <Border Classes="countBadge" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Count}" />
+                  </Border>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+      </Canvas>
 
       <!-- Empty workspace: an invitation rather than a blank page. -->
       <StackPanel x:Name="EmptyState"

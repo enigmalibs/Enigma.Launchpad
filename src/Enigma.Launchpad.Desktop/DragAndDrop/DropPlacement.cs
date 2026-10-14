@@ -77,6 +77,18 @@ public static class DropPlacement
     }
 
     /// <summary>
+    /// Places the copy of a dragged item along one axis: where the pointer holds it, kept inside the layer it is drawn
+    /// on.
+    /// </summary>
+    /// <param name="pointer">Where the pointer is, in the layer's coordinates.</param>
+    /// <param name="grab">How far into the item it is held.</param>
+    /// <param name="size">The copy's extent along the axis.</param>
+    /// <param name="layer">The layer's extent along the axis.</param>
+    /// <returns>The copy's offset, in the layer's coordinates.</returns>
+    public static double GhostOffset(double pointer, double grab, double size, double layer)
+        => Math.Clamp(pointer - grab, 0, Math.Max(0, layer - size));
+
+    /// <summary>
     /// Lays rows out one after the other from a top, as they stand with no gap opened among them.
     /// </summary>
     /// <param name="top">Where the first row starts.</param>

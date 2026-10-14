@@ -488,6 +488,30 @@
     <Setter Property="Opacity" Value="0.45" />
   </Style>
 
+  <!--
+    The copy a drag carries under the pointer: lifted off the page by a shadow, and never faded like the
+    original it copies. A tile's copy is the tile alone, without the room its slot keeps around it.
+  -->
+  <Style Selector="ContentControl.ghost">
+    <Setter Property="Opacity" Value="0.92" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Border.groupCard">
+    <Setter Property="BoxShadow" Value="0 6 18 0 #50000000" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Button.tile /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="0 6 18 0 #50000000" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Button.tile.dragging">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost StackPanel.tileSlot">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
   <!-- Dialog forms. -->
   <Style Selector="TextBlock.fieldHint">
     <Setter Property="FontSize" Value="11" />

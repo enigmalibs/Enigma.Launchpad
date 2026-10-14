@@ -32,6 +32,11 @@ namespace Enigma.Launchpad.Desktop.Views.Pages;
 /// (<see cref="DropPlacement.Stack"/>, <see cref="DropPlacement.Flow"/>): read from the moved items, it would
 /// move with them.
 /// </para>
+/// <para>
+/// While a drag is over the page, a copy of what it carries follows the pointer on a layer above the groups,
+/// and the original stays faded in its place. The copy is drawn from the drag's own payload, so it shows for
+/// whatever item of the page a drag carries; a drag the page started also says where the item was taken hold of.
+/// </para>
 /// </remarks>
 public partial class WorkspacePageView : UserControl
 {
@@ -55,6 +60,7 @@ public partial class WorkspacePageView : UserControl
     private PointerPressedEventArgs? _dragTrigger;
     private Point _dragOrigin;
     private bool _suppressNextClick;
+    private Lift? _lift;
 
     /// <summary>
     /// Initialises a new instance.
@@ -337,11 +343,13 @@ public partial class WorkspacePageView : UserControl
             case GroupViewModel group:
                 data.Add(DataTransferItem.Create(GroupFormat, new DragPayload(group.Kind, group.Id).Format()));
                 group.IsDragging = true;
+                _lift = new Lift(group.Id, GrabIn(trigger.Source, "groupCard"));
                 break;
 
             case ShortcutViewModel shortcut:
                 data.Add(DataTransferItem.Create(ShortcutFormat, new DragPayload(shortcut.Kind, shortcut.Id).Format()));
                 shortcut.IsDragging = true;
+                _lift = new Lift(shortcut.Id, GrabIn(trigger.Source, "tile"));
 
                 // A tile dropped where it started would otherwise read the release as a click and open.
                 _suppressNextClick = true;
@@ -362,21 +370,29 @@ public partial class WorkspacePageView : UserControl
         finally
         {
             page.ClearDragState();
+            PutTheCopyDown();
+            _lift = null;
         }
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
         e.DragEffects = Resolve(e.DataTransfer, e.Source, e.GetPosition, drop: false) ? DragDropEffects.Move : DragDropEffects.None;
+        CarryTheCopy(e.DataTransfer, e.GetPosition);
         e.Handled = true;
     }
 
-    private void OnDragLeave(object? sender, DragEventArgs e) => Page?.ClearDropHints();
+    private void OnDragLeave(object? sender, DragEventArgs e)
+    {
+        Page?.ClearDropHints();
+        HideTheCopy();
+    }
 
     private void OnDrop(object? sender, DragEventArgs e)
     {
         e.DragEffects = Resolve(e.DataTransfer, e.Source, e.GetPosition, drop: true) ? DragDropEffects.Move : DragDropEffects.None;
         Page?.ClearDropHints();
+        PutTheCopyDown();
         e.Handled = true;
     }
 
@@ -396,4 +412,98 @@ public partial class WorkspacePageView : UserControl
         _dragCandidate = null;
         _dragTrigger = null;
     }
+
+    /// <summary>
+    /// Where the press that starts a drag took hold of the item: the offset from its top-left corner.
+    /// </summary>
+    private Point GrabIn(object? source, string styleClass)
+        => (FindAncestor(source, styleClass) is { } item) && (this.TranslatePoint(_dragOrigin, item) is { } grab) ? grab : default;
+
+    /// <summary>
+    /// Shows the copy of what a drag carries under the pointer: a tile, where it is held, in both directions; a group's
+    /// header up and down only, at the cards' left and width. A drag carrying nothing of this page shows none.
+    /// </summary>
+    private void CarryTheCopy(IDataTransfer data, Func<Visual, Point> pointer)
+    {
+        Point at = pointer(DragLayer);
+        Size layer = DragLayer.Bounds.Size;
+
+        if (DragPayload.TryParse(data.TryGetValue(GroupFormat), out DragPayload? groupPayload)
+            && (Page?.FindGroup(groupPayload.Id) is { } group))
+        {
+            Size size = ShowTheCopy(GroupGhost, group, GroupList.Bounds.Width);
+            Point grab = GrabFor(group.Id, size);
+
+            Canvas.SetLeft(GroupGhost, GroupList.TranslatePoint(default, DragLayer)?.X ?? 0);
+            Canvas.SetTop(GroupGhost, DropPlacement.GhostOffset(at.Y, grab.Y, size.Height, layer.Height));
+            TileGhost.IsVisible = false;
+        }
+        else if (DragPayload.TryParse(data.TryGetValue(ShortcutFormat), out DragPayload? shortcutPayload)
+            && (Page?.FindShortcut(shortcutPayload.Id) is { } shortcut))
+        {
+            Size size = ShowTheCopy(TileGhost, shortcut, double.NaN);
+            Point grab = GrabFor(shortcut.Id, size);
+
+            Canvas.SetLeft(TileGhost, DropPlacement.GhostOffset(at.X, grab.X, size.Width, layer.Width));
+            Canvas.SetTop(TileGhost, DropPlacement.GhostOffset(at.Y, grab.Y, size.Height, layer.Height));
+            GroupGhost.IsVisible = false;
+        }
+        else
+        {
+            HideTheCopy();
+        }
+    }
+
+    /// <summary>
+    /// Puts an item in a copy and shows it.
+    /// </summary>
+    /// <returns>The copy's size.</returns>
+    /// <remarks>
+    /// Measured here rather than on the next layout pass: the copy is placed by its size before it has ever been laid
+    /// out.
+    /// </remarks>
+    private static Size ShowTheCopy(ContentControl copy, object item, double width)
+    {
+        copy.Content = item;
+        copy.Width = width;
+        copy.IsVisible = true;
+        copy.Measure(Size.Infinity);
+        return copy.DesiredSize;
+    }
+
+    /// <summary>
+    /// Where the pointer holds the copy: where the press took hold of the item, for a drag this page started; its
+    /// middle otherwise.
+    /// </summary>
+    private Point GrabFor(Guid id, Size size)
+        => (_lift is { } lift) && (lift.Id == id)
+            ? new Point(Math.Clamp(lift.Grab.X, 0, size.Width), Math.Clamp(lift.Grab.Y, 0, size.Height))
+            : new Point(size.Width / 2, size.Height / 2);
+
+    /// <summary>
+    /// Hides the copy while the drag is away from the page, keeping its content for when it comes back.
+    /// </summary>
+    private void HideTheCopy()
+    {
+        TileGhost.IsVisible = false;
+        GroupGhost.IsVisible = false;
+    }
+
+    /// <summary>
+    /// Takes the copy away once the drag is over, emptied so that no second set of the item's controls stays on the
+    /// page between drags.
+    /// </summary>
+    private void PutTheCopyDown()
+    {
+        HideTheCopy();
+        TileGhost.Content = null;
+        GroupGhost.Content = null;
+    }
+
+    /// <summary>
+    /// What a drag the page started carries, and where the press took hold of it.
+    /// </summary>
+    /// <param name="Id">The carried group's or shortcut's identity.</param>
+    /// <param name="Grab">The press's offset from the item's top-left corner.</param>
+    private readonly record struct Lift(Guid Id, Point Grab);
 }
