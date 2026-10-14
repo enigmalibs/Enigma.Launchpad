@@ -52,3 +52,5 @@
 | FEATURE-23F9 | Workspace drag visuals              | DONE   | docs/plan/FEATURE-23F9.md |
 | - PHASE01    | Dashed slot where it lands          | DONE   | (in FEATURE-23F9.md)      |
 | - PHASE02    | Dragged item follows the pointer    | DONE   | (in FEATURE-23F9.md)      |
+| BUG-10AB     | Tests that fail on Linux            | DONE   | docs/plan/BUG-10AB.md     |
+| FEATURE-5FAA | Release 1.1.0                       | DONE   | docs/plan/FEATURE-5FAA.md |

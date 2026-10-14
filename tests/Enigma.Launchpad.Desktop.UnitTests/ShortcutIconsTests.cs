@@ -15,8 +15,10 @@ namespace Enigma.Launchpad.Desktop.UnitTests;
 [Collection(HeadlessCollection.Name)]
 public sealed class ShortcutIconsTests
 {
-    private const string Program = @"C:\Tools\code.exe";
     private const string Link = "https://example.com/docs";
+
+    // Fully qualified on every platform: anything else is taken for a command and looked up on the PATH.
+    private static readonly string Program = Path.Combine(Path.GetTempPath(), "Enigma.Launchpad.Tools", "code.exe");
 
     private readonly HeadlessAvaloniaFixture _fixture;
     private readonly FakeTargetIcons _programIcons = new();

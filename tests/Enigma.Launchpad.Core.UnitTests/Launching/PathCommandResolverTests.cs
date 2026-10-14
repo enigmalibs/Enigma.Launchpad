@@ -43,8 +43,8 @@ public sealed class PathCommandResolverTests : IDisposable
         _temp.CreateFile(Path.Combine("bin", "code.cmd"));
         _temp.CreateFile(Path.Combine("bin", "code.exe"));
 
-        // The name is used as typed; Windows paths ignore case.
-        Assert.Equal(_temp.Combine("bin", "code.cmd"), Windows(_temp.Combine("bin")).Resolve("  CODE.CMD  "), ignoreCase: true);
+        // The name ends in ".CMD", whatever its case, so it is used as typed, without the extensions added.
+        Assert.Equal(_temp.Combine("bin", "code.cmd"), Windows(_temp.Combine("bin")).Resolve("  code.cmd  "));
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public sealed class PathCommandResolverTests : IDisposable
     [Fact]
     public void Elsewhere_TheNameIsTriedAsItIs()
     {
-        _temp.CreateFile(Path.Combine("bin", "firefox"));
-        _temp.CreateFile(Path.Combine("bin", "code.exe"));
+        // Both may be executed: "code" is then not found because its name is not completed, not because it cannot run.
+        AllowExecution(_temp.CreateFile(Path.Combine("bin", "firefox")), _temp.CreateFile(Path.Combine("bin", "code.exe")));
 
         PathCommandResolver resolver = new(() => [_temp.Combine("bin")], () => WindowsExtensions, isWindows: false);
 
@@ -169,4 +169,16 @@ public sealed class PathCommandResolverTests : IDisposable
 
     private static PathCommandResolver Windows(params string[] directories)
         => new(() => directories, () => WindowsExtensions, isWindows: true);
+
+    // Outside Windows a file is a program only once its owner may execute it; Windows has no such permission.
+    private static void AllowExecution(params string[] paths)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            foreach (string path in paths)
+            {
+                File.SetUnixFileMode(path, File.GetUnixFileMode(path) | UnixFileMode.UserExecute);
+            }
+        }
+    }
 }
