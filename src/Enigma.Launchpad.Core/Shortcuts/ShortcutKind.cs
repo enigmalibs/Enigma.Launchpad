@@ -1,8 +1,8 @@
 namespace Enigma.Launchpad.Core.Shortcuts;
 
 /// <summary>
-/// The three categories a shortcut belongs to. A shortcut never changes kind: the kind says what its
-/// target is and how it is opened.
+/// The kinds of shortcut. A group holds shortcuts of one kind, and never changes kind: the kind says what its
+/// shortcuts' targets are and how they are opened.
 /// </summary>
 public enum ShortcutKind
 {
@@ -14,4 +14,7 @@ public enum ShortcutKind
 
     /// <summary>An http or https address, opened in the default browser.</summary>
     Url,
+
+    /// <summary>A file, opened with the application the system associates with it.</summary>
+    Document,
 }
