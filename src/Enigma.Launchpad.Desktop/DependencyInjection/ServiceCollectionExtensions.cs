@@ -69,10 +69,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<MainWindowViewModel>();
             services.AddSingleton<ProfileSwitcherViewModel>();
 
-            services.AddTransient<CategoryPageView>();
-            services.AddSingleton<ApplicationsPageViewModel>();
-            services.AddSingleton<DirectoriesPageViewModel>();
-            services.AddSingleton<UrlsPageViewModel>();
+            services.AddTransient<WorkspacesPageView>();
+            services.AddSingleton<WorkspacesPageViewModel>();
 
             services.AddTransient<ProfilesPageView>();
             services.AddSingleton<ProfilesPageViewModel>();

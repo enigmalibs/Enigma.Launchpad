@@ -9,16 +9,16 @@ using Xunit;
 
 namespace Enigma.Launchpad.Desktop.UnitTests;
 
-public sealed class CategoryPageShortcutsTests
+public sealed class WorkspacePageShortcutsTests
 {
     [Fact]
     public async Task AddShortcut_AppendsIt_UnfoldsTheGroup_AndSaves()
     {
         LaunchpadData data = LaunchpadData.Empty.With(
             ShortcutKind.Application,
-            [new ShortcutGroup(Guid.NewGuid(), "Dev tools", [PageHarness.Shortcut("Code")], IsCollapsed: true)]);
+            [new ShortcutGroup(Guid.NewGuid(), "Dev tools", ShortcutKind.Application, [PageHarness.Shortcut("Code")], IsCollapsed: true)]);
         PageHarness harness = new(data);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         Shortcut terminal = PageHarness.Shortcut("Terminal", @"C:\Tools\wt.exe");
         harness.Dialogs.ShortcutAnswers.Enqueue(terminal);
 
@@ -36,7 +36,7 @@ public sealed class CategoryPageShortcutsTests
     public async Task AddShortcut_Cancelled_ChangesNothing()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         await page.Groups[0].AddShortcutCommand.ExecuteAsync(null);
         await harness.Session.FlushAsync();
@@ -50,8 +50,8 @@ public sealed class CategoryPageShortcutsTests
     [InlineData(ShortcutKind.Url)]
     public async Task AddShortcut_AsksForTheKindOfItsPage(ShortcutKind kind)
     {
-        PageHarness harness = new(LaunchpadData.Empty.With(kind, [new ShortcutGroup(Guid.NewGuid(), "G", [])]), kind);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        PageHarness harness = new(LaunchpadData.Empty.With(kind, [new ShortcutGroup(Guid.NewGuid(), "G", ShortcutKind.Application, [])]), kind);
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         await page.Groups[0].AddShortcutCommand.ExecuteAsync(null);
 
@@ -63,7 +63,7 @@ public sealed class CategoryPageShortcutsTests
     {
         Shortcut code = PageHarness.Shortcut("Code");
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [code, PageHarness.Shortcut("Git")])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
         Shortcut edited = code with { Name = "VS Code", Arguments = "--new-window" };
         harness.Dialogs.ShortcutAnswers.Enqueue(edited);
@@ -80,7 +80,7 @@ public sealed class CategoryPageShortcutsTests
     {
         Shortcut code = PageHarness.Shortcut("Code");
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [code])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.ShortcutAnswers.Enqueue(code with { });
 
         await page.Groups[0].Shortcuts[0].EditCommand.ExecuteAsync(null);
@@ -93,7 +93,7 @@ public sealed class CategoryPageShortcutsTests
     public async Task Delete_Confirmed_RemovesTheShortcut_AndSaves()
     {
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [PageHarness.Shortcut("Code"), PageHarness.Shortcut("Git")])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.ConfirmAnswers.Enqueue(true);
 
         await page.Groups[0].Shortcuts[0].DeleteCommand.ExecuteAsync(null);
@@ -108,7 +108,7 @@ public sealed class CategoryPageShortcutsTests
     public async Task Delete_Declined_KeepsTheShortcut()
     {
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [PageHarness.Shortcut("Code")])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.ConfirmAnswers.Enqueue(false);
 
         await page.Groups[0].Shortcuts[0].DeleteCommand.ExecuteAsync(null);
@@ -124,7 +124,7 @@ public sealed class CategoryPageShortcutsTests
         PageHarness harness = new(PageHarness.WithShortcuts(
             ShortcutKind.Application,
             ("Dev tools", [PageHarness.Shortcut("A"), PageHarness.Shortcut("B"), PageHarness.Shortcut("C")])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel a = page.Groups[0].Shortcuts[0];
         ShortcutViewModel c = page.Groups[0].Shortcuts[2];
 
@@ -145,7 +145,7 @@ public sealed class CategoryPageShortcutsTests
     {
         Shortcut folder = PageHarness.Shortcut("Projects", @"C:\Projects");
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Directory, ("Work", [folder])), ShortcutKind.Directory);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
 
         tile.OpenCommand.Execute(null);
@@ -163,7 +163,7 @@ public sealed class CategoryPageShortcutsTests
         PageHarness harness = new(
             PageHarness.WithShortcuts(ShortcutKind.Url, ("Docs", [PageHarness.Shortcut("Avalonia", "https://docs.avaloniaui.net/docs/welcome")])),
             ShortcutKind.Url);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
 
         Assert.False(tile.CanReveal);
@@ -178,7 +178,7 @@ public sealed class CategoryPageShortcutsTests
         PageHarness harness = new(PageHarness.WithShortcuts(
             ShortcutKind.Application,
             ("Dev tools", [PageHarness.Shortcut("Code", @"C:\Tools\code.exe", "--new-window")])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
 
         Assert.True(tile.CanReveal);
@@ -194,7 +194,7 @@ public sealed class CategoryPageShortcutsTests
     {
         Shortcut code = PageHarness.Shortcut("Code", @"C:\Tools\code.exe", "--new-window") with { Description = "The editor" };
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [code])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
 
         Assert.True(tile.HasDescription);
@@ -207,7 +207,7 @@ public sealed class CategoryPageShortcutsTests
     {
         Shortcut code = PageHarness.Shortcut("Code");
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [code])));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
         harness.Dialogs.ShortcutAnswers.Enqueue(code with { Description = "The editor" });
 

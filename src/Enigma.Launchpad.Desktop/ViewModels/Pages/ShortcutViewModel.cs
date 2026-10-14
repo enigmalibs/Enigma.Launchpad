@@ -12,15 +12,16 @@ using Enigma.Launchpad.Desktop.Services;
 namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 
 /// <summary>
-/// One shortcut's tile on a category page.
+/// One shortcut's tile in an open workspace.
 /// </summary>
 /// <remarks>
 /// Like a group's, a shortcut's commands act on the page — a move changes its group's order, a delete is
-/// confirmed and saved — so they forward to the page rather than doing the work themselves.
+/// confirmed and saved — so they forward to the page rather than doing the work themselves. What the tile offers
+/// follows its kind, which is its group's.
 /// </remarks>
 public sealed class ShortcutViewModel : ObservableObject
 {
-    private readonly CategoryPageViewModel _page;
+    private readonly WorkspacePageViewModel _page;
 
     /// <summary>
     /// Initialises a new instance.
@@ -28,7 +29,7 @@ public sealed class ShortcutViewModel : ObservableObject
     /// <param name="page">The page the shortcut is on.</param>
     /// <param name="group">The group the shortcut is in.</param>
     /// <param name="model">The shortcut as stored.</param>
-    public ShortcutViewModel(CategoryPageViewModel page, GroupViewModel group, Shortcut model)
+    public ShortcutViewModel(WorkspacePageViewModel page, GroupViewModel group, Shortcut model)
     {
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(group);
@@ -54,9 +55,14 @@ public sealed class ShortcutViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gets the group the shortcut is in.
+    /// Gets the group the shortcut is in; a drag can move it to another group of the same kind.
     /// </summary>
     public GroupViewModel Group { get; internal set; }
+
+    /// <summary>
+    /// Gets the shortcut's kind: its group's.
+    /// </summary>
+    public ShortcutKind Kind => Group.Kind;
 
     /// <summary>
     /// Gets the shortcut as stored.
@@ -96,12 +102,7 @@ public sealed class ShortcutViewModel : ObservableObject
     /// <summary>
     /// Gets the tile's icon, which says what kind of shortcut it is.
     /// </summary>
-    public PhosphorIcon Icon => _page.Kind switch
-    {
-        ShortcutKind.Application => PhosphorIcon.AppWindow,
-        ShortcutKind.Directory => PhosphorIcon.Folder,
-        _ => PhosphorIcon.Globe,
-    };
+    public PhosphorIcon Icon => Glyphs.OfKind(Kind);
 
     /// <summary>
     /// Gets the shortcut's own icon — the one it keeps, or a program's or a website's once found — which the tile
@@ -120,7 +121,7 @@ public sealed class ShortcutViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gets a value indicating whether the tile shows the target's own icon rather than the category's glyph.
+    /// Gets a value indicating whether the tile shows the target's own icon rather than its kind's glyph.
     /// </summary>
     public bool HasTargetIcon => TargetIcon is not null;
 
@@ -128,7 +129,7 @@ public sealed class ShortcutViewModel : ObservableObject
     /// Gets the line under the name: a link's host, or the path.
     /// </summary>
     public string Subtitle
-        => (_page.Kind == ShortcutKind.Url) && UrlNormalizer.TryParse(Target, out Uri? address, out _) && (address is not null)
+        => (Kind == ShortcutKind.Url) && UrlNormalizer.TryParse(Target, out Uri? address, out _) && (address is not null)
             ? address.Host
             : Target;
 
@@ -157,36 +158,37 @@ public sealed class ShortcutViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gets a value indicating whether the tile can look its icon up again: an application's or a link's can, a
-    /// folder's has none to find.
+    /// Gets a value indicating whether the tile can look its icon up again: an application's, a link's or a
+    /// document's can, a folder's has none to find.
     /// </summary>
-    public bool CanFindIcon => _page.CanFindIcons;
+    public bool CanFindIcon => _page.CanFindIcons(Kind);
 
     /// <summary>
     /// Gets a value indicating whether the shortcut can be run with other arguments than its default ones: an
     /// application can.
     /// </summary>
-    public bool CanRunWithArguments => _page.Kind == ShortcutKind.Application;
+    public bool CanRunWithArguments => Kind == ShortcutKind.Application;
 
     /// <summary>
     /// Gets a value indicating whether the shortcut can be opened in a terminal: a folder can.
     /// </summary>
-    public bool CanOpenInTerminal => _page.Kind == ShortcutKind.Directory;
+    public bool CanOpenInTerminal => Kind == ShortcutKind.Directory;
 
     /// <summary>
-    /// Gets a value indicating whether the tile has a button copying its target: a folder's path, a link's address.
+    /// Gets a value indicating whether the tile has a button copying its target: a folder's or a document's path, a
+    /// link's address.
     /// </summary>
-    public bool CanCopyFromTile => _page.Kind is ShortcutKind.Directory or ShortcutKind.Url;
+    public bool CanCopyFromTile => Kind is ShortcutKind.Directory or ShortcutKind.Url or ShortcutKind.Document;
 
     /// <summary>
     /// Gets what copying the target is called on the tile's button.
     /// </summary>
-    public string CopyTargetLabel => _page.Kind == ShortcutKind.Url ? "Copy URL" : "Copy path";
+    public string CopyTargetLabel => Kind == ShortcutKind.Url ? "Copy URL" : "Copy path";
 
     /// <summary>
     /// Gets a value indicating whether the shortcut can be shown in its folder; a link cannot.
     /// </summary>
-    public bool CanReveal => _page.Kind != ShortcutKind.Url;
+    public bool CanReveal => Kind != ShortcutKind.Url;
 
     /// <summary>
     /// Gets or sets what the tile shows while something is dragged over it.
@@ -327,13 +329,13 @@ public sealed class ShortcutViewModel : ObservableObject
         }
 
         // An icon the user chose is never replaced behind their back, even one that no longer shows.
-        if ((kept is { IsCustom: true }) || !_page.CanFindIcons)
+        if ((kept is { IsCustom: true }) || !_page.CanFindIcons(Kind))
         {
             return;
         }
 
         string target = Target;
-        IconImage? found = await _page.FindIconAsync(target);
+        IconImage? found = await _page.FindIconAsync(Kind, target);
 
         // An edit may have pointed the shortcut elsewhere, or given it an icon, while this one was looked up.
         if ((found is null) || (target != Target) || (Model.Icon != kept))

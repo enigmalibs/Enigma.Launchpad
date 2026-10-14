@@ -10,7 +10,7 @@ using Enigma.Launchpad.Desktop.ViewModels.Pages;
 namespace Enigma.Launchpad.Desktop.Views.Pages;
 
 /// <summary>
-/// One category's page. The same view serves the three categories; its ViewModel says which.
+/// An open workspace: its groups of every kind, and their tiles.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -25,15 +25,15 @@ namespace Enigma.Launchpad.Desktop.Views.Pages;
 /// one of a tile's own buttons is a click on that button, never the start of a drag.
 /// </para>
 /// </remarks>
-public partial class CategoryPageView : UserControl
+public partial class WorkspacePageView : UserControl
 {
     /// <summary>
-    /// The format a dragged group travels in: its category and identity.
+    /// The format a dragged group travels in: its kind and identity.
     /// </summary>
     internal static readonly DataFormat<string> GroupFormat = DataFormat.CreateStringApplicationFormat("enigma-launchpad.group");
 
     /// <summary>
-    /// The format a dragged shortcut travels in: its category and identity.
+    /// The format a dragged shortcut travels in: its kind and identity.
     /// </summary>
     internal static readonly DataFormat<string> ShortcutFormat = DataFormat.CreateStringApplicationFormat("enigma-launchpad.shortcut");
 
@@ -51,7 +51,7 @@ public partial class CategoryPageView : UserControl
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
-    public CategoryPageView()
+    public WorkspacePageView()
     {
         InitializeComponent();
 
@@ -66,7 +66,7 @@ public partial class CategoryPageView : UserControl
         AddHandler(Button.ClickEvent, OnClick, RoutingStrategies.Bubble);
     }
 
-    private CategoryPageViewModel? Page => DataContext as CategoryPageViewModel;
+    private WorkspacePageViewModel? Page => DataContext as WorkspacePageViewModel;
 
     /// <summary>
     /// Finds what a drop at a point of the page lands on, and acts on it.
@@ -211,12 +211,12 @@ public partial class CategoryPageView : UserControl
         switch (candidate)
         {
             case GroupViewModel group:
-                data.Add(DataTransferItem.Create(GroupFormat, new DragPayload(page.Kind, group.Id).Format()));
+                data.Add(DataTransferItem.Create(GroupFormat, new DragPayload(group.Kind, group.Id).Format()));
                 group.IsDragging = true;
                 break;
 
             case ShortcutViewModel shortcut:
-                data.Add(DataTransferItem.Create(ShortcutFormat, new DragPayload(page.Kind, shortcut.Id).Format()));
+                data.Add(DataTransferItem.Create(ShortcutFormat, new DragPayload(shortcut.Kind, shortcut.Id).Format()));
                 shortcut.IsDragging = true;
 
                 // A tile dropped where it started would otherwise read the release as a click and open.

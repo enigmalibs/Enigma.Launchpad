@@ -19,6 +19,8 @@ public sealed class LaunchpadSessionTests
     public LaunchpadSessionTests()
         => _session = new LaunchpadSession(_store, _notifications, NullLogger<LaunchpadSession>.Instance);
 
+    private Guid WorkspaceId => _session.Workspaces[0].Id;
+
     [Fact]
     public async Task LoadAsync_ReadsTheStoreOnlyOnce()
     {
@@ -26,7 +28,7 @@ public sealed class LaunchpadSessionTests
         await _session.LoadAsync();
 
         Assert.Equal(1, _store.LoadCount);
-        Assert.Equal("Dev tools", Assert.Single(_session.GroupsOf(ShortcutKind.Application)).Name);
+        Assert.Equal("Dev tools", Assert.Single(_session.Workspaces[0].Groups).Name);
         Assert.Empty(_notifications.Shown);
     }
 
@@ -48,31 +50,46 @@ public sealed class LaunchpadSessionTests
         _store.LoadFailure = new IOException("The file is locked.");
 
         await _session.LoadAsync();
-        _session.Update(ShortcutKind.Url, []);
+        _session.AddWorkspace("Lab", null, "Flask");
         await _session.FlushAsync();
 
         Assert.Equal("Error", Assert.Single(_notifications.Shown).Severity);
         Assert.Empty(_store.Saved);
-        Assert.Empty(_session.GroupsOf(ShortcutKind.Application));
+        Assert.Equal(["Lab"], _session.Workspaces.Select(workspace => workspace.Title));
     }
 
     [Fact]
-    public void Update_BeforeLoading_Throws()
-        => Assert.Throws<InvalidOperationException>(() => _session.Update(ShortcutKind.Url, []));
+    public void UpdateGroups_BeforeLoading_Throws()
+        => Assert.Throws<InvalidOperationException>(() => _session.UpdateGroups(Guid.NewGuid(), []));
 
     [Fact]
-    public async Task Update_ReplacesOnlyItsCategory_AndSavesTheDocument()
+    public async Task UpdateGroups_OfAnUnknownWorkspace_IsRefused_AndSavesNothing()
     {
         await _session.LoadAsync();
-        ShortcutGroup docs = new(Guid.NewGuid(), "Docs", []);
 
-        _session.Update(ShortcutKind.Url, [docs]);
+        Assert.Throws<ArgumentException>(() => _session.UpdateGroups(Guid.NewGuid(), []));
+        await _session.FlushAsync();
+
+        Assert.Empty(_store.Saved);
+    }
+
+    [Fact]
+    public async Task UpdateGroups_ReplacesTheWorkspacesGroups_SavesTheDocument_AndAnnouncesNothing()
+    {
+        await _session.LoadAsync();
+        int events = 0;
+        _session.WorkspacesChanged += (_, _) => events++;
+        _session.ActiveProfileChanged += (_, _) => events++;
+        ShortcutGroup docs = new(Guid.NewGuid(), "Docs", ShortcutKind.Url, []);
+        ShortcutGroup tools = _session.Workspaces[0].Groups[0];
+
+        _session.UpdateGroups(WorkspaceId, [tools, docs]);
         await _session.FlushAsync();
 
         LaunchpadData saved = Assert.Single(_store.Saved);
-        Assert.Same(docs, Assert.Single(saved.GroupsOf(ShortcutKind.Url)));
-        Assert.Equal("Dev tools", Assert.Single(saved.GroupsOf(ShortcutKind.Application)).Name);
-        Assert.Same(docs, Assert.Single(_session.GroupsOf(ShortcutKind.Url)));
+        Assert.Equal([tools, docs], saved.ActiveProfile.Workspaces[0].Groups);
+        Assert.Same(docs, _session.Workspaces[0].Groups[1]);
+        Assert.Equal(0, events);
     }
 
     [Fact]
@@ -84,14 +101,14 @@ public sealed class LaunchpadSessionTests
 
         for (int index = 1; index <= 5; index++)
         {
-            _session.Update(ShortcutKind.Url, Enumerable.Range(0, index).Select(n => new ShortcutGroup(Guid.NewGuid(), $"G{n}", [])).ToArray());
+            _session.UpdateGroups(WorkspaceId, Enumerable.Range(0, index).Select(n => new ShortcutGroup(Guid.NewGuid(), $"G{n}", ShortcutKind.Url, [])).ToArray());
         }
 
         gate.SetResult();
         await _session.FlushAsync();
 
         Assert.InRange(_store.Saved.Count, 1, 2);
-        Assert.Equal(5, _store.LastSaved?.GroupsOf(ShortcutKind.Url).Count);
+        Assert.Equal(5, _store.LastSaved?.ActiveProfile.Workspaces[0].Groups.Count);
     }
 
     [Fact]
@@ -100,7 +117,7 @@ public sealed class LaunchpadSessionTests
         await _session.LoadAsync();
         _store.SaveFailure = new UnauthorizedAccessException("Access denied.");
 
-        _session.Update(ShortcutKind.Url, []);
+        _session.UpdateGroups(WorkspaceId, []);
         await _session.FlushAsync();
 
         (string severity, string title, string _) = Assert.Single(_notifications.Shown);
@@ -108,9 +125,67 @@ public sealed class LaunchpadSessionTests
         Assert.Equal("Your changes could not be saved", title);
 
         _store.SaveFailure = null;
-        _session.Update(ShortcutKind.Directory, []);
+        _session.UpdateGroups(WorkspaceId, []);
         await _session.FlushAsync();
 
         Assert.Single(_store.Saved);
+    }
+
+    [Fact]
+    public async Task MoveGroup_TakesItFromOneWorkspace_ToTheEndOfAnother_InOneSave_AndSaysSo()
+    {
+        await _session.LoadAsync();
+        Workspace lab = _session.AddWorkspace("Lab", null, "Flask");
+        _session.UpdateGroups(lab.Id, [new ShortcutGroup(Guid.NewGuid(), "Existing", ShortcutKind.Url, [])]);
+        await _session.FlushAsync();
+        int saves = _store.Saved.Count;
+        int events = 0;
+        _session.WorkspacesChanged += (_, _) => events++;
+        ShortcutGroup tools = _session.Workspaces[0].Groups[0];
+
+        _session.MoveGroup(tools.Id, WorkspaceId, lab.Id);
+        await _session.FlushAsync();
+
+        Assert.Empty(_session.Workspaces[0].Groups);
+        Assert.Equal(["Existing", "Dev tools"], _session.Workspaces[1].Groups.Select(group => group.Name));
+        Assert.Same(tools, _session.Workspaces[1].Groups[1]);
+        Assert.Equal(saves + 1, _store.Saved.Count);
+        Assert.Equal(1, events);
+    }
+
+    [Fact]
+    public async Task MoveGroup_IsRefused_WhenTheTargetHasAGroupOfTheSameNameAndKind()
+    {
+        await _session.LoadAsync();
+        Workspace lab = _session.AddWorkspace("Lab", null, "Flask");
+        _session.UpdateGroups(lab.Id, [new ShortcutGroup(Guid.NewGuid(), " DEV TOOLS ", ShortcutKind.Application, [])]);
+        ShortcutGroup tools = _session.Workspaces[0].Groups[0];
+
+        Assert.Throws<InvalidOperationException>(() => _session.MoveGroup(tools.Id, WorkspaceId, lab.Id));
+
+        Assert.Same(tools, Assert.Single(_session.Workspaces[0].Groups));
+    }
+
+    [Fact]
+    public async Task MoveGroup_ToAGroupOfTheSameNameButAnotherKind_IsFine()
+    {
+        await _session.LoadAsync();
+        Workspace lab = _session.AddWorkspace("Lab", null, "Flask");
+        _session.UpdateGroups(lab.Id, [new ShortcutGroup(Guid.NewGuid(), "Dev tools", ShortcutKind.Directory, [])]);
+
+        _session.MoveGroup(_session.Workspaces[0].Groups[0].Id, WorkspaceId, lab.Id);
+
+        Assert.Equal([ShortcutKind.Directory, ShortcutKind.Application], _session.Workspaces[1].Groups.Select(group => group.Kind));
+    }
+
+    [Fact]
+    public async Task MoveGroup_WithinOneWorkspace_OrOfAnUnknownGroup_IsRefused()
+    {
+        await _session.LoadAsync();
+        Workspace lab = _session.AddWorkspace("Lab", null, "Flask");
+
+        Assert.Throws<ArgumentException>(() => _session.MoveGroup(_session.Workspaces[0].Groups[0].Id, WorkspaceId, WorkspaceId));
+        Assert.Throws<ArgumentException>(() => _session.MoveGroup(Guid.NewGuid(), WorkspaceId, lab.Id));
+        Assert.Throws<ArgumentException>(() => _session.MoveGroup(_session.Workspaces[0].Groups[0].Id, WorkspaceId, Guid.NewGuid()));
     }
 }
