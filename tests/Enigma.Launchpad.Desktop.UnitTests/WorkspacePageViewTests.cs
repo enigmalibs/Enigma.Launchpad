@@ -19,18 +19,18 @@ using Xunit;
 namespace Enigma.Launchpad.Desktop.UnitTests;
 
 [Collection(HeadlessCollection.Name)]
-public sealed class CategoryPageViewTests
+public sealed class WorkspacePageViewTests
 {
     private readonly HeadlessAvaloniaFixture _fixture;
 
-    public CategoryPageViewTests(HeadlessAvaloniaFixture fixture) => _fixture = fixture;
+    public WorkspacePageViewTests(HeadlessAvaloniaFixture fixture) => _fixture = fixture;
 
     [Fact]
     public void APageWithGroups_ShowsOneCardPerGroup_AndNoEmptyState()
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(PageHarness.Data("Dev tools", "Games"));
-            CategoryPageView view = await LoadedPageAsync(harness);
+            WorkspacePageView view = await LoadedPageAsync(harness);
 
             ItemsControl list = view.FindControl<ItemsControl>("GroupList") ?? throw new InvalidOperationException("No group list.");
             Assert.Equal(2, list.ItemCount);
@@ -50,7 +50,7 @@ public sealed class CategoryPageViewTests
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new();
-            CategoryPageView view = await LoadedPageAsync(harness);
+            WorkspacePageView view = await LoadedPageAsync(harness);
 
             Assert.True(view.FindControl<StackPanel>("EmptyState")?.IsVisible);
             Assert.False(view.FindControl<Button>("NewGroupButton")?.IsVisible);
@@ -62,14 +62,14 @@ public sealed class CategoryPageViewTests
         {
             LaunchpadData data = LaunchpadData.Empty.With(
                 ShortcutKind.Application,
-                [new ShortcutGroup(Guid.NewGuid(), "Folded", [], IsCollapsed: true)]);
+                [new ShortcutGroup(Guid.NewGuid(), "Folded", ShortcutKind.Application, [], IsCollapsed: true)]);
             using WindowHarness harness = new(data);
-            CategoryPageView view = await LoadedPageAsync(harness);
+            WorkspacePageView view = await LoadedPageAsync(harness);
 
             TextBlock emptyHint = view.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Classes.Contains("groupEmpty"));
             Assert.False(emptyHint.IsEffectivelyVisible);
 
-            Assert.IsType<ApplicationsPageViewModel>(view.DataContext).Groups[0].IsExpanded = true;
+            Assert.IsType<WorkspacePageViewModel>(view.DataContext).Groups[0].IsExpanded = true;
             await WindowHarness.WaitUntilAsync(() => emptyHint.IsEffectivelyVisible);
         });
 
@@ -129,7 +129,7 @@ public sealed class CategoryPageViewTests
             using WindowHarness harness = new(PageHarness.WithShortcuts(
                 ShortcutKind.Application,
                 ("Dev tools", [PageHarness.Shortcut("Code", @"C:\Tools\code.exe"), PageHarness.Shortcut("Git", @"C:\Tools\git.exe")])));
-            CategoryPageView view = await LoadedPageAsync(harness);
+            WorkspacePageView view = await LoadedPageAsync(harness);
 
             Button[] tiles = view.GetVisualDescendants().OfType<Button>().Where(button => button.Classes.Contains("tile")).ToArray();
             Assert.Equal(2, tiles.Length);
@@ -151,7 +151,7 @@ public sealed class CategoryPageViewTests
                 ShortcutKind.Application,
                 ("Dev tools", [described, PageHarness.Shortcut("Git", @"C:\Tools\git.exe")]),
                 ("Plain", [PageHarness.Shortcut("Shell", @"C:\Tools\sh.exe")])));
-            CategoryPageView view = await LoadedPageAsync(harness);
+            WorkspacePageView view = await LoadedPageAsync(harness);
 
             TextBlock[] descriptions = view.GetVisualDescendants().OfType<TextBlock>()
                 .Where(text => text.Classes.Contains("tileDescription"))
@@ -180,7 +180,7 @@ public sealed class CategoryPageViewTests
                     ShortcutKind.Application,
                     ("Dev tools", [PageHarness.Shortcut("Code", @"C:\Tools\code.exe"), PageHarness.Shortcut("Git", @"C:\Tools\git.exe")])),
                 services => services.AddSingleton<IProgramIcons>(programIcons));
-            CategoryPageView view = await LoadedPageAsync(harness);
+            WorkspacePageView view = await LoadedPageAsync(harness);
             (Image codeImage, Icon codeGlyph) = TileIcon(view, "Code");
             (Image gitImage, Icon gitGlyph) = TileIcon(view, "Git");
             Assert.True(codeGlyph.IsEffectivelyVisible);
@@ -254,20 +254,13 @@ public sealed class CategoryPageViewTests
             Assert.Null(await answer);
         });
 
-    private static async Task<CategoryPageView> LoadedPageAsync(WindowHarness harness)
-    {
-        await WindowHarness.WaitUntilAsync(() => harness.ViewModel.Navigation.CurrentPage is CategoryPageView { DataContext: CategoryPageViewModel { IsLoaded: true } });
-
-        // One more turn of the dispatcher, so the bindings the load changed have been applied.
-        await Task.Delay(20);
-
-        return Assert.IsType<CategoryPageView>(harness.ViewModel.Navigation.CurrentPage);
-    }
+    // The window opens on the workspaces; the harness opens the applications page and waits for it.
+    private static Task<WorkspacePageView> LoadedPageAsync(WindowHarness harness) => harness.LoadedPageAsync();
 
     /// <summary>
     /// The two things a tile's plate can show: the program's icon and the category's glyph.
     /// </summary>
-    private static (Image Image, Icon Glyph) TileIcon(CategoryPageView view, string name)
+    private static (Image Image, Icon Glyph) TileIcon(WorkspacePageView view, string name)
     {
         Button tile = view.GetVisualDescendants().OfType<Button>()
             .Single(button => button.Classes.Contains("tile") && button.DataContext is ShortcutViewModel shortcut && shortcut.Name == name);

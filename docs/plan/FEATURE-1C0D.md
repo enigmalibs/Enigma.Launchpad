@@ -1,6 +1,6 @@
 # FEATURE-1C0D — Workspaces
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-1c0d-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-14-workspaces-documents-commands
@@ -213,7 +213,7 @@ Acceptance criteria:
 
 ### PHASE03 — Open workspace, mixed groups
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `WorkspacePageViewModel` / view from the category page, with typed groups, the kind menu of New group, kind

@@ -58,7 +58,7 @@ public sealed class TileActionsTests
     private static async Task<ShortcutViewModel> TileAsync(ShortcutKind kind, string target)
     {
         PageHarness harness = new(PageHarness.WithShortcuts(kind, ("Group", [PageHarness.Shortcut("Item", target)])), kind);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         return page.Groups.Single().Shortcuts.Single();
     }
 }

@@ -22,24 +22,24 @@ namespace Enigma.Launchpad.Desktop.UnitTests;
 /// pointer, show where the item would land, and hand the drop to the ViewModel.
 /// </summary>
 [Collection(HeadlessCollection.Name)]
-public sealed class CategoryPageViewDragDropTests
+public sealed class WorkspacePageViewDragDropTests
 {
     private readonly HeadlessAvaloniaFixture _fixture;
 
-    public CategoryPageViewDragDropTests(HeadlessAvaloniaFixture fixture) => _fixture = fixture;
+    public WorkspacePageViewDragDropTests(HeadlessAvaloniaFixture fixture) => _fixture = fixture;
 
     [Fact]
     public void ATileDraggedOntoAnotherGroup_ShowsWhereItLands_ThenMovesThere()
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(Data(("Dev", ["A", "B"]), ("Tools", ["X", "Y"])));
-            CategoryPageView view = await harness.LoadedPageAsync();
-            CategoryPageViewModel page = Assert.IsAssignableFrom<CategoryPageViewModel>(view.DataContext);
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
             ShortcutViewModel a = page.Groups[0].Shortcuts[0];
             ShortcutViewModel y = page.Groups[1].Shortcuts[1];
             Control tile = Tile(view, y);
             Point rightHalf = At(harness, tile, tile.Bounds.Width - 10, tile.Bounds.Height / 2);
-            DataTransfer data = Carrying(CategoryPageView.ShortcutFormat, page.Kind, a.Id);
+            DataTransfer data = Carrying(WorkspacePageView.ShortcutFormat, ShortcutKind.Application, a.Id);
 
             harness.Window.DragDrop(rightHalf, RawDragEventType.DragEnter, data, DragDropEffects.Move, RawInputModifiers.None);
             harness.Window.DragDrop(rightHalf, RawDragEventType.DragOver, data, DragDropEffects.Move, RawInputModifiers.None);
@@ -62,12 +62,12 @@ public sealed class CategoryPageViewDragDropTests
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(Data(("Dev", ["A", "B"]), ("Tools", ["X"])));
-            CategoryPageView view = await harness.LoadedPageAsync();
-            CategoryPageViewModel page = Assert.IsAssignableFrom<CategoryPageViewModel>(view.DataContext);
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
             GroupViewModel tools = page.Groups[1];
             Control name = view.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Classes.Contains("groupName") && text.Text == "Tools");
             Point point = At(harness, name, 2, name.Bounds.Height / 2);
-            DataTransfer data = Carrying(CategoryPageView.ShortcutFormat, page.Kind, page.Groups[0].Shortcuts[0].Id);
+            DataTransfer data = Carrying(WorkspacePageView.ShortcutFormat, ShortcutKind.Application, page.Groups[0].Shortcuts[0].Id);
 
             harness.Window.DragDrop(point, RawDragEventType.DragEnter, data, DragDropEffects.Move, RawInputModifiers.None);
             harness.Window.DragDrop(point, RawDragEventType.DragOver, data, DragDropEffects.Move, RawInputModifiers.None);
@@ -84,12 +84,12 @@ public sealed class CategoryPageViewDragDropTests
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(Data(("A", []), ("B", []), ("C", [])));
-            CategoryPageView view = await harness.LoadedPageAsync();
-            CategoryPageViewModel page = Assert.IsAssignableFrom<CategoryPageViewModel>(view.DataContext);
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
             GroupViewModel first = page.Groups[0];
             Control card = view.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("groupCard") && border.DataContext == first);
             Point topHalf = At(harness, card, card.Bounds.Width / 2, 4);
-            DataTransfer data = Carrying(CategoryPageView.GroupFormat, page.Kind, page.Groups[2].Id);
+            DataTransfer data = Carrying(WorkspacePageView.GroupFormat, ShortcutKind.Application, page.Groups[2].Id);
 
             harness.Window.DragDrop(topHalf, RawDragEventType.DragEnter, data, DragDropEffects.Move, RawInputModifiers.None);
             harness.Window.DragDrop(topHalf, RawDragEventType.DragOver, data, DragDropEffects.Move, RawInputModifiers.None);
@@ -106,15 +106,15 @@ public sealed class CategoryPageViewDragDropTests
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(Data(("Dev", ["A", "B"])));
-            CategoryPageView view = await harness.LoadedPageAsync();
-            CategoryPageViewModel page = Assert.IsAssignableFrom<CategoryPageViewModel>(view.DataContext);
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
             Control tile = Tile(view, page.Groups[0].Shortcuts[0]);
             Point point = At(harness, tile, 5, tile.Bounds.Height / 2);
             DataTransfer text = new();
             text.Add(DataTransferItem.CreateText("C:\\Windows"));
-            DataTransfer otherCategory = Carrying(CategoryPageView.ShortcutFormat, ShortcutKind.Url, page.Groups[0].Shortcuts[1].Id);
+            DataTransfer unknown = Carrying(WorkspacePageView.ShortcutFormat, ShortcutKind.Application, Guid.NewGuid());
 
-            foreach (DataTransfer data in new[] { text, otherCategory })
+            foreach (DataTransfer data in new[] { text, unknown })
             {
                 harness.Window.DragDrop(point, RawDragEventType.DragEnter, data, DragDropEffects.Move, RawInputModifiers.None);
                 harness.Window.DragDrop(point, RawDragEventType.DragOver, data, DragDropEffects.Move, RawInputModifiers.None);
@@ -130,13 +130,13 @@ public sealed class CategoryPageViewDragDropTests
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(Data(("A", []), ("B", [])));
-            CategoryPageView view = await harness.LoadedPageAsync();
+            WorkspacePageView view = await harness.LoadedPageAsync();
 
             Assert.Equal(2, view.GetVisualDescendants().OfType<Border>().Count(border => border.Classes.Contains("grip")));
             Assert.True(DragDrop.GetAllowDrop(view));
         });
 
-    private static Control Tile(CategoryPageView view, ShortcutViewModel shortcut)
+    private static Control Tile(WorkspacePageView view, ShortcutViewModel shortcut)
         => view.GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("tile") && button.DataContext == shortcut);
 
     private static Point At(WindowHarness harness, Visual control, double x, double y)
