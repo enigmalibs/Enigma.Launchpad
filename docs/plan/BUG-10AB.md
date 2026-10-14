@@ -1,6 +1,6 @@
 # BUG-10AB — Tests that fail on Linux
 
-**Status:** TODO
+**Status:** DONE
 **Type:** BUG
 **Branch:** `bugfix/bug-10ab-linux-tests`
 **Run:** bugfix/2026-10-14-release-1-1-0

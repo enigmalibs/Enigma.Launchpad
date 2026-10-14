@@ -194,6 +194,7 @@ public sealed class ShortcutExchangeTests : IDisposable
     {
         string tool = JsonSerializer.Serialize(Absolute("tool.exe"));
         string folder = JsonSerializer.Serialize(Absolute("Projects"));
+        string relative = JsonSerializer.Serialize(Path.Combine("bin", "tool.exe"));
         string json = $$"""
             {
               "format": "enigma-launchpad-shortcuts",
@@ -204,7 +205,7 @@ public sealed class ShortcutExchangeTests : IDisposable
                     { "name": "Kept", "target": {{tool}} },
                     { "name": "  ", "target": {{tool}} },
                     { "name": "{{new string('x', 101)}}", "target": {{tool}} },
-                    { "name": "Relative", "target": "bin\\tool.exe" },
+                    { "name": "Relative", "target": {{relative}} },
                     { "name": "Empty", "target": "   " },
                     { "name": "Long description", "target": {{tool}}, "description": "{{new string('x', 201)}}" }
                   ] },

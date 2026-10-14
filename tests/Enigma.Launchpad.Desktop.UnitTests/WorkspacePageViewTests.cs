@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -174,11 +175,14 @@ public sealed class WorkspacePageViewTests
     public void AnApplicationTile_TradesItsGlyphForItsProgramsIcon_OnceItArrives()
         => _fixture.RunAsync(async () =>
         {
+            // Fully qualified on every platform: anything else is taken for a command and looked up on the PATH.
+            string codePath = Path.Combine(Path.GetTempPath(), "Enigma.Launchpad.Tools", "code.exe");
+            string gitPath = Path.Combine(Path.GetTempPath(), "Enigma.Launchpad.Tools", "git.exe");
             FakeTargetIcons programIcons = new() { Hold = true };
             using WindowHarness harness = new(
                 PageHarness.WithShortcuts(
                     ShortcutKind.Application,
-                    ("Dev tools", [PageHarness.Shortcut("Code", @"C:\Tools\code.exe"), PageHarness.Shortcut("Git", @"C:\Tools\git.exe")])),
+                    ("Dev tools", [PageHarness.Shortcut("Code", codePath), PageHarness.Shortcut("Git", gitPath)])),
                 services => services.AddSingleton<IProgramIcons>(programIcons));
             WorkspacePageView view = await LoadedPageAsync(harness);
             (Image codeImage, Icon codeGlyph) = TileIcon(view, "Code");
@@ -186,8 +190,8 @@ public sealed class WorkspacePageViewTests
             Assert.True(codeGlyph.IsEffectivelyVisible);
             Assert.False(codeImage.IsEffectivelyVisible);
 
-            programIcons.Release(@"C:\Tools\code.exe", TestImages.Png(ProgramIcons.IconSize, ProgramIcons.IconSize));
-            programIcons.Release(@"C:\Tools\git.exe", null);
+            programIcons.Release(codePath, TestImages.Png(ProgramIcons.IconSize, ProgramIcons.IconSize));
+            programIcons.Release(gitPath, null);
             await WindowHarness.WaitUntilAsync(() => codeImage.IsEffectivelyVisible);
 
             Assert.Equal(new PixelSize(ProgramIcons.IconSize, ProgramIcons.IconSize), Assert.IsType<Bitmap>(codeImage.Source).PixelSize);
