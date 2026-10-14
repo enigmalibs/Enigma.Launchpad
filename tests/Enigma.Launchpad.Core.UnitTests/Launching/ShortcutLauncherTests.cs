@@ -15,10 +15,11 @@ public sealed class ShortcutLauncherTests : IDisposable
 {
     private readonly TempDirectory _temp = new();
     private readonly RecordingProcessStarter _starter = new();
+    private readonly FakeCommandResolver _commands = new();
     private readonly ShortcutLauncher _launcher;
 
     public ShortcutLauncherTests()
-        => _launcher = new ShortcutLauncher(_starter, NullLogger<ShortcutLauncher>.Instance);
+        => _launcher = new ShortcutLauncher(_starter, _commands, NullLogger<ShortcutLauncher>.Instance);
 
     public void Dispose() => _temp.Dispose();
 
@@ -35,6 +36,99 @@ public sealed class ShortcutLauncherTests : IDisposable
         Assert.True(started.UseShellExecute);
         Assert.Equal(_temp.Combine("bin"), started.WorkingDirectory);
         Assert.Equal("--flag value", started.Arguments);
+    }
+
+    [Fact]
+    public void Launch_StartsTheProgramACommandLeadsTo_InTheHomeFolder_WithItsArguments()
+    {
+        string program = _temp.CreateFile(Path.Combine("bin", "code.cmd"));
+        _commands.Programs["code"] = program;
+
+        LaunchResult result = _launcher.Launch(ShortcutKind.Application, Shortcut("Code", "code", " --new-window "));
+
+        Assert.True(result.Succeeded);
+        ProcessStartInfo started = Assert.Single(_starter.Started);
+        Assert.Equal(program, started.FileName);
+        Assert.True(started.UseShellExecute);
+        Assert.Equal(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), started.WorkingDirectory);
+        Assert.Equal("--new-window", started.Arguments);
+        Assert.Equal(["code"], _commands.Lookups);
+    }
+
+    [Fact]
+    public void Launch_OpensADocumentThroughTheShell_InItsOwnFolder()
+    {
+        string report = _temp.CreateFile(Path.Combine("docs", "report.pdf"));
+
+        LaunchResult result = _launcher.Launch(ShortcutKind.Document, Shortcut("Report", report, "--ignored"));
+
+        Assert.True(result.Succeeded);
+        ProcessStartInfo started = Assert.Single(_starter.Started);
+        Assert.Equal(report, started.FileName);
+        Assert.True(started.UseShellExecute);
+        Assert.Equal(_temp.Combine("docs"), started.WorkingDirectory);
+        Assert.Empty(started.Arguments);
+    }
+
+    [Fact]
+    public void Launch_OfAMissingDocument_StartsNothing_AndSaysSo()
+    {
+        LaunchResult result = _launcher.Launch(ShortcutKind.Document, Shortcut("Gone", _temp.Combine("gone.pdf")));
+
+        Assert.Equal(LaunchOutcome.TargetMissing, result.Outcome);
+        Assert.StartsWith("The document no longer exists", result.Message, StringComparison.Ordinal);
+        Assert.Empty(_starter.Attempted);
+    }
+
+    [Fact]
+    public void Reveal_ShowsADocumentInItsFolder()
+    {
+        string report = _temp.CreateFile("report.pdf");
+
+        Assert.True(_launcher.Reveal(ShortcutKind.Document, Shortcut("Report", report)).Succeeded);
+        Assert.Single(_starter.Started);
+    }
+
+    [Fact]
+    public void Launch_OfACommandNotOnThePath_StartsNothing_AndSaysSo()
+    {
+        LaunchResult result = _launcher.Launch(ShortcutKind.Application, Shortcut("Gone", "gone"));
+
+        Assert.Equal(LaunchOutcome.TargetMissing, result.Outcome);
+        Assert.Equal("No program called “gone” was found on the PATH.", result.Message);
+        Assert.Empty(_starter.Attempted);
+    }
+
+    [Fact]
+    public void Launch_OfAFullPath_NeverLooksOnThePath()
+    {
+        string program = _temp.CreateFile("tool.exe");
+
+        Assert.True(_launcher.Launch(ShortcutKind.Application, Shortcut("Tool", program)).Succeeded);
+
+        Assert.Empty(_commands.Lookups);
+    }
+
+    [Fact]
+    public void Reveal_ShowsTheProgramACommandLeadsTo()
+    {
+        string program = _temp.CreateFile(Path.Combine("bin", "code.exe"));
+        _commands.Programs["code"] = program;
+
+        Assert.True(_launcher.Reveal(ShortcutKind.Application, Shortcut("Code", "code")).Succeeded);
+
+        ProcessStartInfo started = Assert.Single(_starter.Started);
+        string shown = started.ArgumentList.Count > 0 ? started.ArgumentList[^1] : started.FileName;
+        Assert.Contains(OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? program : _temp.Combine("bin"), shown, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Reveal_OfACommandNotOnThePath_SaysSo()
+    {
+        LaunchResult result = _launcher.Reveal(ShortcutKind.Application, Shortcut("Gone", "gone"));
+
+        Assert.Equal(LaunchOutcome.TargetMissing, result.Outcome);
+        Assert.Empty(_starter.Attempted);
     }
 
     [Fact]

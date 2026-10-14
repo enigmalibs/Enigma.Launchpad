@@ -1,6 +1,6 @@
 # FEATURE-1F8C — Commands as application targets
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-1f8c-command-targets`
 **Run:** vibe/2026-10-14-workspaces-documents-commands
@@ -88,7 +88,7 @@ usable without knowing where it lives.
 
 Single phase.
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. Core: `ICommandResolver`, `PathCommandResolver`, DI registration.
