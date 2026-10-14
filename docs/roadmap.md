@@ -49,3 +49,6 @@
 | - PHASE02    | Workspaces page                     | DONE   | (in FEATURE-1C0D.md)      |
 | - PHASE03    | Open workspace, mixed groups        | DONE   | (in FEATURE-1C0D.md)      |
 | FEATURE-1FA9 | Documents                           | DONE   | docs/plan/FEATURE-1FA9.md |
+| FEATURE-23F9 | Workspace drag visuals              | TODO   | docs/plan/FEATURE-23F9.md |
+| - PHASE01    | Dashed slot where it lands          | TODO   | (in FEATURE-23F9.md)      |
+| - PHASE02    | Dragged item follows the pointer    | TODO   | (in FEATURE-23F9.md)      |
