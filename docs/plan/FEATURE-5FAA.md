@@ -1,6 +1,6 @@
 # FEATURE-5FAA — Release 1.1.0
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-5faa-release-1-1-0`
 **Run:** bugfix/2026-10-14-release-1-1-0

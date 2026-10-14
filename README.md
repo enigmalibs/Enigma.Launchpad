@@ -4,9 +4,9 @@ A cross-platform desktop launcher for your **applications**, **folders**, **link
 [Avalonia 12](https://avaloniaui.net/), [Enigma.Avalonia.Desktop](https://www.nuget.org/packages/Enigma.Avalonia.Desktop)
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
-> **What's new in 1.0** — the first release: your applications, folders and websites in groups, per profile, with
-> their icons, tile actions, export and import — and, on Linux, a one-command installer. See
-> [RELEASENOTES.md](RELEASENOTES.md).
+> **What's new in 1.1** — workspaces in place of the three category pages, documents as a fourth kind of shortcut,
+> commands found on the `PATH` as applications, and drag and drop that shows where an item will land. Your shortcuts
+> move into a workspace on their own. See [RELEASENOTES.md](RELEASENOTES.md).
 
 **Workspaces**, the main page of the navigation rail and where the launchpad opens, are a profile's own collections
 of shortcuts: each has a title, a line saying what it is for and a glyph, and holds groups of applications, folders,
