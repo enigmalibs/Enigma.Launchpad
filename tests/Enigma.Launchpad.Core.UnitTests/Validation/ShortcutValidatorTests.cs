@@ -126,7 +126,7 @@ public sealed class ShortcutValidatorTests
 
         TargetValidation result = _validator.ValidateTarget(ShortcutKind.Application, temp.Path);
 
-        Assert.Contains("Directories", result.Error);
+        Assert.Equal("This is a folder, not a program. Add it to a folders group instead.", result.Error);
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public sealed class ShortcutValidatorTests
 
         TargetValidation result = _validator.ValidateTarget(ShortcutKind.Directory, file);
 
-        Assert.Contains("Applications", result.Error);
+        Assert.Equal("This is a file, not a folder. Add it to an applications or a documents group instead.", result.Error);
     }
 
     [Fact]
@@ -171,19 +171,120 @@ public sealed class ShortcutValidatorTests
             _validator.ValidateTarget(ShortcutKind.Directory, temp.Combine("missing")).Error);
     }
 
-    [Theory]
-    [InlineData(ShortcutKind.Application)]
-    [InlineData(ShortcutKind.Directory)]
-    public void ValidateTarget_RefusesARelativePath(ShortcutKind kind)
+    [Fact]
+    public void ValidateTarget_RefusesARelativeDirectory()
         => Assert.Equal(
             "Enter a full path, starting from the drive or the root.",
-            _validator.ValidateTarget(kind, Path.Combine("relative", "path")).Error);
+            _validator.ValidateTarget(ShortcutKind.Directory, Path.Combine("relative", "path")).Error);
+
+    [Fact]
+    public void ValidateTarget_RefusesARelativeApplicationPath_ThatIsNoCommand()
+        => Assert.Equal(
+            "Enter a full path, or a command found on the PATH.",
+            _validator.ValidateTarget(ShortcutKind.Application, Path.Combine("relative", "tool.exe")).Error);
+
+    [Fact]
+    public void ValidateTarget_RefusesAnEmptyDirectory()
+        => Assert.Equal("Enter a path.", _validator.ValidateTarget(ShortcutKind.Directory, "  ").Error);
+
+    [Fact]
+    public void ValidateTarget_RefusesAnEmptyApplication()
+        => Assert.Equal("Enter a path or a command.", _validator.ValidateTarget(ShortcutKind.Application, "  ").Error);
+
+    [Fact]
+    public void ValidateTarget_AcceptsACommandOnThePath_AndKeepsItAsTyped()
+    {
+        FakeCommandResolver commands = new();
+        commands.Programs["code"] = Path.Combine(Path.GetTempPath(), "code.cmd");
+
+        TargetValidation result = new ShortcutValidator(acceptsApplicationBundles: false, commands)
+            .ValidateTarget(ShortcutKind.Application, "  \"code\"  ");
+
+        Assert.True(result.IsValid);
+        Assert.Equal("code", result.NormalizedTarget);
+        Assert.Equal(["code"], commands.Lookups);
+    }
+
+    [Fact]
+    public void ValidateTarget_RefusesACommandNotOnThePath()
+        => Assert.Equal(
+            "No program called “gone” was found on the PATH.",
+            new ShortcutValidator(acceptsApplicationBundles: false, new FakeCommandResolver())
+                .ValidateTarget(ShortcutKind.Application, "gone").Error);
+
+    [Fact]
+    public void ValidateTarget_RefusingACommandWithASpace_PointsAtTheArguments()
+        => Assert.Equal(
+            "No program called “code --wait” was found on the PATH. Arguments go in Default arguments.",
+            new ShortcutValidator(acceptsApplicationBundles: false, new FakeCommandResolver())
+                .ValidateTarget(ShortcutKind.Application, "code --wait").Error);
+
+    [Fact]
+    public void ValidateTarget_NeverLooksADirectoryUpOnThePath()
+    {
+        FakeCommandResolver commands = new();
+        commands.Programs["Projects"] = Path.GetTempPath();
+
+        Assert.False(new ShortcutValidator(acceptsApplicationBundles: false, commands).ValidateTarget(ShortcutKind.Directory, "Projects").IsValid);
+        Assert.Empty(commands.Lookups);
+    }
 
     [Theory]
-    [InlineData(ShortcutKind.Application)]
-    [InlineData(ShortcutKind.Directory)]
-    public void ValidateTarget_RefusesAnEmptyPath(ShortcutKind kind)
-        => Assert.Equal("Enter a path.", _validator.ValidateTarget(kind, "  ").Error);
+    [InlineData("Dev")]
+    [InlineData("  Dev  ")]
+    public void ValidateWorkspaceTitle_AcceptsANewTitle(string title)
+        => Assert.Null(_validator.ValidateWorkspaceTitle(title, ["Reading", "Games"]));
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ValidateWorkspaceTitle_RefusesAnEmptyTitle(string? title)
+        => Assert.Equal("Enter a title.", _validator.ValidateWorkspaceTitle(title, []));
+
+    [Fact]
+    public void ValidateWorkspaceTitle_RefusesALongTitle()
+    {
+        Assert.Null(_validator.ValidateWorkspaceTitle(new string('a', ShortcutValidator.MaxNameLength), []));
+        Assert.Equal(
+            "Keep the title to 100 characters or fewer.",
+            _validator.ValidateWorkspaceTitle(new string('a', ShortcutValidator.MaxNameLength + 1), []));
+    }
+
+    [Fact]
+    public void ValidateWorkspaceTitle_RefusesATitleAnotherWorkspaceHas_IgnoringCase()
+        => Assert.Equal("A workspace with this title already exists.", _validator.ValidateWorkspaceTitle(" dev ", ["Reading", "Dev"]));
+
+    [Fact]
+    public void ValidateWorkspaceDescription_AcceptsNoneOrAShortOne_AndRefusesALongOne()
+    {
+        Assert.Null(_validator.ValidateWorkspaceDescription(null));
+        Assert.Null(_validator.ValidateWorkspaceDescription(new string('x', ShortcutValidator.MaxDescriptionLength)));
+        Assert.NotNull(_validator.ValidateWorkspaceDescription(new string('x', ShortcutValidator.MaxDescriptionLength + 1)));
+    }
+
+    [Fact]
+    public void ValidateTarget_AcceptsAnExistingFileAsADocument()
+    {
+        using TempDirectory temp = new();
+        string report = temp.CreateFile("report.pdf");
+
+        TargetValidation result = _validator.ValidateTarget(ShortcutKind.Document, $"  \"{report}\"  ");
+
+        Assert.True(result.IsValid);
+        Assert.Equal(report, result.NormalizedTarget);
+    }
+
+    [Fact]
+    public void ValidateTarget_RefusesAFolder_AMissingFile_OrARelativePath_AsADocument()
+    {
+        using TempDirectory temp = new();
+
+        Assert.Equal("This is a folder, not a file. Add it to a folders group instead.", _validator.ValidateTarget(ShortcutKind.Document, temp.Path).Error);
+        Assert.Equal("There is no file at this path.", _validator.ValidateTarget(ShortcutKind.Document, temp.Combine("missing.pdf")).Error);
+        Assert.Equal("Enter a full path, starting from the drive or the root.", _validator.ValidateTarget(ShortcutKind.Document, "report.pdf").Error);
+        Assert.Equal("Enter a path.", _validator.ValidateTarget(ShortcutKind.Document, " ").Error);
+    }
 
     [Fact]
     public void ValidateTarget_NormalisesAUrl()

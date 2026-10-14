@@ -107,7 +107,7 @@ public sealed class ApplicationTileIconTests
         harness.Icons.Images["kept"] = image;
         harness.Icons.Answer = _ => new StubImage();
 
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         await harness.Session.FlushAsync();
 
         Assert.Same(image, page.Groups[0].Shortcuts[0].TargetIcon);
@@ -124,7 +124,7 @@ public sealed class ApplicationTileIconTests
         LaunchpadData saved = await SavedDocumentAsync(_harness);
 
         PageHarness restarted = new(saved);
-        CategoryPageViewModel page = await restarted.LoadAsync();
+        WorkspacePageViewModel page = await restarted.LoadAsync();
 
         Assert.True(page.Groups[0].Shortcuts[0].HasTargetIcon);
         Assert.Equal([FakeShortcutIcons.FoundIcon(CodePath)], restarted.Icons.Shown);
@@ -138,7 +138,7 @@ public sealed class ApplicationTileIconTests
         harness.Icons.Images["broken"] = null;
         harness.Icons.Answer = _ => new StubImage();
 
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.Equal(FakeShortcutIcons.FoundIcon(CodePath), page.Groups[0].Shortcuts[0].Model.Icon);
         Assert.Equal([CodePath], harness.Icons.Requests);
@@ -152,7 +152,7 @@ public sealed class ApplicationTileIconTests
         harness.Icons.Images["broken"] = null;
         harness.Icons.Answer = _ => new StubImage();
 
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.False(page.Groups[0].Shortcuts[0].HasTargetIcon);
         Assert.Equal(chosen, page.Groups[0].Shortcuts[0].Model.Icon);
@@ -165,7 +165,7 @@ public sealed class ApplicationTileIconTests
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Directory, ("Places", [PageHarness.Shortcut("Place", @"C:\Docs")])), ShortcutKind.Directory);
         harness.Icons.Answer = _ => new StubImage();
 
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.Empty(harness.Icons.Requests);
         Assert.False(page.Groups[0].Shortcuts[0].HasTargetIcon);
@@ -179,7 +179,7 @@ public sealed class ApplicationTileIconTests
             PageHarness.WithShortcuts(ShortcutKind.Directory, ("Places", [PageHarness.Shortcut("Place", @"C:\Docs") with { Icon = chosen }])),
             ShortcutKind.Directory);
 
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.True(page.Groups[0].Shortcuts[0].HasTargetIcon);
         Assert.Equal([chosen], harness.Icons.Shown);
@@ -283,7 +283,7 @@ public sealed class ApplicationTileIconTests
         PageHarness harness = new(PageHarness.WithShortcuts(ShortcutKind.Application, ("Dev tools", [_code with { Icon = chosen }])));
         StubImage found = new();
         harness.Icons.Answer = _ => found;
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         ShortcutViewModel tile = page.Groups[0].Shortcuts[0];
         Assert.Empty(harness.Icons.Requests);
 
@@ -315,7 +315,7 @@ public sealed class ApplicationTileIconTests
 
     private async Task<ShortcutViewModel> LoadedTileAsync()
     {
-        CategoryPageViewModel page = await _harness.LoadAsync();
+        WorkspacePageViewModel page = await _harness.LoadAsync();
         return page.Groups[0].Shortcuts[0];
     }
 

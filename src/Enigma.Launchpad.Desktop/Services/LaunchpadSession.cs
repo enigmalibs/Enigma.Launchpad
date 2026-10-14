@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Enigma.Launchpad.Core.Persistence;
 using Enigma.Launchpad.Core.Shortcuts;
@@ -12,10 +13,10 @@ namespace Enigma.Launchpad.Desktop.Services;
 /// The launchpad document the running application works on: loaded once, and saved after every change.
 /// </summary>
 /// <remarks>
-/// The category accessors (<see cref="GroupsOf"/>, <see cref="Update"/>) act on the profile in use. The profile
-/// operations change the document like any other edit, and announce themselves through
-/// <see cref="ProfilesChanged"/> and <see cref="ActiveProfileChanged"/>, raised on the thread that made the
-/// change once it is in place.
+/// The workspace accessors act on the profile in use. The profile and workspace operations change the document like
+/// any other edit, and announce themselves through <see cref="ProfilesChanged"/>, <see cref="ActiveProfileChanged"/>
+/// and <see cref="WorkspacesChanged"/>, raised on the thread that made the change once it is in place. An open
+/// workspace saving its own groups (<see cref="UpdateGroups"/>) announces nothing: it is the one that changed them.
 /// </remarks>
 public interface ILaunchpadSession
 {
@@ -25,11 +26,16 @@ public interface ILaunchpadSession
     event EventHandler? ProfilesChanged;
 
     /// <summary>
-    /// Raised after the profile in use changed under the category pages: another one was put in use — chosen, or
-    /// because the one in use was deleted — or shortcuts were imported into it. Raised after
-    /// <see cref="ProfilesChanged"/>.
+    /// Raised after the profile in use changed under the pages: another one was put in use — chosen, or because the
+    /// one in use was deleted — or shortcuts were imported into it. Raised after <see cref="ProfilesChanged"/>.
     /// </summary>
     event EventHandler? ActiveProfileChanged;
+
+    /// <summary>
+    /// Raised after a workspace of the profile in use was added, edited, copied, moved or deleted, or a group was moved
+    /// from one workspace to another.
+    /// </summary>
+    event EventHandler? WorkspacesChanged;
 
     /// <summary>
     /// Gets the profiles, in display order.
@@ -42,24 +48,83 @@ public interface ILaunchpadSession
     Profile ActiveProfile { get; }
 
     /// <summary>
+    /// Gets the workspaces of the profile in use, in display order.
+    /// </summary>
+    IReadOnlyList<Workspace> Workspaces { get; }
+
+    /// <summary>
     /// Loads the document. Only the first call reads the file; later ones return the same task.
     /// </summary>
     /// <returns>A task that completes once the document is available, even when it could not be read.</returns>
     Task LoadAsync();
 
     /// <summary>
-    /// Gets the current groups of one category.
+    /// Replaces a workspace's groups and saves the document in the background.
     /// </summary>
-    /// <param name="kind">The category.</param>
-    /// <returns>Its groups, in display order.</returns>
-    IReadOnlyList<ShortcutGroup> GroupsOf(ShortcutKind kind);
+    /// <param name="workspaceId">The workspace, in the profile in use.</param>
+    /// <param name="groups">Its groups now, in display order.</param>
+    /// <exception cref="ArgumentException">The profile in use has no such workspace.</exception>
+    void UpdateGroups(Guid workspaceId, IReadOnlyList<ShortcutGroup> groups);
 
     /// <summary>
-    /// Replaces one category's groups and saves the document in the background.
+    /// Moves a group, with its shortcuts, from one workspace of the profile in use to the end of another.
     /// </summary>
-    /// <param name="kind">The category that changed.</param>
-    /// <param name="groups">Its groups now, in display order.</param>
-    void Update(ShortcutKind kind, IReadOnlyList<ShortcutGroup> groups);
+    /// <param name="groupId">The group.</param>
+    /// <param name="fromWorkspaceId">The workspace holding it.</param>
+    /// <param name="toWorkspaceId">The workspace taking it.</param>
+    /// <exception cref="ArgumentException">A workspace or the group is unknown, or the two workspaces are the same.</exception>
+    /// <exception cref="InvalidOperationException">The target already has a group of the same name and kind.</exception>
+    void MoveGroup(Guid groupId, Guid fromWorkspaceId, Guid toWorkspaceId);
+
+    /// <summary>
+    /// Adds an empty workspace at the end of the profile in use.
+    /// </summary>
+    /// <param name="title">Its title, already validated.</param>
+    /// <param name="description">What it is for, already validated; <see langword="null"/> or blank for nothing.</param>
+    /// <param name="icon">The name of its glyph.</param>
+    /// <returns>The new workspace.</returns>
+    Workspace AddWorkspace(string title, string? description, string icon);
+
+    /// <summary>
+    /// Changes a workspace's title, description and glyph; its groups stay as they are.
+    /// </summary>
+    /// <param name="id">The workspace, in the profile in use.</param>
+    /// <param name="title">Its new title, already validated.</param>
+    /// <param name="description">What it is for, already validated; <see langword="null"/> or blank for nothing.</param>
+    /// <param name="icon">The name of its glyph.</param>
+    /// <exception cref="ArgumentException">The profile in use has no such workspace.</exception>
+    void UpdateWorkspace(Guid id, string title, string? description, string icon);
+
+    /// <summary>
+    /// Adds a copy of a workspace — its groups and shortcuts under new identities — right after it.
+    /// </summary>
+    /// <param name="id">The workspace to copy, in the profile in use.</param>
+    /// <param name="title">The copy's title, already validated.</param>
+    /// <returns>The copy.</returns>
+    /// <exception cref="ArgumentException">The profile in use has no such workspace.</exception>
+    Workspace DuplicateWorkspace(Guid id, string title);
+
+    /// <summary>
+    /// Deletes a workspace with its groups and shortcuts.
+    /// </summary>
+    /// <param name="id">The workspace, in the profile in use.</param>
+    /// <exception cref="ArgumentException">The profile in use has no such workspace.</exception>
+    void DeleteWorkspace(Guid id);
+
+    /// <summary>
+    /// Whether a workspace can move by an offset without leaving the list.
+    /// </summary>
+    /// <param name="id">The workspace.</param>
+    /// <param name="offset">How many places, negative for up.</param>
+    /// <returns><see langword="true"/> when the move stays in the list.</returns>
+    bool CanMoveWorkspace(Guid id, int offset);
+
+    /// <summary>
+    /// Moves a workspace by an offset in the list.
+    /// </summary>
+    /// <param name="id">The workspace.</param>
+    /// <param name="offset">How many places, negative for up.</param>
+    void MoveWorkspace(Guid id, int offset);
 
     /// <summary>
     /// Puts another profile in use. Nothing happens when it already is.
@@ -112,7 +177,7 @@ public interface ILaunchpadSession
     void MoveProfile(Guid id, int offset);
 
     /// <summary>
-    /// Imports groups and shortcuts into a profile, merged as <see cref="Profile.Import"/> does.
+    /// Imports workspaces, groups and shortcuts into a profile, merged as <see cref="Profile.Import"/> does.
     /// </summary>
     /// <param name="id">The profile receiving them.</param>
     /// <param name="content">What to import.</param>
@@ -183,6 +248,9 @@ public sealed class LaunchpadSession : ILaunchpadSession
     public event EventHandler? ActiveProfileChanged;
 
     /// <inheritdoc />
+    public event EventHandler? WorkspacesChanged;
+
+    /// <inheritdoc />
     public IReadOnlyList<Profile> Profiles
     {
         get
@@ -207,6 +275,18 @@ public sealed class LaunchpadSession : ILaunchpadSession
     }
 
     /// <inheritdoc />
+    public IReadOnlyList<Workspace> Workspaces
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _current.ActiveProfile.Workspaces;
+            }
+        }
+    }
+
+    /// <inheritdoc />
     public Task LoadAsync()
     {
         lock (_sync)
@@ -216,26 +296,110 @@ public sealed class LaunchpadSession : ILaunchpadSession
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ShortcutGroup> GroupsOf(ShortcutKind kind)
-    {
-        lock (_sync)
-        {
-            return _current.GroupsOf(kind);
-        }
-    }
-
-    /// <inheritdoc />
-    public void Update(ShortcutKind kind, IReadOnlyList<ShortcutGroup> groups)
+    public void UpdateGroups(Guid workspaceId, IReadOnlyList<ShortcutGroup> groups)
     {
         ArgumentNullException.ThrowIfNull(groups);
 
         lock (_sync)
         {
             EnsureLoaded();
-            _current = _current.With(kind, groups);
+
+            Profile profile = _current.ActiveProfile;
+            Workspace workspace = RequireWorkspace(profile, workspaceId);
+
+            _current = _current.WithProfile(profile.ReplaceWorkspace(workspace with { Groups = groups }));
             QueueSave();
         }
     }
+
+    /// <inheritdoc />
+    public void MoveGroup(Guid groupId, Guid fromWorkspaceId, Guid toWorkspaceId)
+    {
+        if (fromWorkspaceId == toWorkspaceId)
+        {
+            throw new ArgumentException("A group is moved to another workspace.", nameof(toWorkspaceId));
+        }
+
+        ChangeWorkspaces(profile =>
+        {
+            Workspace source = RequireWorkspace(profile, fromWorkspaceId);
+            Workspace target = RequireWorkspace(profile, toWorkspaceId);
+            ShortcutGroup group = source.Groups.FirstOrDefault(candidate => candidate.Id == groupId)
+                ?? throw new ArgumentException("No group of this workspace has this identity.", nameof(groupId));
+
+            if (target.Groups.Any(existing => (existing.Kind == group.Kind)
+                && string.Equals(existing.Name.Trim(), group.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("The workspace already has a group of this name and kind.");
+            }
+
+            return profile
+                .ReplaceWorkspace(source with { Groups = source.Groups.Where(candidate => candidate.Id != groupId).ToArray() })
+                .ReplaceWorkspace(target with { Groups = [.. target.Groups, group] });
+        });
+    }
+
+    /// <inheritdoc />
+    public Workspace AddWorkspace(string title, string? description, string icon)
+    {
+        Workspace workspace = Workspace.Create(title, Blank(description), icon);
+        ChangeWorkspaces(profile => profile.AddWorkspace(workspace));
+        return workspace;
+    }
+
+    /// <inheritdoc />
+    public void UpdateWorkspace(Guid id, string title, string? description, string icon)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+
+        ChangeWorkspaces(profile => profile.ReplaceWorkspace(
+            (profile.FindWorkspace(id) ?? throw new ArgumentException("No workspace has this identity.", nameof(id))) with
+            {
+                Title = title,
+                Description = Blank(description),
+                Icon = icon,
+            }));
+    }
+
+    /// <inheritdoc />
+    public Workspace DuplicateWorkspace(Guid id, string title)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+
+        Workspace? copy = null;
+
+        ChangeWorkspaces(profile =>
+        {
+            Workspace source = profile.FindWorkspace(id) ?? throw new ArgumentException("No workspace has this identity.", nameof(id));
+            copy = Profile.Copy(source) with { Title = title };
+
+            int index = 0;
+
+            while (profile.Workspaces[index].Id != id)
+            {
+                index++;
+            }
+
+            return profile.AddWorkspace(copy, index + 1);
+        });
+
+        return copy ?? throw new InvalidOperationException("The workspace was not copied.");
+    }
+
+    /// <inheritdoc />
+    public void DeleteWorkspace(Guid id) => ChangeWorkspaces(profile => profile.RemoveWorkspace(id));
+
+    /// <inheritdoc />
+    public bool CanMoveWorkspace(Guid id, int offset)
+    {
+        lock (_sync)
+        {
+            return _current.ActiveProfile.CanMoveWorkspace(id, offset);
+        }
+    }
+
+    /// <inheritdoc />
+    public void MoveWorkspace(Guid id, int offset) => ChangeWorkspaces(profile => profile.MoveWorkspace(id, offset));
 
     /// <inheritdoc />
     public void SwitchProfile(Guid id)
@@ -324,8 +488,8 @@ public sealed class LaunchpadSession : ILaunchpadSession
     /// </summary>
     /// <param name="change">The change.</param>
     /// <param name="groupsChangedIn">
-    /// The profile whose groups the change replaced, if any. When it is the profile in use, the category pages are
-    /// told as for a switch: they hold its groups, and would otherwise write their stale copy back on the next edit.
+    /// The profile whose workspaces the change replaced, if any. When it is the profile in use, the pages are told as
+    /// for a switch: an open workspace holds its groups, and would otherwise write its stale copy back on the next edit.
     /// </param>
     private void ChangeProfiles(Func<LaunchpadData, LaunchpadData> change, Guid? groupsChangedIn = null)
     {
@@ -348,6 +512,29 @@ public sealed class LaunchpadSession : ILaunchpadSession
         {
             ActiveProfileChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private static string? Blank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    private static Workspace RequireWorkspace(Profile profile, Guid id)
+        => profile.FindWorkspace(id) ?? throw new ArgumentException("No workspace has this identity.", nameof(id));
+
+    /// <summary>
+    /// Applies a change to the workspaces of the profile in use, saves, and tells the listeners once the change is in
+    /// place. A change that throws leaves the document as it was.
+    /// </summary>
+    /// <param name="change">The change, given the profile in use and returning its new version.</param>
+    private void ChangeWorkspaces(Func<Profile, Profile> change)
+    {
+        lock (_sync)
+        {
+            EnsureLoaded();
+            _current = _current.WithProfile(change(_current.ActiveProfile));
+            QueueSave();
+        }
+
+        // Outside the lock: a listener reads the session back.
+        WorkspacesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

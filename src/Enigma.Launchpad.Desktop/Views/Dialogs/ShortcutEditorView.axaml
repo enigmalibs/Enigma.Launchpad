@@ -40,6 +40,10 @@
       <TextBlock Text="{Binding VisibleTargetError}"
                  IsVisible="{Binding VisibleTargetError, Converter={x:Static ObjectConverters.IsNotNull}}"
                  Classes="fieldError" />
+      <TextBlock x:Name="TargetHint"
+                 Text="{Binding TargetHint}"
+                 IsVisible="{Binding TargetHint, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Classes="fieldHint" />
     </StackPanel>
 
     <StackPanel Spacing="4" IsVisible="{Binding HasArguments}">

@@ -73,13 +73,13 @@ public sealed class LaunchpadSessionProfileTests
         await _session.LoadAsync();
         _session.SwitchProfile(HomeId);
 
-        _session.Update(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "News", [])]);
+        _session.Update(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "News", ShortcutKind.Application, [])]);
         await _session.FlushAsync();
 
         LaunchpadData saved = _store.LastSaved ?? throw new InvalidOperationException("Nothing saved.");
-        Assert.Equal("News", Assert.Single(saved.FindProfile(HomeId)?.Urls ?? []).Name);
-        Assert.Empty(saved.FindProfile(WorkId)?.Urls ?? throw new InvalidOperationException());
-        Assert.Equal("Dev tools", Assert.Single(saved.FindProfile(WorkId)?.Applications ?? []).Name);
+        Assert.Equal("News", Assert.Single(saved.FindProfile(HomeId)?.GroupsOf(ShortcutKind.Url) ?? []).Name);
+        Assert.Empty(saved.FindProfile(WorkId)?.GroupsOf(ShortcutKind.Url) ?? throw new InvalidOperationException());
+        Assert.Equal("Dev tools", Assert.Single(saved.FindProfile(WorkId)?.GroupsOf(ShortcutKind.Application) ?? []).Name);
     }
 
     [Fact]
@@ -105,8 +105,8 @@ public sealed class LaunchpadSessionProfileTests
         await _session.FlushAsync();
 
         Assert.Equal(["Work", "Work (copy)", "Home"], _session.Profiles.Select(profile => profile.Name));
-        Assert.Equal("Dev tools", Assert.Single(copy.Applications).Name);
-        Assert.NotEqual(_session.Profiles[0].Applications[0].Id, copy.Applications[0].Id);
+        Assert.Equal("Dev tools", Assert.Single(copy.GroupsOf(ShortcutKind.Application)).Name);
+        Assert.NotEqual(_session.Profiles[0].GroupsOf(ShortcutKind.Application)[0].Id, copy.GroupsOf(ShortcutKind.Application)[0].Id);
         Assert.Equal(3, _store.LastSaved?.Profiles.Count);
     }
 
@@ -171,15 +171,15 @@ public sealed class LaunchpadSessionProfileTests
         await _session.LoadAsync();
         Profile content = Profile.Create("Shared").With(
             ShortcutKind.Application,
-            [new ShortcutGroup(Guid.NewGuid(), "games", [PageHarness.Shortcut("Chess")]), new ShortcutGroup(Guid.NewGuid(), "Emulators", [])]);
+            [new ShortcutGroup(Guid.NewGuid(), "games", ShortcutKind.Application, [PageHarness.Shortcut("Chess")]), new ShortcutGroup(Guid.NewGuid(), "Emulators", ShortcutKind.Application, [])]);
 
         _session.ImportIntoProfile(HomeId, content);
         await _session.FlushAsync();
 
         LaunchpadData saved = _store.LastSaved ?? throw new InvalidOperationException("Nothing saved.");
-        Assert.Equal(["Games", "Emulators"], saved.FindProfile(HomeId)?.Applications.Select(group => group.Name));
-        Assert.Equal(["Chess"], saved.FindProfile(HomeId)?.Applications[0].Shortcuts.Select(shortcut => shortcut.Name));
-        Assert.Equal(["Dev tools"], saved.FindProfile(WorkId)?.Applications.Select(group => group.Name));
+        Assert.Equal(["Games", "Emulators"], saved.FindProfile(HomeId)?.GroupsOf(ShortcutKind.Application).Select(group => group.Name));
+        Assert.Equal(["Chess"], saved.FindProfile(HomeId)?.GroupsOf(ShortcutKind.Application)[0].Shortcuts.Select(shortcut => shortcut.Name));
+        Assert.Equal(["Dev tools"], saved.FindProfile(WorkId)?.GroupsOf(ShortcutKind.Application).Select(group => group.Name));
         Assert.Equal("Work", _session.ActiveProfile.Name);
         Assert.Equal(["Profiles"], _events);
     }
@@ -189,7 +189,7 @@ public sealed class LaunchpadSessionProfileTests
     {
         await _session.LoadAsync();
 
-        _session.ImportIntoProfile(WorkId, Profile.Create("Shared").With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "Docs", [])]));
+        _session.ImportIntoProfile(WorkId, Profile.Create("Shared").With(ShortcutKind.Url, [new ShortcutGroup(Guid.NewGuid(), "Docs", ShortcutKind.Application, [])]));
 
         Assert.Equal("Docs", Assert.Single(_session.GroupsOf(ShortcutKind.Url)).Name);
         Assert.Equal(["Profiles", "Active"], _events);

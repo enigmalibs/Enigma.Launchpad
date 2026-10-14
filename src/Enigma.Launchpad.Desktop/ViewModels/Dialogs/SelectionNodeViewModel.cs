@@ -8,13 +8,13 @@ using Enigma.Launchpad.Core.Shortcuts;
 namespace Enigma.Launchpad.Desktop.ViewModels.Dialogs;
 
 /// <summary>
-/// One line of the selection tree — a category, a group or a shortcut — with its checkbox.
+/// One line of the selection tree — a workspace, a group or a shortcut — with its checkbox.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Checking or unchecking a line does the same to everything under it. A line with lines under it shows the state
-/// they share, or indeterminate when they differ; only a line with nothing under it — a shortcut, or an empty group
-/// — keeps a state of its own.
+/// they share, or indeterminate when they differ; only a line with nothing under it — a shortcut, an empty group or an
+/// empty workspace — keeps a state of its own.
 /// </para>
 /// <para>
 /// The user chooses checked or unchecked only: indeterminate is shown, never chosen, and clicking it unchecks.
@@ -30,14 +30,12 @@ public sealed class SelectionNodeViewModel : ObservableObject
         string title,
         string? detail,
         PhosphorIcon icon,
-        ShortcutKind kind,
         SelectionNodeViewModel? parent,
         Action selectionChanged)
     {
         Title = title;
         Detail = detail;
         Icon = icon;
-        Kind = kind;
         _parent = parent;
         _selectionChanged = selectionChanged;
     }
@@ -89,17 +87,17 @@ public sealed class SelectionNodeViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gets the category the line belongs to.
+    /// Gets the workspace the line stands for; <see langword="null"/> for a group or a shortcut.
     /// </summary>
-    internal ShortcutKind Kind { get; }
+    internal Workspace? Workspace { get; private init; }
 
     /// <summary>
-    /// Gets the group the line stands for; <see langword="null"/> for a category or a shortcut.
+    /// Gets the group the line stands for; <see langword="null"/> for a workspace or a shortcut.
     /// </summary>
     internal ShortcutGroup? Group { get; private init; }
 
     /// <summary>
-    /// Gets the shortcut the line stands for; <see langword="null"/> for a category or a group.
+    /// Gets the shortcut the line stands for; <see langword="null"/> for a workspace or a group.
     /// </summary>
     internal Shortcut? Shortcut { get; private init; }
 
@@ -115,42 +113,38 @@ public sealed class SelectionNodeViewModel : ObservableObject
     private bool? State { get; set => SetProperty(ref field, value, nameof(IsChecked)); } = true;
 
     /// <summary>
-    /// Builds a category's line, with a line for each of its groups and their shortcuts, everything chosen and open.
+    /// Builds a workspace's line, with a line for each of its groups and their shortcuts, everything chosen and open.
     /// </summary>
-    /// <param name="kind">The category.</param>
-    /// <param name="title">What the category is called.</param>
-    /// <param name="icon">The category's icon, which its shortcuts share.</param>
-    /// <param name="groups">The category's groups.</param>
+    /// <param name="workspace">The workspace.</param>
     /// <param name="selectionChanged">Called once after every choice the user makes.</param>
-    /// <returns>The category's line.</returns>
-    internal static SelectionNodeViewModel ForCategory(
-        ShortcutKind kind,
-        string title,
-        PhosphorIcon icon,
-        IReadOnlyList<ShortcutGroup> groups,
-        Action selectionChanged)
+    /// <returns>The workspace's line.</returns>
+    internal static SelectionNodeViewModel ForWorkspace(Workspace workspace, Action selectionChanged)
     {
-        SelectionNodeViewModel category = new(title, null, icon, kind, null, selectionChanged);
-
-        foreach (ShortcutGroup group in groups)
+        SelectionNodeViewModel workspaceNode = new(workspace.Title, null, Glyphs.OfWorkspace(workspace.Icon), null, selectionChanged)
         {
-            SelectionNodeViewModel groupNode = new(group.Name, Count(group.Shortcuts.Count), PhosphorIcon.SquaresFour, kind, category, selectionChanged)
+            Workspace = workspace,
+        };
+
+        foreach (ShortcutGroup group in workspace.Groups)
+        {
+            PhosphorIcon glyph = Glyphs.OfKind(group.Kind);
+            SelectionNodeViewModel groupNode = new(group.Name, Count(group.Shortcuts.Count), glyph, workspaceNode, selectionChanged)
             {
                 Group = group,
             };
 
             foreach (Shortcut shortcut in group.Shortcuts)
             {
-                groupNode._children.Add(new SelectionNodeViewModel(shortcut.Name, shortcut.Target, icon, kind, groupNode, selectionChanged)
+                groupNode._children.Add(new SelectionNodeViewModel(shortcut.Name, shortcut.Target, glyph, groupNode, selectionChanged)
                 {
                     Shortcut = shortcut,
                 });
             }
 
-            category._children.Add(groupNode);
+            workspaceNode._children.Add(groupNode);
         }
 
-        return category;
+        return workspaceNode;
     }
 
     private static string Count(int shortcuts)

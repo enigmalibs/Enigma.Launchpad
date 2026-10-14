@@ -31,7 +31,7 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
         => fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(FolderData());
-            CategoryPageView view = await DirectoriesAsync(harness);
+            WorkspacePageView view = await DirectoriesAsync(harness);
             Button tile = Tile(view);
             StackPanel actions = Actions(tile);
             Assert.False(actions.IsEffectivelyVisible);
@@ -47,7 +47,7 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
         => fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(FolderData());
-            CategoryPageView view = await DirectoriesAsync(harness);
+            WorkspacePageView view = await DirectoriesAsync(harness);
             Button tile = Tile(view);
 
             tile.Focus(NavigationMethod.Tab);
@@ -62,7 +62,7 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
         {
             RecordingShortcutActions recording = new();
             using WindowHarness harness = new(FolderData(), services => services.AddSingleton<IShortcutActions>(recording));
-            CategoryPageView view = await DirectoriesAsync(harness);
+            WorkspacePageView view = await DirectoriesAsync(harness);
             Button tile = Tile(view);
             harness.Window.MouseMove(Centre(harness, tile));
             harness.Window.UpdateLayout();
@@ -88,7 +88,7 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
             using WindowHarness harness = new(
                 PageHarness.WithShortcuts(ShortcutKind.Application, ("Tools", [code])),
                 services => services.AddSingleton<IShortcutActions>(recording));
-            CategoryPageView view = await harness.LoadedPageAsync();
+            WorkspacePageView view = await harness.LoadedPageAsync();
             Button run = Assert.Single(ActionButtons(Tile(view)), button => button.IsVisible);
             Assert.Equal("Run with arguments", AutomationProperties.GetName(run));
 
@@ -113,7 +113,7 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
         => fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(FolderData());
-            CategoryPageView view = await DirectoriesAsync(harness);
+            WorkspacePageView view = await DirectoriesAsync(harness);
 
             Assert.Equal(
                 ["Open in terminal", "Copy path"],
@@ -125,37 +125,37 @@ public sealed class TileActionsViewTests(HeadlessAvaloniaFixture fixture)
         => fixture.RunAsync(async () =>
         {
             LaunchpadData data = PageHarness.WithShortcuts(ShortcutKind.Url, ("Reading", [PageHarness.Shortcut("Docs", "https://example.com/")]))
-                .With(ShortcutKind.Application, [new ShortcutGroup(Guid.NewGuid(), "Tools", [PageHarness.Shortcut("Code", @"C:\Tools\code.exe")])]);
+                .With(ShortcutKind.Application, [new ShortcutGroup(Guid.NewGuid(), "Tools", ShortcutKind.Application, [PageHarness.Shortcut("Code", @"C:\Tools\code.exe")])]);
             using WindowHarness harness = new(data);
 
-            CategoryPageView applications = await harness.LoadedPageAsync();
-            Assert.DoesNotContain(ActionButtons(Tile(applications)), button => button.IsVisible && (AutomationProperties.GetName(button) ?? string.Empty).StartsWith("Copy", StringComparison.Ordinal));
+            // Both in one workspace: what a tile offers follows its group's kind.
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            Assert.DoesNotContain(ActionButtons(Tile(view, "Code")), button => button.IsVisible && (AutomationProperties.GetName(button) ?? string.Empty).StartsWith("Copy", StringComparison.Ordinal));
 
-            CategoryPageView urls = await ShowAsync<UrlsPageViewModel>(harness, 2);
-            Button copy = Assert.Single(ActionButtons(Tile(urls)), button => button.IsVisible);
+            Button copy = Assert.Single(ActionButtons(Tile(view, "Docs")), button => button.IsVisible);
             Assert.Equal("Copy URL", AutomationProperties.GetName(copy));
+        });
+
+    [Fact]
+    public void ADocumentTile_OffersCopyPath_Only()
+        => fixture.RunAsync(async () =>
+        {
+            LaunchpadData data = PageHarness.WithShortcuts(ShortcutKind.Document, ("Papers", [PageHarness.Shortcut("Report", @"C:\Docs\report.pdf")]));
+            using WindowHarness harness = new(data);
+            WorkspacePageView view = await harness.LoadedPageAsync();
+
+            Button copy = Assert.Single(ActionButtons(Tile(view, "Report")), button => button.IsVisible);
+            Assert.Equal("Copy path", AutomationProperties.GetName(copy));
         });
 
     private static LaunchpadData FolderData()
         => PageHarness.WithShortcuts(ShortcutKind.Directory, ("Work", [PageHarness.Shortcut("Projects", Folder)]));
 
-    private static async Task<CategoryPageView> DirectoriesAsync(WindowHarness harness)
-    {
-        await harness.LoadedPageAsync();
-        return await ShowAsync<DirectoriesPageViewModel>(harness, 1);
-    }
+    // The folder's group is in the workspace the harness opens.
+    private static Task<WorkspacePageView> DirectoriesAsync(WindowHarness harness) => harness.LoadedPageAsync();
 
-    // Selects a category in the rail, as a click on it would, and waits for its page.
-    private static async Task<CategoryPageView> ShowAsync<TPage>(WindowHarness harness, int index)
-        where TPage : CategoryPageViewModel
-    {
-        harness.ViewModel.Navigation.SelectedItem = harness.ViewModel.Navigation.Items[index];
-        await WindowHarness.WaitUntilAsync(() => harness.ViewModel.Navigation.CurrentPage?.DataContext is TPage);
-        return await harness.LoadedPageAsync();
-    }
-
-    private static Button Tile(CategoryPageView view)
-        => view.GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("tile"));
+    private static Button Tile(WorkspacePageView view, string? name = null)
+        => view.GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("tile") && ((name is null) || (AutomationProperties.GetName(button) == name)));
 
     private static StackPanel Actions(Button tile)
         => tile.GetVisualDescendants().OfType<StackPanel>().Single(panel => panel.Classes.Contains("tileActions"));

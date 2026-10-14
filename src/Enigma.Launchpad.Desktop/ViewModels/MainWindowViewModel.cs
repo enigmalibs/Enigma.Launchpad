@@ -13,8 +13,8 @@ using Microsoft.Extensions.Logging;
 namespace Enigma.Launchpad.Desktop.ViewModels;
 
 /// <summary>
-/// The main window: the navigation rail over the three categories, the profiles and the settings, the page it
-/// shows, and the profile list above it.
+/// The main window: the navigation rail over the workspaces, the profiles and the settings, the page it shows, and the
+/// profile list above it.
 /// </summary>
 public sealed class MainWindowViewModel : ObservableObject
 {
@@ -22,7 +22,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly NavigationItem _profilesItem;
 
     /// <summary>
-    /// Initialises a new instance and builds the rail, selecting the first category.
+    /// Initialises a new instance and builds the rail, selecting the workspaces.
     /// </summary>
     /// <param name="navigation">The navigation service the rail is bound to.</param>
     /// <param name="pageFactory">Builds pages out of the container.</param>
@@ -48,9 +48,7 @@ public sealed class MainWindowViewModel : ObservableObject
         // not subscribing would make such a failure invisible.
         Navigation.NavigationFailed += OnNavigationFailed;
 
-        Navigation.Items.Add(Item("Applications", PhosphorIcon.AppWindow, typeof(CategoryPageView), typeof(ApplicationsPageViewModel)));
-        Navigation.Items.Add(Item("Directories", PhosphorIcon.Folder, typeof(CategoryPageView), typeof(DirectoriesPageViewModel)));
-        Navigation.Items.Add(Item("URLs", PhosphorIcon.Globe, typeof(CategoryPageView), typeof(UrlsPageViewModel)));
+        Navigation.Items.Add(Item("Workspaces", PhosphorIcon.SquaresFour, typeof(WorkspacesPageView), typeof(WorkspacesPageViewModel)));
 
         _profilesItem = Item("Profiles", PhosphorIcon.UsersThree, typeof(ProfilesPageView), typeof(ProfilesPageViewModel));
         Navigation.FooterItems.Add(_profilesItem);

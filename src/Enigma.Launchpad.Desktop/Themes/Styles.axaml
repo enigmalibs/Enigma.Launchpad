@@ -10,7 +10,7 @@
     The icon scale: an icon takes its size from the role it plays, so the application has one scale
     rather than a number per icon.
 
-      pageIcon  the category's icon in a page header
+      pageIcon  the page's or the workspace's icon in a page header
       header    a title's icon, beside the name of a group
       toolbar   an icon-only button, or the icon of a text button
       row       an icon on a line or in a tile
@@ -84,6 +84,59 @@
 
   <Style Selector="Border.profileCard.active">
     <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+  </Style>
+
+  <!-- Workspace cards: the profile cards' look, as buttons that open the workspace, lit like a tile on hover. -->
+  <Style Selector="Button.workspaceCard">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.workspaceCard /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaBorderSubtleBrush}" />
+  </Style>
+
+  <Style Selector="Button.workspaceCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <Style Selector="Button.workspaceCard:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource EnigmaPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
+  </Style>
+
+  <!-- A group's kind, beside its name: quieter than the name. -->
+  <Style Selector="ei|Icon.groupKind">
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.workspaceSummary">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+  </Style>
+
+  <!-- The workspace form's glyphs: a grid of small squares, the chosen one in the selection colour. -->
+  <Style Selector="ListBox.glyphPicker">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.glyphPicker ListBoxItem">
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="Margin" Value="0,0,4,4" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="MinWidth" Value="0" />
   </Style>
 
   <Style Selector="Border.activeBadge">
@@ -223,7 +276,8 @@
     description; its content sits at the top, padded so a tile without one keeps its icon row centred in 62 px,
     and every tile of a row stretches to the tallest, so the icon rows stay aligned.
   -->
-  <Style Selector="Panel.tileSlot">
+  <Style Selector="StackPanel.tileSlot">
+    <Setter Property="Orientation" Value="Horizontal" />
     <Setter Property="Margin" Value="0,0,8,8" />
   </Style>
 
@@ -344,9 +398,10 @@
   </Style>
 
   <!--
-    Drag and drop. The item being dragged fades; the accent bar shows where a drop lands, between
-    two cards or two tiles; a group receiving a shortcut at its end is framed in the accent colour.
-    The grip is the handle groups are dragged by.
+    Drag and drop. The item being dragged fades; where it would land, a dashed placeholder opens in the
+    gap — a small bar between two cards, a dashed tile among the tiles — and the cards or tiles after it
+    make room. A group receiving a tile at its end while it shows none is framed in dashes. The grip is
+    the handle groups are dragged by.
   -->
   <Style Selector="Border.grip">
     <Setter Property="Background" Value="Transparent" />
@@ -369,26 +424,92 @@
     <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundBrush}" />
   </Style>
 
-  <Style Selector="Border.dropBar">
+  <Style Selector="Panel.placeholder, Rectangle.dropFrame">
     <Setter Property="IsHitTestVisible" Value="False" />
-    <Setter Property="CornerRadius" Value="2" />
+  </Style>
+
+  <Style Selector="Panel.placeholder > Border">
     <Setter Property="Background" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="Opacity" Value="0.08" />
   </Style>
 
-  <Style Selector="Border.dropBar.horizontal">
-    <Setter Property="Height" Value="3" />
+  <Style Selector="Panel.placeholder > Rectangle, Rectangle.dropFrame">
+    <Setter Property="Stroke" Value="{DynamicResource EnigmaAccentBrush}" />
+    <Setter Property="StrokeThickness" Value="1.5" />
+    <Setter Property="StrokeDashArray" Value="4,3" />
   </Style>
 
-  <Style Selector="Border.dropBar.vertical">
-    <Setter Property="Width" Value="3" />
+  <!-- Between two group cards: a small bar, whatever the size of the card it stands for. -->
+  <Style Selector="Panel.placeholder.group">
+    <Setter Property="Height" Value="48" />
   </Style>
 
-  <Style Selector="Border.groupCard.dropInside">
-    <Setter Property="BorderBrush" Value="{DynamicResource EnigmaAccentBrush}" />
+  <Style Selector="Panel.placeholder.group.before">
+    <Setter Property="Margin" Value="0,0,0,12" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.group.after">
+    <Setter Property="Margin" Value="0,12,0,0" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.group > Border">
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.group > Rectangle, Rectangle.dropFrame">
+    <Setter Property="RadiusX" Value="10" />
+    <Setter Property="RadiusY" Value="10" />
+  </Style>
+
+  <!-- Among the tiles: a dashed tile as wide as a tile and as high as its row. -->
+  <Style Selector="Panel.placeholder.tile">
+    <Setter Property="Width" Value="248" />
+    <Setter Property="MinHeight" Value="62" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile.before">
+    <Setter Property="Margin" Value="0,0,8,0" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile.after">
+    <Setter Property="Margin" Value="8,0,0,0" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile > Border">
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+
+  <Style Selector="Panel.placeholder.tile > Rectangle">
+    <Setter Property="RadiusX" Value="8" />
+    <Setter Property="RadiusY" Value="8" />
   </Style>
 
   <Style Selector="Border.groupCard.dragging, Button.tile.dragging">
     <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!--
+    The copy a drag carries under the pointer: lifted off the page by a shadow, and never faded like the
+    original it copies. A tile's copy is the tile alone, without the room its slot keeps around it.
+  -->
+  <Style Selector="ContentControl.ghost">
+    <Setter Property="Opacity" Value="0.92" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Border.groupCard">
+    <Setter Property="BoxShadow" Value="0 6 18 0 #50000000" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Button.tile /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="0 6 18 0 #50000000" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost Button.tile.dragging">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="ContentControl.ghost StackPanel.tileSlot">
+    <Setter Property="Margin" Value="0" />
   </Style>
 
   <!-- Dialog forms. -->

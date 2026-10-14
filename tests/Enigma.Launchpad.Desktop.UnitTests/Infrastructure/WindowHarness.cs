@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.VisualTree;
 using Enigma.Launchpad.Core.Persistence;
 using Enigma.Launchpad.Core.Settings;
 using Enigma.Launchpad.Core.Shortcuts;
@@ -77,18 +79,38 @@ internal sealed class WindowHarness : IDisposable
     }
 
     /// <summary>
-    /// Waits for the current page to have loaded its category, and for its bindings to have been applied.
+    /// Opens the first workspace of the profile in use — creating an empty one when it has none — and waits for its
+    /// view, and for its bindings to have been applied. The window opens on the list of workspaces.
     /// </summary>
-    public async Task<CategoryPageView> LoadedPageAsync()
+    public async Task<WorkspacePageView> LoadedPageAsync()
     {
-        await WaitUntilAsync(() => ViewModel.Navigation.CurrentPage is CategoryPageView { DataContext: CategoryPageViewModel { IsLoaded: true } });
+        await WaitUntilAsync(() => ViewModel.Navigation.CurrentPage is WorkspacesPageView { DataContext: WorkspacesPageViewModel { IsLoaded: true } });
+        WorkspacesPageViewModel workspaces = Provider.GetRequiredService<WorkspacesPageViewModel>();
 
-        // One more turn of the dispatcher, so the bindings the load changed have been applied.
+        if (workspaces.OpenWorkspace is null)
+        {
+            if (workspaces.Workspaces.Count == 0)
+            {
+                Provider.GetRequiredService<ILaunchpadSession>().AddWorkspace(Workspace.DefaultTitle, null, Workspace.MigratedIcon);
+            }
+
+            workspaces.Workspaces[0].OpenCommand.Execute(null);
+        }
+
+        await WaitUntilAsync(() => OpenPage is not null);
+
+        // One more turn of the dispatcher, so the bindings the open changed have been applied.
         await Task.Delay(20);
         Window.UpdateLayout();
 
-        return (CategoryPageView)(ViewModel.Navigation.CurrentPage ?? throw new InvalidOperationException("No page."));
+        return OpenPage ?? throw new InvalidOperationException("No workspace is open.");
     }
+
+    /// <summary>
+    /// Gets the view of the open workspace, inside the Workspaces page; <see langword="null"/> while the list shows.
+    /// </summary>
+    public WorkspacePageView? OpenPage
+        => (ViewModel.Navigation.CurrentPage as WorkspacesPageView)?.GetVisualDescendants().OfType<WorkspacePageView>().FirstOrDefault();
 
     public void Dispose()
     {

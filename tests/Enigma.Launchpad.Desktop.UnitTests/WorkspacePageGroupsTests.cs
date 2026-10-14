@@ -7,46 +7,56 @@ using Xunit;
 
 namespace Enigma.Launchpad.Desktop.UnitTests;
 
-public sealed class CategoryPageGroupsTests
+public sealed class WorkspacePageGroupsTests
 {
     [Fact]
-    public async Task OnAppearing_LoadsTheGroupsOfItsOwnCategory_Once()
+    public async Task Opening_ShowsTheWorkspace_WithItsGroupsOfEveryKind_InOrder()
     {
         LaunchpadData data = PageHarness.Data("Dev tools", "Games")
-            .With(ShortcutKind.Url, [new ShortcutGroup(System.Guid.NewGuid(), "Docs", [])]);
-        PageHarness harness = new(data);
+            .With(ShortcutKind.Url, [new ShortcutGroup(System.Guid.NewGuid(), "Docs", ShortcutKind.Url, [])]);
+        Workspace workspace = data.ActiveProfile.Workspaces[0] with { Title = "Dev", Description = "Coding", Icon = "Code" };
+        PageHarness harness = new(data.WithProfile(data.ActiveProfile.ReplaceWorkspace(workspace)));
 
-        CategoryPageViewModel page = await harness.LoadAsync();
-        await page.OnAppearingAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
-        Assert.True(page.IsLoaded);
+        Assert.Equal(workspace.Id, page.WorkspaceId);
+        Assert.Equal(("Dev", "Coding", true, Enigma.Icons.Phosphor.PhosphorIcon.Code), (page.Title, page.Description, page.HasDescription, page.Glyph));
         Assert.False(page.IsEmpty);
-        Assert.Equal(["Dev tools", "Games"], page.Groups.Select(group => group.Name));
-        Assert.Equal(ShortcutKind.Application, page.Kind);
+        Assert.Equal(["Dev tools", "Games", "Docs"], page.Groups.Select(group => group.Name));
+        Assert.Equal([ShortcutKind.Application, ShortcutKind.Application, ShortcutKind.Url], page.Groups.Select(group => group.Kind));
     }
 
     [Fact]
-    public async Task APageWithoutGroups_IsEmpty_OnlyOnceLoaded()
+    public async Task AWorkspaceWithoutGroups_IsEmpty()
     {
         PageHarness harness = new();
-
-        Assert.False(harness.Page.IsEmpty);
-        Assert.False(harness.Page.NewGroupCommand.CanExecute(null));
 
         await harness.LoadAsync();
 
         Assert.True(harness.Page.IsEmpty);
-        Assert.True(harness.Page.NewGroupCommand.CanExecute(null));
+        Assert.True(harness.Page.NewGroupCommand.CanExecute(ShortcutKind.Application));
+        Assert.False(harness.Page.HasDescription);
+    }
+
+    [Fact]
+    public async Task Back_AsksTheListToShowAgain()
+    {
+        PageHarness harness = new();
+        WorkspacePageViewModel page = await harness.LoadAsync();
+
+        page.BackCommand.Execute(null);
+
+        Assert.Equal(1, harness.BackRequests);
     }
 
     [Fact]
     public async Task NewGroup_AddsItAtTheEnd_Expanded_AndSaves()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.NameAnswers.Enqueue("Games");
 
-        await page.NewGroupCommand.ExecuteAsync(null);
+        await page.NewGroupCommand.ExecuteAsync(ShortcutKind.Application);
 
         Assert.Equal(["Dev tools", "Games"], page.Groups.Select(group => group.Name));
         Assert.True(page.Groups[1].IsExpanded);
@@ -59,9 +69,9 @@ public sealed class CategoryPageGroupsTests
     public async Task NewGroup_ChecksTheNameAgainstEveryGroup()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
-        await page.NewGroupCommand.ExecuteAsync(null);
+        await page.NewGroupCommand.ExecuteAsync(ShortcutKind.Application);
 
         ScriptedDialogs.NamePrompt prompt = Assert.Single(harness.Dialogs.NamePrompts);
         Assert.Null(prompt.InitialName);
@@ -74,9 +84,9 @@ public sealed class CategoryPageGroupsTests
     public async Task NewGroup_Cancelled_ChangesNothing()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
-        await page.NewGroupCommand.ExecuteAsync(null);
+        await page.NewGroupCommand.ExecuteAsync(ShortcutKind.Application);
         await harness.Session.FlushAsync();
 
         Assert.Single(page.Groups);
@@ -87,7 +97,7 @@ public sealed class CategoryPageGroupsTests
     public async Task Rename_AppliesTheNewName_AndSaves()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools", "Games"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.NameAnswers.Enqueue("Tools");
 
         await page.Groups[0].RenameCommand.ExecuteAsync(null);
@@ -100,7 +110,7 @@ public sealed class CategoryPageGroupsTests
     public async Task Rename_AcceptsTheGroupsOwnName_ButNotASiblings()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools", "Games"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         await page.Groups[0].RenameCommand.ExecuteAsync(null);
 
@@ -114,7 +124,7 @@ public sealed class CategoryPageGroupsTests
     public async Task Rename_ToTheSameName_DoesNotSave()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.NameAnswers.Enqueue("Dev tools");
 
         await page.Groups[0].RenameCommand.ExecuteAsync(null);
@@ -129,11 +139,11 @@ public sealed class CategoryPageGroupsTests
         LaunchpadData data = LaunchpadData.Empty.With(
             ShortcutKind.Application,
             [
-                new ShortcutGroup(System.Guid.NewGuid(), "Dev tools", [new Shortcut(System.Guid.NewGuid(), "Code", @"C:\code.exe"), new Shortcut(System.Guid.NewGuid(), "Git", @"C:\git.exe")]),
-                new ShortcutGroup(System.Guid.NewGuid(), "Games", []),
+                new ShortcutGroup(System.Guid.NewGuid(), "Dev tools", ShortcutKind.Application, [new Shortcut(System.Guid.NewGuid(), "Code", @"C:\code.exe"), new Shortcut(System.Guid.NewGuid(), "Git", @"C:\git.exe")]),
+                new ShortcutGroup(System.Guid.NewGuid(), "Games", ShortcutKind.Application, []),
             ]);
         PageHarness harness = new(data);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.ConfirmAnswers.Enqueue(true);
 
         await page.Groups[0].DeleteCommand.ExecuteAsync(null);
@@ -149,7 +159,7 @@ public sealed class CategoryPageGroupsTests
     public async Task Delete_Declined_KeepsTheGroup()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.ConfirmAnswers.Enqueue(false);
 
         await page.Groups[0].DeleteCommand.ExecuteAsync(null);
@@ -163,7 +173,7 @@ public sealed class CategoryPageGroupsTests
     public async Task DeletingTheLastGroup_LeavesThePageEmpty()
     {
         PageHarness harness = new(PageHarness.Data("Dev tools"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.ConfirmAnswers.Enqueue(true);
 
         await page.Groups[0].DeleteCommand.ExecuteAsync(null);
@@ -175,7 +185,7 @@ public sealed class CategoryPageGroupsTests
     public async Task MoveUpAndDown_AreOnlyAvailableWhereTheGroupCanGo()
     {
         PageHarness harness = new(PageHarness.Data("A", "B", "C"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         Assert.False(page.Groups[0].MoveUpCommand.CanExecute(null));
         Assert.True(page.Groups[0].MoveDownCommand.CanExecute(null));
@@ -189,7 +199,7 @@ public sealed class CategoryPageGroupsTests
     public async Task MoveDown_ReordersTheGroups_AndSaves()
     {
         PageHarness harness = new(PageHarness.Data("A", "B", "C"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         GroupViewModel first = page.Groups[0];
 
         first.MoveDownCommand.Execute(null);
@@ -203,7 +213,7 @@ public sealed class CategoryPageGroupsTests
     public async Task MoveUp_FromTheTop_DoesNothing()
     {
         PageHarness harness = new(PageHarness.Data("A", "B"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         page.Groups[0].MoveUpCommand.Execute(null);
         await harness.Session.FlushAsync();
@@ -216,7 +226,7 @@ public sealed class CategoryPageGroupsTests
     public async Task Folding_AGroup_IsSaved()
     {
         PageHarness harness = new(PageHarness.Data("A", "B"));
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
 
         page.Groups[1].IsExpanded = false;
 
@@ -230,10 +240,10 @@ public sealed class CategoryPageGroupsTests
     {
         LaunchpadData data = LaunchpadData.Empty.With(
             ShortcutKind.Application,
-            [new ShortcutGroup(System.Guid.NewGuid(), "A", [], IsCollapsed: true)]);
+            [new ShortcutGroup(System.Guid.NewGuid(), "A", ShortcutKind.Application, [], IsCollapsed: true)]);
         PageHarness harness = new(data);
 
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         await harness.Session.FlushAsync();
 
         Assert.False(page.Groups[0].IsExpanded);
@@ -246,9 +256,9 @@ public sealed class CategoryPageGroupsTests
         Shortcut code = new(System.Guid.NewGuid(), "Code", @"C:\code.exe", "--new-window");
         LaunchpadData data = LaunchpadData.Empty.With(
             ShortcutKind.Application,
-            [new ShortcutGroup(System.Guid.NewGuid(), "Dev tools", [code])]);
+            [new ShortcutGroup(System.Guid.NewGuid(), "Dev tools", ShortcutKind.Application, [code])]);
         PageHarness harness = new(data);
-        CategoryPageViewModel page = await harness.LoadAsync();
+        WorkspacePageViewModel page = await harness.LoadAsync();
         harness.Dialogs.NameAnswers.Enqueue("Tools");
 
         await page.Groups[0].RenameCommand.ExecuteAsync(null);

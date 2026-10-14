@@ -3,7 +3,7 @@ using Avalonia.Controls;
 namespace Enigma.Launchpad.Desktop.Views;
 
 /// <summary>
-/// The main window: the category rail, the page area and the three overlay hosts.
+/// The main window: the navigation rail, the page area and the three overlay hosts.
 /// </summary>
 public partial class MainWindow : Window
 {

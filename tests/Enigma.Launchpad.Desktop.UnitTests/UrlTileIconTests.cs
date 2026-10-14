@@ -57,7 +57,7 @@ public sealed class UrlTileIconTests
 
     private async Task<ShortcutViewModel> LoadedTileAsync()
     {
-        CategoryPageViewModel page = await _harness.LoadAsync();
+        WorkspacePageViewModel page = await _harness.LoadAsync();
         return page.Groups[0].Shortcuts[0];
     }
 }

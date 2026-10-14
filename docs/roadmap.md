@@ -43,3 +43,14 @@
 | - PHASE03    | Open in terminal                    | DONE   | (in FEATURE-2DA2.md)      |
 | FEATURE-200F | Linux installer                     | DONE   | docs/plan/FEATURE-200F.md |
 | FEATURE-10CE | Release 1.0.0                       | DONE   | docs/plan/FEATURE-10CE.md |
+| FEATURE-1F8C | Commands as application targets     | DONE   | docs/plan/FEATURE-1F8C.md |
+| FEATURE-1C0D | Workspaces                          | DONE   | docs/plan/FEATURE-1C0D.md |
+| - PHASE01    | Workspace model & storage           | DONE   | (in FEATURE-1C0D.md)      |
+| - PHASE02    | Workspaces page                     | DONE   | (in FEATURE-1C0D.md)      |
+| - PHASE03    | Open workspace, mixed groups        | DONE   | (in FEATURE-1C0D.md)      |
+| FEATURE-1FA9 | Documents                           | DONE   | docs/plan/FEATURE-1FA9.md |
+| FEATURE-23F9 | Workspace drag visuals              | DONE   | docs/plan/FEATURE-23F9.md |
+| - PHASE01    | Dashed slot where it lands          | DONE   | (in FEATURE-23F9.md)      |
+| - PHASE02    | Dragged item follows the pointer    | DONE   | (in FEATURE-23F9.md)      |
+| BUG-10AB     | Tests that fail on Linux            | DONE   | docs/plan/BUG-10AB.md     |
+| FEATURE-5FAA | Release 1.1.0                       | DONE   | docs/plan/FEATURE-5FAA.md |

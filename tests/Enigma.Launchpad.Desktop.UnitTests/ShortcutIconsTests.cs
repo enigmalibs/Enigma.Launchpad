@@ -15,26 +15,30 @@ namespace Enigma.Launchpad.Desktop.UnitTests;
 [Collection(HeadlessCollection.Name)]
 public sealed class ShortcutIconsTests
 {
-    private const string Program = @"C:\Tools\code.exe";
     private const string Link = "https://example.com/docs";
+
+    // Fully qualified on every platform: anything else is taken for a command and looked up on the PATH.
+    private static readonly string Program = Path.Combine(Path.GetTempPath(), "Enigma.Launchpad.Tools", "code.exe");
 
     private readonly HeadlessAvaloniaFixture _fixture;
     private readonly FakeTargetIcons _programIcons = new();
     private readonly FakeTargetIcons _websiteIcons = new();
+    private readonly FakeCommandResolver _commands = new();
     private readonly RecordingLogger<ShortcutIcons> _logger = new();
     private readonly ShortcutIcons _icons;
 
     public ShortcutIconsTests(HeadlessAvaloniaFixture fixture)
     {
         _fixture = fixture;
-        _icons = new ShortcutIcons(_programIcons, _websiteIcons, _logger);
+        _icons = new ShortcutIcons(_programIcons, _websiteIcons, _commands, _logger);
     }
 
     [Theory]
     [InlineData(ShortcutKind.Application, true)]
     [InlineData(ShortcutKind.Directory, false)]
     [InlineData(ShortcutKind.Url, true)]
-    public void OnlyProgramsAndWebsites_HaveIconsToFind(ShortcutKind kind, bool canFind)
+    [InlineData(ShortcutKind.Document, true)]
+    public void OnlyFoldersHaveNoIconToFind(ShortcutKind kind, bool canFind)
         => Assert.Equal(canFind, _icons.CanFind(kind));
 
     [Fact]
@@ -74,6 +78,45 @@ public sealed class ShortcutIconsTests
             Assert.Equal(ShortcutIcon.FromBytes(png, isCustom: false), found.Icon);
             Assert.Equal(new PixelSize(48, 48), Assert.IsType<Bitmap>(found.Image).PixelSize);
             Assert.Equal([Program], _programIcons.Requests);
+            Assert.Empty(_websiteIcons.Requests);
+        });
+
+    [Fact]
+    public void ACommandsIcon_IsTheIconOfTheProgramItLeadsTo()
+        => _fixture.RunAsync(async () =>
+        {
+            _commands.Programs["code"] = Program;
+            _programIcons.Answer = path => path == Program ? TestImages.Png(32, 32) : null;
+
+            Assert.NotNull(await _icons.FindAsync(ShortcutKind.Application, "code"));
+            Assert.NotNull(await _icons.RefreshAsync(ShortcutKind.Application, "code"));
+
+            Assert.Equal([Program, Program], _programIcons.Requests);
+            Assert.Equal([Program], _programIcons.Refreshes);
+        });
+
+    [Fact]
+    public async Task ACommandNotOnThePath_HasNoIcon_AndNoProgramIsAsked()
+    {
+        Assert.Null(await _icons.FindAsync(ShortcutKind.Application, "gone", TestContext.Current.CancellationToken));
+
+        Assert.Equal(["gone"], _commands.Lookups);
+        Assert.Empty(_programIcons.Requests);
+    }
+
+    [Fact]
+    public void ADocumentsIcon_IsTheOneTheShellGivesTheFile()
+        => _fixture.RunAsync(async () =>
+        {
+            const string Report = @"C:\Docs\report.pdf";
+            _programIcons.Answer = path => path == Report ? TestImages.Png(32, 32) : null;
+
+            Assert.NotNull(await _icons.FindAsync(ShortcutKind.Document, Report));
+            Assert.NotNull(await _icons.RefreshAsync(ShortcutKind.Document, Report));
+
+            Assert.Equal([Report, Report], _programIcons.Requests);
+            Assert.Equal([Report], _programIcons.Refreshes);
+            Assert.Empty(_commands.Lookups);
             Assert.Empty(_websiteIcons.Requests);
         });
 

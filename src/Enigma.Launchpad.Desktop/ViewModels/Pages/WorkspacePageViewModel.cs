@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
@@ -6,7 +7,6 @@ using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Enigma.Avalonia.Desktop.Services;
 using Enigma.Icons.Phosphor;
 using Enigma.Launchpad.Core.Shortcuts;
 using Enigma.Launchpad.Core.Validation;
@@ -16,20 +16,21 @@ using Enigma.Launchpad.Desktop.Services;
 namespace Enigma.Launchpad.Desktop.ViewModels.Pages;
 
 /// <summary>
-/// One category's page: its title and the groups of shortcuts it holds.
+/// One open workspace: its title, and its groups — each of one kind, of every kind together.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The three categories share one view and this base; each concrete ViewModel only says which category it
-/// is, so the rail can resolve each page by its own type.
+/// The page's groups are the live state of the workspace. Every change is handed to the session as a fresh snapshot of
+/// the workspace's groups, which the session saves in the background. The Workspaces page owns the open workspace: it
+/// creates it, closes it, and has it read the workspace again when the session changes under it, so this page never
+/// subscribes to the session itself and goes away with nothing left attached.
 /// </para>
 /// <para>
-/// The page's groups are the live state of its category in the profile in use. Every change is handed to the
-/// session as a fresh snapshot of the whole category, which the session saves in the background; when another
-/// profile is put in use, a loaded page reads its groups again.
+/// A group, and every shortcut in it, has one kind for its whole life; what can be done with a tile — run it with
+/// arguments, open a terminal in it, find its icon — follows its group's kind.
 /// </para>
 /// </remarks>
-public abstract class CategoryPageViewModel : ObservableObject, INavigationViewModel
+public sealed class WorkspacePageViewModel : ObservableObject
 {
     private readonly ILaunchpadSession _session;
     private readonly IShortcutValidator _validator;
@@ -38,48 +39,41 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     private readonly IShortcutIcons _icons;
     private readonly IUserNotifications _notifications;
 
-    // Set while the groups are being built from the session, when the category is not whole yet.
+    // Set while the groups are being built from the session, when the workspace is not whole yet.
     private bool _isReadingGroups;
     private bool _hasIconsToKeep;
 
     /// <summary>
-    /// Initialises a new instance.
+    /// Initialises a new instance, showing a workspace of the profile in use.
     /// </summary>
-    /// <param name="kind">The category the page shows.</param>
-    /// <param name="title">The page's title.</param>
-    /// <param name="description">One line under the title saying what the category holds.</param>
-    /// <param name="icon">The category's icon.</param>
+    /// <param name="workspaceId">The workspace to show; the session must be loaded, and the workspace in it.</param>
     /// <param name="session">The launchpad document.</param>
     /// <param name="validator">The rules names and targets must meet.</param>
     /// <param name="dialogs">The questions asked of the user.</param>
     /// <param name="actions">Opens shortcuts, shows them in their folder, copies their targets.</param>
     /// <param name="icons">The icons of the tiles: kept with the shortcuts, or found from their targets.</param>
-    /// <param name="notifications">Where a failed icon lookup is reported.</param>
-    protected CategoryPageViewModel(
-        ShortcutKind kind,
-        string title,
-        string description,
-        PhosphorIcon icon,
+    /// <param name="notifications">Where a failed icon lookup or a refused move is reported.</param>
+    /// <param name="back">Goes back to the list of workspaces.</param>
+    /// <exception cref="ArgumentException">The profile in use has no such workspace.</exception>
+    public WorkspacePageViewModel(
+        Guid workspaceId,
         ILaunchpadSession session,
         IShortcutValidator validator,
         ILaunchpadDialogs dialogs,
         IShortcutActions actions,
         IShortcutIcons icons,
-        IUserNotifications notifications)
+        IUserNotifications notifications,
+        Action back)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        ArgumentException.ThrowIfNullOrWhiteSpace(description);
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(validator);
         ArgumentNullException.ThrowIfNull(dialogs);
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentNullException.ThrowIfNull(icons);
         ArgumentNullException.ThrowIfNull(notifications);
+        ArgumentNullException.ThrowIfNull(back);
 
-        Kind = kind;
-        Title = title;
-        Description = description;
-        Icon = icon;
+        WorkspaceId = workspaceId;
         _session = session;
         _validator = validator;
         _dialogs = dialogs;
@@ -88,83 +82,93 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         _notifications = notifications;
 
         Groups.CollectionChanged += OnGroupsChanged;
-        _session.ActiveProfileChanged += OnActiveProfileChanged;
-        NewGroupCommand = new AsyncRelayCommand(NewGroupAsync, () => IsLoaded);
+        NewGroupCommand = new AsyncRelayCommand<ShortcutKind>(NewGroupAsync);
+        BackCommand = new RelayCommand(back);
+
+        if (!Reload())
+        {
+            throw new ArgumentException("The profile in use has no such workspace.", nameof(workspaceId));
+        }
     }
 
     /// <summary>
-    /// Gets the category the page shows.
+    /// Gets the workspace's identity.
     /// </summary>
-    public ShortcutKind Kind { get; }
+    public Guid WorkspaceId { get; }
 
     /// <summary>
-    /// Gets the page's title.
+    /// Gets the workspace's title.
     /// </summary>
-    public string Title { get; }
+    public string Title { get; private set => SetProperty(ref field, value); } = string.Empty;
 
     /// <summary>
-    /// Gets the line under the title saying what the category holds.
+    /// Gets what the workspace is for; empty when it does not say.
     /// </summary>
-    public string Description { get; }
-
-    /// <summary>
-    /// Gets the category's icon.
-    /// </summary>
-    public PhosphorIcon Icon { get; }
-
-    /// <summary>
-    /// Gets the category's groups, in display order.
-    /// </summary>
-    public ObservableCollection<GroupViewModel> Groups { get; } = [];
-
-    /// <summary>
-    /// Gets a value indicating whether the category has been read from the session.
-    /// </summary>
-    public bool IsLoaded
+    public string Description
     {
         get;
         private set
         {
             if (SetProperty(ref field, value))
             {
-                OnPropertyChanged(nameof(IsEmpty));
-                NewGroupCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(HasDescription));
             }
         }
-    }
+    } = string.Empty;
 
     /// <summary>
-    /// Gets a value indicating whether the category is loaded and has no group, which is when the page invites
-    /// the user to create one.
+    /// Gets a value indicating whether the header shows a description.
     /// </summary>
-    public bool IsEmpty => IsLoaded && (Groups.Count == 0);
+    public bool HasDescription => Description.Length > 0;
 
     /// <summary>
-    /// Gets the command creating a group, at the end of the page.
+    /// Gets the workspace's glyph.
     /// </summary>
-    public AsyncRelayCommand NewGroupCommand { get; }
+    public PhosphorIcon Glyph { get; private set => SetProperty(ref field, value); }
 
-    /// <inheritdoc />
-    public async Task OnAppearingAsync(object? parameter = null)
+    /// <summary>
+    /// Gets the workspace's groups, in display order.
+    /// </summary>
+    public ObservableCollection<GroupViewModel> Groups { get; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether the workspace has no group, which is when the page invites the user to create
+    /// one.
+    /// </summary>
+    public bool IsEmpty => Groups.Count == 0;
+
+    /// <summary>
+    /// Gets the command creating a group of a kind, at the end of the workspace.
+    /// </summary>
+    public AsyncRelayCommand<ShortcutKind> NewGroupCommand { get; }
+
+    /// <summary>
+    /// Gets the command going back to the list of workspaces.
+    /// </summary>
+    public RelayCommand BackCommand { get; }
+
+    /// <summary>
+    /// Reads the workspace again from the session: its title, glyph and groups.
+    /// </summary>
+    /// <returns><see langword="false"/> when the profile in use no longer has the workspace.</returns>
+    public bool Reload()
     {
-        if (IsLoaded)
+        if (_session.Workspaces.FirstOrDefault(workspace => workspace.Id == WorkspaceId) is not { } workspace)
         {
-            return;
+            return false;
         }
 
-        await _session.LoadAsync();
-
-        ReadGroups();
-        IsLoaded = true;
+        Title = workspace.Title;
+        Description = workspace.Description ?? string.Empty;
+        Glyph = Glyphs.OfWorkspace(workspace.Icon);
+        ReadGroups(workspace.Groups);
+        return true;
     }
 
-    /// <inheritdoc />
-    public Task<bool> OnDisappearingAsync() => Task.FromResult(true);
-
     /// <summary>
-    /// Hands the category's current state to the session, which saves it.
+    /// Hands the workspace's current groups to the session, which saves them.
     /// </summary>
-    internal void Persist() => _session.Update(Kind, Groups.Select(group => group.ToModel()).ToArray());
+    internal void Persist() => _session.UpdateGroups(WorkspaceId, Groups.Select(group => group.ToModel()).ToArray());
 
     /// <summary>
     /// Asks for a new name for a group and applies it.
@@ -178,7 +182,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
             "Group name",
             "Rename",
             group.Name,
-            candidate => _validator.ValidateGroupName(candidate, Groups.Where(other => other != group).Select(other => other.Name)));
+            candidate => _validator.ValidateGroupName(candidate, NamesOfKind(group.Kind, except: group)));
 
         if ((name is null) || (name == group.Name))
         {
@@ -246,13 +250,58 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     }
 
     /// <summary>
+    /// Asks which other workspace to move a group to, and moves it there, at the end. A workspace that already has a
+    /// group of the same name and kind does not take it: the user is told, and nothing moves.
+    /// </summary>
+    /// <param name="group">The group to move.</param>
+    /// <returns>A task that completes once the user has answered.</returns>
+    internal async Task MoveGroupToWorkspaceAsync(GroupViewModel group)
+    {
+        Workspace[] others = _session.Workspaces.Where(workspace => workspace.Id != WorkspaceId).ToArray();
+
+        if (others.Length == 0)
+        {
+            _notifications.ShowWarning("No other workspace", "Create another workspace first, then move the group to it.");
+            return;
+        }
+
+        Workspace? target = await _dialogs.ChooseWorkspaceAsync(
+            $"Move “{group.Name}”",
+            $"Choose the workspace to move the group “{group.Name}” to, with its shortcuts.",
+            "Move",
+            others);
+
+        // The group may have gone, or the workspace with it, while the question was open.
+        if ((target is null) || !Groups.Contains(group))
+        {
+            return;
+        }
+
+        if (_session.Workspaces.FirstOrDefault(workspace => workspace.Id == target.Id) is not { } current)
+        {
+            return;
+        }
+
+        if (current.Groups.Any(existing => (existing.Kind == group.Kind) && SameName(existing.Name, group.Name)))
+        {
+            _notifications.ShowWarning(
+                "The group was not moved",
+                $"“{current.Title}” already has {GroupKindOption.Article(group.Kind)} group called “{group.Name}”. Rename one of them first.");
+            return;
+        }
+
+        // The session moves it in one change, and the Workspaces page has this page read the workspace again.
+        _session.MoveGroup(group.Id, WorkspaceId, current.Id);
+    }
+
+    /// <summary>
     /// Asks for a new shortcut and adds it at the end of a group, which is unfolded to show it.
     /// </summary>
-    /// <param name="group">The group to add to.</param>
+    /// <param name="group">The group to add to; the shortcut is of its kind.</param>
     /// <returns>A task that completes once the user has answered.</returns>
     internal async Task AddShortcutAsync(GroupViewModel group)
     {
-        Shortcut? shortcut = await _dialogs.EditShortcutAsync(Kind, null);
+        Shortcut? shortcut = await _dialogs.EditShortcutAsync(group.Kind, null);
 
         if (shortcut is null)
         {
@@ -271,7 +320,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <returns>A task that completes once the user has answered.</returns>
     internal async Task EditShortcutAsync(ShortcutViewModel shortcut)
     {
-        Shortcut? edited = await _dialogs.EditShortcutAsync(Kind, shortcut.Model);
+        Shortcut? edited = await _dialogs.EditShortcutAsync(shortcut.Kind, shortcut.Model);
 
         if ((edited is null) || (edited == shortcut.Model))
         {
@@ -289,7 +338,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <returns>A task that completes once the user has answered.</returns>
     internal async Task DeleteShortcutAsync(ShortcutViewModel shortcut)
     {
-        if (!await _dialogs.ConfirmDeleteAsync($"Delete the shortcut \u201C{shortcut.Name}\u201D?", "This cannot be undone.", "Delete"))
+        if (!await _dialogs.ConfirmDeleteAsync($"Delete the shortcut “{shortcut.Name}”?", "This cannot be undone.", "Delete"))
         {
             return;
         }
@@ -335,7 +384,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// Opens a shortcut; a failure is shown to the user.
     /// </summary>
     /// <param name="shortcut">The shortcut.</param>
-    internal void OpenShortcut(ShortcutViewModel shortcut) => _actions.Open(Kind, shortcut.Model);
+    internal void OpenShortcut(ShortcutViewModel shortcut) => _actions.Open(shortcut.Kind, shortcut.Model);
 
     /// <summary>
     /// Asks which arguments to run an application with this once — starting from its default arguments — and runs
@@ -345,7 +394,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <returns>A task that completes once the user has answered.</returns>
     internal async Task RunWithArgumentsAsync(ShortcutViewModel shortcut)
     {
-        if (Kind != ShortcutKind.Application)
+        if (shortcut.Kind != ShortcutKind.Application)
         {
             return;
         }
@@ -358,7 +407,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
             return;
         }
 
-        _actions.Open(Kind, model with { Arguments = arguments.Length == 0 ? null : arguments });
+        _actions.Open(ShortcutKind.Application, model with { Arguments = arguments.Length == 0 ? null : arguments });
     }
 
     /// <summary>
@@ -367,7 +416,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <param name="shortcut">The folder's tile.</param>
     internal void OpenInTerminal(ShortcutViewModel shortcut)
     {
-        if (Kind == ShortcutKind.Directory)
+        if (shortcut.Kind == ShortcutKind.Directory)
         {
             _actions.OpenInTerminal(shortcut.Model);
         }
@@ -377,12 +426,14 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// Shows a shortcut in its folder; a failure is shown to the user.
     /// </summary>
     /// <param name="shortcut">The shortcut.</param>
-    internal void RevealShortcut(ShortcutViewModel shortcut) => _actions.Reveal(Kind, shortcut.Model);
+    internal void RevealShortcut(ShortcutViewModel shortcut) => _actions.Reveal(shortcut.Kind, shortcut.Model);
 
     /// <summary>
-    /// Gets a value indicating whether the category's tiles can have their icon found from their targets.
+    /// Whether a kind of tile can have its icon found from its target.
     /// </summary>
-    internal bool CanFindIcons => _icons.CanFind(Kind);
+    /// <param name="kind">The kind.</param>
+    /// <returns><see langword="true"/> for the kinds whose icons the sources can find.</returns>
+    internal bool CanFindIcons(ShortcutKind kind) => _icons.CanFind(kind);
 
     /// <summary>
     /// Gets the image of an icon a shortcut keeps.
@@ -392,12 +443,13 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     internal IImage? ShowIcon(ShortcutIcon icon) => _icons.Show(icon);
 
     /// <summary>
-    /// Finds the icon of a shortcut's target — a program's, a website's — which its tile shows instead of the
-    /// category's glyph.
+    /// Finds the icon of a shortcut's target — a program's, a website's — which its tile shows instead of its kind's
+    /// glyph.
     /// </summary>
+    /// <param name="kind">The shortcut's kind.</param>
     /// <param name="target">The shortcut's target.</param>
-    /// <returns>The icon, or <see langword="null"/> when none was found or the category has none to find.</returns>
-    internal Task<IconImage?> FindIconAsync(string target) => _icons.FindAsync(Kind, target);
+    /// <returns>The icon, or <see langword="null"/> when none was found or the kind has none to find.</returns>
+    internal Task<IconImage?> FindIconAsync(ShortcutKind kind, string target) => _icons.FindAsync(kind, target);
 
     /// <summary>
     /// Looks a shortcut's icon up again — from the program, or from the website itself — and keeps it. An image the
@@ -408,24 +460,31 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <returns>A task that completes once the icon has been looked up, or the user declined.</returns>
     internal async Task FindShortcutIconAsync(ShortcutViewModel shortcut)
     {
-        if (!CanFindIcons)
+        ShortcutKind kind = shortcut.Kind;
+
+        if (!CanFindIcons(kind))
         {
             return;
         }
 
-        string source = Kind == ShortcutKind.Url ? "website" : "program";
+        string source = kind switch
+        {
+            ShortcutKind.Url => "website",
+            ShortcutKind.Document => "file",
+            _ => "program",
+        };
 
         if ((shortcut.Model.Icon is { IsCustom: true })
             && !await _dialogs.ConfirmAsync(
                 "Replace your icon?",
-                $"\u201C{shortcut.Name}\u201D uses an image you chose. Look for the {source}'s own icon and use it instead?",
+                $"“{shortcut.Name}” uses an image you chose. Look for the {source}'s own icon and use it instead?",
                 "Replace"))
         {
             return;
         }
 
         Shortcut before = shortcut.Model;
-        IconImage? found = await _icons.RefreshAsync(Kind, before.Target);
+        IconImage? found = await _icons.RefreshAsync(kind, before.Target);
 
         // The tile may have been edited, moved off the page or deleted while its icon was looked up.
         if ((FindShortcut(shortcut.Id) != shortcut) || (shortcut.Model != before))
@@ -435,7 +494,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
 
         if (found is null)
         {
-            _notifications.ShowWarning("No icon found", $"No icon could be found for \u201C{shortcut.Name}\u201D. Its icon is unchanged.");
+            _notifications.ShowWarning("No icon found", $"No icon could be found for “{shortcut.Name}”. Its icon is unchanged.");
             return;
         }
 
@@ -449,9 +508,9 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// </summary>
     /// <param name="shortcut">The tile.</param>
     /// <remarks>
-    /// While the groups are being built the category is not whole, and saving it then would drop the groups not
-    /// built yet; the save waits for the end of the build. A tile no longer on the page — the profile changed while
-    /// its icon was looked up — saves nothing: its icon is found again when the profile is shown again.
+    /// While the groups are being built the workspace is not whole, and saving it then would drop the groups not
+    /// built yet; the save waits for the end of the build. A tile no longer on the page — the workspace was read again
+    /// while its icon was looked up — saves nothing: its icon is found again when it is shown again.
     /// </remarks>
     internal void KeepFoundIcon(ShortcutViewModel shortcut)
     {
@@ -479,9 +538,9 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// </summary>
     /// <param name="payload">What the drag carries.</param>
     /// <param name="target">The group under the pointer.</param>
-    /// <returns><see langword="true"/> for a group of this category other than the target itself.</returns>
+    /// <returns><see langword="true"/> for a group of this page other than the target itself, whatever its kind.</returns>
     internal bool CanDropGroup(DragPayload payload, GroupViewModel target)
-        => (payload.Kind == Kind) && (FindGroup(payload.Id) is { } source) && (source != target) && Groups.Contains(target);
+        => (FindGroup(payload.Id) is { } source) && (source != target) && Groups.Contains(target);
 
     /// <summary>
     /// Moves a dragged group next to another one, and saves the new order.
@@ -492,22 +551,36 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <returns><see langword="true"/> when the order changed.</returns>
     internal bool DropGroup(DragPayload payload, GroupViewModel target, DropPosition position)
     {
+        if (!MovesGroup(payload, target, position) || (FindGroup(payload.Id) is not { } source))
+        {
+            return false;
+        }
+
+        int from = Groups.IndexOf(source);
+
+        Groups.Move(from, DropPlacement.MoveIndex(from, Groups.IndexOf(target), position));
+        Persist();
+        return true;
+    }
+
+    /// <summary>
+    /// Whether dropping a dragged group next to another one would change the order.
+    /// </summary>
+    /// <param name="payload">What the drag carries.</param>
+    /// <param name="target">The group it would be dropped next to.</param>
+    /// <param name="position">Which side of that group.</param>
+    /// <returns><see langword="true"/> when the drop is allowed and moves the group; <see langword="false"/> next to its
+    /// own place, where nothing would move.</returns>
+    internal bool MovesGroup(DragPayload payload, GroupViewModel target, DropPosition position)
+    {
         if (!CanDropGroup(payload, target) || (FindGroup(payload.Id) is not { } source))
         {
             return false;
         }
 
         int from = Groups.IndexOf(source);
-        int to = DropPlacement.MoveIndex(from, Groups.IndexOf(target), position);
 
-        if (to == from)
-        {
-            return false;
-        }
-
-        Groups.Move(from, to);
-        Persist();
-        return true;
+        return DropPlacement.MoveIndex(from, Groups.IndexOf(target), position) != from;
     }
 
     /// <summary>
@@ -516,17 +589,17 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <param name="payload">What the drag carries.</param>
     /// <param name="targetGroup">The group under the pointer.</param>
     /// <param name="targetShortcut">The tile under the pointer; <see langword="null"/> for the group's empty space.</param>
-    /// <returns><see langword="true"/> for a shortcut of this category dropped anywhere but on its own tile.</returns>
+    /// <returns><see langword="true"/> for a shortcut of this page dropped on a group of its own kind, anywhere but on
+    /// its own tile.</returns>
     internal bool CanDropShortcut(DragPayload payload, GroupViewModel targetGroup, ShortcutViewModel? targetShortcut)
-        => (payload.Kind == Kind)
-            && (FindShortcut(payload.Id) is { } source)
+        => (FindShortcut(payload.Id) is { } source)
+            && (source.Kind == targetGroup.Kind)
             && (source != targetShortcut)
             && Groups.Contains(targetGroup)
             && ((targetShortcut is null) || (targetShortcut.Group == targetGroup));
 
     /// <summary>
-    /// Moves a dragged shortcut next to a tile, or to the end of a group — its own or another of this
-    /// category — and saves.
+    /// Moves a dragged shortcut next to a tile, or to the end of a group — its own or another of its kind — and saves.
     /// </summary>
     /// <param name="payload">What the drag carries.</param>
     /// <param name="targetGroup">The group it was dropped on.</param>
@@ -535,7 +608,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     /// <returns><see langword="true"/> when anything moved.</returns>
     internal bool DropShortcut(DragPayload payload, GroupViewModel targetGroup, ShortcutViewModel? targetShortcut, DropPosition position)
     {
-        if (!CanDropShortcut(payload, targetGroup, targetShortcut) || (FindShortcut(payload.Id) is not { } source))
+        if (!MovesShortcut(payload, targetGroup, targetShortcut, position) || (FindShortcut(payload.Id) is not { } source))
         {
             return false;
         }
@@ -545,16 +618,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
 
         if (sourceGroup == targetGroup)
         {
-            int to = targetShortcut is null
-                ? targetGroup.Shortcuts.Count - 1
-                : DropPlacement.MoveIndex(from, targetGroup.Shortcuts.IndexOf(targetShortcut), position);
-
-            if (to == from)
-            {
-                return false;
-            }
-
-            targetGroup.Shortcuts.Move(from, to);
+            targetGroup.Shortcuts.Move(from, IndexWithinItsGroup(from, targetGroup, targetShortcut, position));
         }
         else
         {
@@ -570,6 +634,32 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
 
         Persist();
         return true;
+    }
+
+    /// <summary>
+    /// Whether dropping a dragged shortcut next to a tile, or at a group's end, would move it.
+    /// </summary>
+    /// <param name="payload">What the drag carries.</param>
+    /// <param name="targetGroup">The group it would be dropped on.</param>
+    /// <param name="targetShortcut">The tile it would be dropped next to; <see langword="null"/> for the group's end.</param>
+    /// <param name="position">Which side of the tile; ignored without one.</param>
+    /// <returns><see langword="true"/> when the drop is allowed and moves the shortcut; <see langword="false"/> next to
+    /// its own place, where nothing would move.</returns>
+    internal bool MovesShortcut(DragPayload payload, GroupViewModel targetGroup, ShortcutViewModel? targetShortcut, DropPosition position)
+    {
+        if (!CanDropShortcut(payload, targetGroup, targetShortcut) || (FindShortcut(payload.Id) is not { } source))
+        {
+            return false;
+        }
+
+        if (source.Group != targetGroup)
+        {
+            return true;
+        }
+
+        int from = targetGroup.Shortcuts.IndexOf(source);
+
+        return IndexWithinItsGroup(from, targetGroup, targetShortcut, position) != from;
     }
 
     /// <summary>
@@ -621,25 +711,39 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
     internal ShortcutViewModel? FindShortcut(Guid id)
         => Groups.SelectMany(group => group.Shortcuts).FirstOrDefault(shortcut => shortcut.Id == id);
 
-    private async Task NewGroupAsync()
+    /// <summary>
+    /// Where a shortcut moved within its own group ends up: next to a tile, or last.
+    /// </summary>
+    private static int IndexWithinItsGroup(int from, GroupViewModel group, ShortcutViewModel? target, DropPosition position)
+        => target is null
+            ? group.Shortcuts.Count - 1
+            : DropPlacement.MoveIndex(from, group.Shortcuts.IndexOf(target), position);
+
+    private static bool SameName(string first, string second)
+        => string.Equals(first.Trim(), second.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private IEnumerable<string> NamesOfKind(ShortcutKind kind, GroupViewModel? except = null)
+        => Groups.Where(group => (group.Kind == kind) && (group != except)).Select(group => group.Name).ToArray();
+
+    private async Task NewGroupAsync(ShortcutKind kind)
     {
         string? name = await _dialogs.PromptNameAsync(
-            "New group",
+            $"New {GroupKindOption.Noun(kind)} group",
             "Group name",
             "Create",
             null,
-            candidate => _validator.ValidateGroupName(candidate, Groups.Select(group => group.Name)));
+            candidate => _validator.ValidateGroupName(candidate, NamesOfKind(kind)));
 
         if (name is null)
         {
             return;
         }
 
-        Groups.Add(new GroupViewModel(this, new ShortcutGroup(Guid.NewGuid(), name, [])));
+        Groups.Add(new GroupViewModel(this, new ShortcutGroup(Guid.NewGuid(), name, kind, [])));
         Persist();
     }
 
-    private void ReadGroups()
+    private void ReadGroups(IReadOnlyList<ShortcutGroup> groups)
     {
         _isReadingGroups = true;
 
@@ -647,7 +751,7 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         {
             Groups.Clear();
 
-            foreach (ShortcutGroup group in _session.GroupsOf(Kind))
+            foreach (ShortcutGroup group in groups)
             {
                 Groups.Add(new GroupViewModel(this, group));
             }
@@ -665,15 +769,6 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         }
     }
 
-    // A page not shown yet reads the profile in use when it first appears; only a loaded one has stale groups.
-    private void OnActiveProfileChanged(object? sender, EventArgs e)
-    {
-        if (IsLoaded)
-        {
-            ReadGroups();
-        }
-    }
-
     private void OnGroupsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         OnPropertyChanged(nameof(IsEmpty));
@@ -682,5 +777,46 @@ public abstract class CategoryPageViewModel : ObservableObject, INavigationViewM
         {
             group.RefreshPosition();
         }
+    }
+}
+
+/// <summary>
+/// A kind of group, as the New group menu and the group cards name it.
+/// </summary>
+/// <param name="Kind">The kind.</param>
+public sealed record GroupKindOption(ShortcutKind Kind)
+{
+    /// <summary>
+    /// Gets what the menu calls the kind: "Applications", "Folders", "Links", "Documents".
+    /// </summary>
+    public string Title => Kind switch
+    {
+        ShortcutKind.Application => "Applications",
+        ShortcutKind.Directory => "Folders",
+        ShortcutKind.Document => "Documents",
+        _ => "Links",
+    };
+
+    /// <summary>
+    /// Gets the kind's glyph.
+    /// </summary>
+    public PhosphorIcon Glyph => Glyphs.OfKind(Kind);
+
+    /// <summary>
+    /// Gets the kind in lower case, as it reads inside a sentence: "applications", "folders", "links", "documents".
+    /// </summary>
+    /// <param name="kind">The kind.</param>
+    /// <returns>The word.</returns>
+    public static string Noun(ShortcutKind kind) => new GroupKindOption(kind).Title.ToLowerInvariant();
+
+    /// <summary>
+    /// Gets "a" or "an" and the kind's noun, as in "an applications group".
+    /// </summary>
+    /// <param name="kind">The kind.</param>
+    /// <returns>The words.</returns>
+    public static string Article(ShortcutKind kind)
+    {
+        string noun = Noun(kind);
+        return ("aeiou".Contains(noun[0], StringComparison.Ordinal) ? "an " : "a ") + noun;
     }
 }

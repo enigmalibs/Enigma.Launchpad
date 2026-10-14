@@ -66,7 +66,7 @@ internal sealed class FakeShortcutIcons : IShortcutIcons
     /// </summary>
     public static ShortcutIcon FoundIcon(string target) => new($"found:{target}");
 
-    public bool CanFind(ShortcutKind kind) => kind is ShortcutKind.Application or ShortcutKind.Url;
+    public bool CanFind(ShortcutKind kind) => kind is ShortcutKind.Application or ShortcutKind.Url or ShortcutKind.Document;
 
     public IImage? Show(ShortcutIcon icon)
     {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using Enigma.Launchpad.Core.Launching;
 using Enigma.Launchpad.Core.Shortcuts;
 
 namespace Enigma.Launchpad.Core.Validation;
@@ -13,7 +14,7 @@ namespace Enigma.Launchpad.Core.Validation;
 public sealed class ShortcutValidator : IShortcutValidator
 {
     /// <summary>
-    /// The longest a profile, group or shortcut name may be.
+    /// The longest a profile, group or shortcut name, or a workspace title, may be.
     /// </summary>
     public const int MaxNameLength = 100;
 
@@ -23,12 +24,22 @@ public sealed class ShortcutValidator : IShortcutValidator
     public const int MaxDescriptionLength = 200;
 
     private readonly bool _acceptsApplicationBundles;
+    private readonly ICommandResolver _commands;
+
+    /// <summary>
+    /// Initialises a new instance for the running platform, finding commands through its <c>PATH</c>.
+    /// </summary>
+    public ShortcutValidator()
+        : this(new PathCommandResolver())
+    {
+    }
 
     /// <summary>
     /// Initialises a new instance for the running platform: application bundles are accepted on macOS.
     /// </summary>
-    public ShortcutValidator()
-        : this(OperatingSystem.IsMacOS())
+    /// <param name="commands">Finds the programs commands name.</param>
+    public ShortcutValidator(ICommandResolver commands)
+        : this(OperatingSystem.IsMacOS(), commands)
     {
     }
 
@@ -36,7 +47,12 @@ public sealed class ShortcutValidator : IShortcutValidator
     /// Initialises a new instance, saying whether a <c>.app</c> directory counts as an application.
     /// </summary>
     /// <param name="acceptsApplicationBundles">Whether application bundles are accepted.</param>
-    internal ShortcutValidator(bool acceptsApplicationBundles) => _acceptsApplicationBundles = acceptsApplicationBundles;
+    /// <param name="commands">Finds the programs commands name; the platform's <c>PATH</c> when omitted.</param>
+    internal ShortcutValidator(bool acceptsApplicationBundles, ICommandResolver? commands = null)
+    {
+        _acceptsApplicationBundles = acceptsApplicationBundles;
+        _commands = commands ?? new PathCommandResolver();
+    }
 
     /// <inheritdoc />
     public string? ValidateShortcutName(string? name) => ValidateName(name);
@@ -56,12 +72,38 @@ public sealed class ShortcutValidator : IShortcutValidator
         => ValidateUniqueName(name, otherProfileNames, "A profile with this name already exists.");
 
     /// <inheritdoc />
+    public string? ValidateWorkspaceTitle(string? title, IEnumerable<string> otherTitles)
+    {
+        ArgumentNullException.ThrowIfNull(otherTitles);
+
+        string trimmed = title?.Trim() ?? string.Empty;
+
+        if (trimmed.Length == 0)
+        {
+            return "Enter a title.";
+        }
+
+        if (trimmed.Length > MaxNameLength)
+        {
+            return $"Keep the title to {MaxNameLength} characters or fewer.";
+        }
+
+        return otherTitles.Any(other => string.Equals(other.Trim(), trimmed, StringComparison.OrdinalIgnoreCase))
+            ? "A workspace with this title already exists."
+            : null;
+    }
+
+    /// <inheritdoc />
+    public string? ValidateWorkspaceDescription(string? description) => ValidateDescription(description);
+
+    /// <inheritdoc />
     public TargetValidation ValidateTarget(ShortcutKind kind, string? target)
         => kind switch
         {
             ShortcutKind.Application => ValidateApplication(target),
             ShortcutKind.Directory => ValidateDirectory(target),
             ShortcutKind.Url => ValidateUrl(target),
+            ShortcutKind.Document => ValidateDocument(target),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown shortcut kind."),
         };
 
@@ -103,9 +145,25 @@ public sealed class ShortcutValidator : IShortcutValidator
             : null;
     }
 
+    /// <summary>
+    /// An application is a program's full path, or a command the <c>PATH</c> leads to — kept as typed, so it follows
+    /// the <c>PATH</c> wherever the shortcut is opened.
+    /// </summary>
     private TargetValidation ValidateApplication(string? target)
     {
-        if (!TryReadPath(target, out string path, out string? error))
+        string text = Unquote(target);
+
+        if (text.Length == 0)
+        {
+            return TargetValidation.Invalid("Enter a path or a command.");
+        }
+
+        if (!Path.IsPathFullyQualified(text))
+        {
+            return ValidateCommand(text);
+        }
+
+        if (!TryReadPath(text, out string path, out string? error))
         {
             return TargetValidation.Invalid(error);
         }
@@ -116,8 +174,25 @@ public sealed class ShortcutValidator : IShortcutValidator
         }
 
         return TargetValidation.Invalid(Directory.Exists(path)
-            ? "This is a folder, not a program. Add it under Directories instead."
+            ? "This is a folder, not a program. Add it to a folders group instead."
             : "There is no file at this path.");
+    }
+
+    private TargetValidation ValidateCommand(string command)
+    {
+        if (!PathCommandResolver.IsCommandName(command))
+        {
+            return TargetValidation.Invalid("Enter a full path, or a command found on the PATH.");
+        }
+
+        if (_commands.Resolve(command) is not null)
+        {
+            return TargetValidation.Valid(command);
+        }
+
+        string message = $"No program called “{command}” was found on the PATH.";
+
+        return TargetValidation.Invalid(command.Any(char.IsWhiteSpace) ? $"{message} Arguments go in Default arguments." : message);
     }
 
     private static TargetValidation ValidateDirectory(string? target)
@@ -133,8 +208,28 @@ public sealed class ShortcutValidator : IShortcutValidator
         }
 
         return TargetValidation.Invalid(File.Exists(path)
-            ? "This is a file, not a folder. Add it under Applications instead."
+            ? "This is a file, not a folder. Add it to an applications or a documents group instead."
             : "There is no folder at this path.");
+    }
+
+    /// <summary>
+    /// A document is any existing file; the system's association decides what opens it.
+    /// </summary>
+    private static TargetValidation ValidateDocument(string? target)
+    {
+        if (!TryReadPath(target, out string path, out string? error))
+        {
+            return TargetValidation.Invalid(error);
+        }
+
+        if (File.Exists(path))
+        {
+            return TargetValidation.Valid(path);
+        }
+
+        return TargetValidation.Invalid(Directory.Exists(path)
+            ? "This is a folder, not a file. Add it to a folders group instead."
+            : "There is no file at this path.");
     }
 
     private static TargetValidation ValidateUrl(string? target)
@@ -147,12 +242,7 @@ public sealed class ShortcutValidator : IShortcutValidator
     /// </summary>
     private static bool TryReadPath(string? target, out string path, [NotNullWhen(false)] out string? error)
     {
-        path = target?.Trim() ?? string.Empty;
-
-        if ((path.Length >= 2) && path.StartsWith('"') && path.EndsWith('"'))
-        {
-            path = path[1..^1].Trim();
-        }
+        path = Unquote(target);
 
         if (path.Length == 0)
         {
@@ -170,5 +260,15 @@ public sealed class ShortcutValidator : IShortcutValidator
         path = Path.GetFullPath(path);
         error = null;
         return true;
+    }
+
+    /// <summary>
+    /// Reads a target as typed: trimmed, and without the quotes a "copy as path" puts around it.
+    /// </summary>
+    private static string Unquote(string? target)
+    {
+        string text = target?.Trim() ?? string.Empty;
+
+        return (text.Length >= 2) && text.StartsWith('"') && text.EndsWith('"') ? text[1..^1].Trim() : text;
     }
 }
