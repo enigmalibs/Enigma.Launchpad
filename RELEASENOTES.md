@@ -1,5 +1,76 @@
 # Release notes
 
+## 1.2.0 — 2026-10-15
+
+A minor release:
+
+- **group columns**: a group takes the full line of a workspace, two thirds or one third of it, and groups whose
+  widths fit together share a line;
+- a group can be **dragged beside another one**, onto its line.
+
+### Group columns
+
+- **A group's menu has a Width submenu**, after *Rename…*: *Full width*, *Two thirds* and *One third*. The current
+  width is checked, and a change is saved.
+- **Groups are laid out in lines of three columns, in their order.** A group that does not fit in what is left of a
+  line starts the next one:
+  - three ⅓ groups, a ⅔ and a ⅓, or a ⅓ and a ⅔ share a line;
+  - a full-width group is alone on its line.
+- **Cards on a shared line** sit at its top, each at its own height, so a folded group stays a header.
+- **In a narrow window** — when a third of the line cannot hold a tile — every group takes the whole line, in order.
+  The widths are kept, and come back when the window is wide enough again.
+- **New groups take the full line**, as do all the groups you had: a workspace looks as it did until you change a
+  width.
+
+### Drag and drop
+
+- **Drop a group beside another one.** Over a card narrower than the line, the group lands on the side of the card
+  the pointer is over; over the empty end of a line, after its last card. Over a card that takes the whole line, the
+  upper half is before it and the lower half after it, as before.
+- **The dashed gap is as wide as the dragged group**: beside a card when it fits on that line, on a line of its own
+  otherwise. The cards after it make room, and the gap holds still while they move.
+- **The copy of a dragged group is as wide as its card** and follows the pointer both ways, inside the list. A
+  full-width group's copy still moves up and down only.
+- The rules are unchanged:
+  - groups reorder whatever their kind;
+  - a tile goes only to a group of its own kind;
+  - dropping an item where it already is moves nothing.
+
+### Changes
+
+- **Move earlier and Move later.** In a group's menu, *Move up* and *Move down* are now *Move earlier* and *Move
+  later*, with left and right arrows, as on tiles: in columns, the next group may sit beside a group rather than
+  below it.
+- **Narrow cards.** A long group name is trimmed with an ellipsis, with its count right after it. The sentence of an
+  empty group wraps.
+- **Export files carry the widths** that are not full: `twoThirds`, `oneThird`.
+  - An import gives a group it adds its width; a group merged into one you have keeps yours.
+  - A width this version does not know is read as the full width, and nothing is skipped for it.
+
+### Upgrading from 1.1
+
+- **Nothing is converted.** `launchpad.json` stays at format version 3:
+  - each group gains a `width`;
+  - a group without one, as 1.1 writes them all, takes the full line;
+  - no copy of the file is made.
+- **`settings.json` is unchanged.**
+- **Export files stay at format version 2.** 1.1's exports import into 1.2 at full width. 1.2's import into 1.1,
+  which ignores the widths.
+- **Going back to 1.1:**
+  - 1.1 opens a file 1.2 wrote, and shows every group at full width;
+  - its next save writes the groups without their widths, so they are gone if you come back to 1.2.
+
+### Dependencies
+
+- None moved: only the Avalonia set is outdated.
+- The Avalonia set is still held back at **12.1.1** with Enigma.Avalonia.Desktop 1.2.0, which is still its latest.
+  12.1.4 is out, but the set moves as a whole.
+
+### Version
+
+- **1.2.0** is a minor release under Semantic Versioning. It adds group columns and dragging a group beside another
+  one. The file format is unchanged: a 1.1 file opens as it was, and 1.1 still opens a 1.2 file.
+
 ## 1.1.0 — 2026-10-14
 
 A minor release:
