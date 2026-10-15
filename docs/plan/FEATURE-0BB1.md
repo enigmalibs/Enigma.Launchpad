@@ -1,6 +1,6 @@
 # FEATURE-0BB1 — Group columns
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-0bb1-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-15-group-columns
@@ -60,7 +60,7 @@ beside another one on the same line.
 
 ## PHASE01 — Group width in model & files
 
-**Status:** TODO
+**Status:** DONE
 **Branch:** `feature/feature-0bb1-phase01-group-width-model`
 
 ### Steps
