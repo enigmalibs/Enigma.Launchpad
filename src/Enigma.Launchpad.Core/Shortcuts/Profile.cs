@@ -171,8 +171,8 @@ public sealed record Profile(Guid Id, string Name, IReadOnlyList<Workspace> Work
     /// <para>
     /// A workspace whose title matches one of this profile's, ignoring case, adds its groups to it; any other
     /// workspace is added at the end, with its description and icon. Within a workspace, a group whose name and kind
-    /// match one already there adds its shortcuts at that group's end; any other group is added, unfolded, at the
-    /// end. A shortcut identical to one already in the group it would join — same name and target, ignoring case,
+    /// match one already there adds its shortcuts at that group's end, the group keeping its width; any other group is
+    /// added, unfolded and with its width, at the end. A shortcut identical to one already in the group it would join — same name and target, ignoring case,
     /// and same arguments — is left out, so importing the same content twice adds nothing the second time.
     /// </para>
     /// <para>Everything added gets a new identity, so no identity is ever shared with the source.</para>
@@ -227,7 +227,7 @@ public sealed record Profile(Guid Id, string Name, IReadOnlyList<Workspace> Work
 
             if (index < 0)
             {
-                merged.Add(new ShortcutGroup(Guid.NewGuid(), group.Name, group.Kind, []));
+                merged.Add(new ShortcutGroup(Guid.NewGuid(), group.Name, group.Kind, [], Width: group.Width));
                 index = merged.Count - 1;
             }
 

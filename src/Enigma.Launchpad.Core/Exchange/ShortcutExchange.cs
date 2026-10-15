@@ -20,8 +20,8 @@ namespace Enigma.Launchpad.Core.Exchange;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The document holds workspaces — titles, descriptions and icons — with their groups — names and kinds — and the
-/// groups' shortcuts — names, targets, arguments, descriptions and icons. It holds no identities and no fold state: it
+/// The document holds workspaces — titles, descriptions and icons — with their groups — names, kinds and widths — and
+/// the groups' shortcuts — names, targets, arguments, descriptions and icons. It holds no identities and no fold state: it
 /// is a way to move shortcuts between profiles and machines, not a copy of <c>launchpad.json</c>, whose format it never
 /// follows. Version 2 is written; version 1 — the three categories, from before workspaces — is still read, into one
 /// <see cref="Workspace.DefaultTitle"/> workspace.
@@ -31,7 +31,8 @@ namespace Enigma.Launchpad.Core.Exchange;
 /// entry the forms would not accept — or a group of a kind this build does not know — is left out and counted, with
 /// everything in it — except that a path need not exist, since the file may come from another machine and the
 /// launcher checks every target when it opens it. An icon that is not a PNG image of an acceptable size, or a
-/// workspace glyph whose name is not a plain identifier, is left out on its own: what carried it is kept.
+/// workspace glyph whose name is not a plain identifier, is left out on its own: what carried it is kept. A group
+/// width this build does not know reads as the full width.
 /// </para>
 /// </remarks>
 public sealed class ShortcutExchange : IShortcutExchange
@@ -139,6 +140,13 @@ public sealed class ShortcutExchange : IShortcutExchange
     /// <param name="kind">The kind.</param>
     /// <returns>Its camelCase name, as in <c>launchpad.json</c>.</returns>
     internal static string KindName(ShortcutKind kind) => JsonNamingPolicy.CamelCase.ConvertName(kind.ToString());
+
+    /// <summary>
+    /// The name a group width is written under.
+    /// </summary>
+    /// <param name="width">The width.</param>
+    /// <returns>Its camelCase name, as in <c>launchpad.json</c>.</returns>
+    internal static string WidthName(GroupWidth width) => JsonNamingPolicy.CamelCase.ConvertName(width.ToString());
 
     /// <summary>
     /// Reads an export document, refusing anything that is not a version 1 or 2 export and leaving out the entries
@@ -251,7 +259,8 @@ public sealed class ShortcutExchange : IShortcutExchange
                         string.IsNullOrWhiteSpace(shortcut.Arguments) ? null : shortcut.Arguments,
                         string.IsNullOrWhiteSpace(shortcut.Description) ? null : shortcut.Description,
                         shortcut.Icon is { } icon ? new ExportIcon(icon.Png, icon.IsCustom) : null))
-                    .ToArray()))
+                    .ToArray(),
+                group.Width == GroupWidth.Full ? null : WidthName(group.Width)))
             .ToArray();
 
     /// <summary>
@@ -286,6 +295,22 @@ public sealed class ShortcutExchange : IShortcutExchange
 
         kind = default;
         return false;
+    }
+
+    /// <summary>
+    /// The width a group's <c>width</c> field names, ignoring case; the full width when it names none.
+    /// </summary>
+    private static GroupWidth ReadWidth(string? text)
+    {
+        foreach (GroupWidth candidate in Enum.GetValues<GroupWidth>())
+        {
+            if (string.Equals(text?.Trim(), WidthName(candidate), StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+
+        return GroupWidth.Full;
     }
 
     /// <summary>
@@ -429,7 +454,7 @@ public sealed class ShortcutExchange : IShortcutExchange
             }
         }
 
-        return new ShortcutGroup(Guid.NewGuid(), group.Name.Trim(), kind, kept);
+        return new ShortcutGroup(Guid.NewGuid(), group.Name.Trim(), kind, kept, Width: ReadWidth(group.Width));
     }
 
     private Shortcut? Read(ShortcutKind kind, ExportShortcut shortcut)
@@ -489,7 +514,12 @@ public sealed class ShortcutExchange : IShortcutExchange
     /// <param name="Name">The group's name.</param>
     /// <param name="Kind">Version 2: its kind's camelCase name. Version 1 groups have none: their category says.</param>
     /// <param name="Shortcuts">Its shortcuts, in display order; none when absent.</param>
-    private sealed record ExportGroup(string Name, string? Kind = null, IReadOnlyList<ExportShortcut>? Shortcuts = null);
+    /// <param name="Width">Version 2: its width's camelCase name, when it is not the full width.</param>
+    private sealed record ExportGroup(
+        string Name,
+        string? Kind = null,
+        IReadOnlyList<ExportShortcut>? Shortcuts = null,
+        string? Width = null);
 
     /// <summary>
     /// One exported shortcut.

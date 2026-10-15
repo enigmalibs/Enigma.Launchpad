@@ -36,6 +36,7 @@ public sealed class GroupViewModel : ObservableObject
         Id = group.Id;
         Kind = group.Kind;
         Name = group.Name;
+        Width = group.Width;
         IsExpanded = !group.IsCollapsed;
         Shortcuts = new ObservableCollection<ShortcutViewModel>(group.Shortcuts.Select(shortcut => new ShortcutViewModel(page, this, shortcut)));
         Shortcuts.CollectionChanged += OnShortcutsChanged;
@@ -80,6 +81,11 @@ public sealed class GroupViewModel : ObservableObject
     /// Gets or sets the group's name.
     /// </summary>
     public string Name { get; set => SetProperty(ref field, value); } = string.Empty;
+
+    /// <summary>
+    /// Gets how much of a line of the workspace the group takes.
+    /// </summary>
+    public GroupWidth Width { get; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the group shows its shortcuts. A change is saved.
@@ -182,7 +188,7 @@ public sealed class GroupViewModel : ObservableObject
     /// Gets the group as it should be stored.
     /// </summary>
     /// <returns>The group.</returns>
-    public ShortcutGroup ToModel() => new(Id, Name, Kind, Shortcuts.Select(shortcut => shortcut.Model).ToArray(), !IsExpanded);
+    public ShortcutGroup ToModel() => new(Id, Name, Kind, Shortcuts.Select(shortcut => shortcut.Model).ToArray(), !IsExpanded, Width);
 
     /// <summary>
     /// Re-evaluates the commands that depend on the group's position on the page.

@@ -82,9 +82,9 @@ cannot be reached keeps the icon it had. The folder is only a cache: deleting it
 ### Export files
 
 An export is a small, readable JSON document of its own — not a copy of `launchpad.json` — holding workspaces
-(titles, descriptions and glyphs), their groups (names and kinds: `application`, `directory`, `url`, `document`) and the
-groups' shortcuts (names, targets, arguments, descriptions and icons), but no internal identities and no folded
-state:
+(titles, descriptions and glyphs), their groups (names; kinds: `application`, `directory`, `url`, `document`; and
+widths other than the full one: `twoThirds`, `oneThird`) and the groups' shortcuts (names, targets, arguments,
+descriptions and icons), but no internal identities and no folded state:
 
 ```json
 {
@@ -106,7 +106,8 @@ refused with the reason. Inside one, an entry the forms would refuse — a blank
 address other than http or https, a description over 200 characters, a group of a kind this version does not know —
 is left out with everything in it, and the import says how many entries were. Paths need not exist on the machine
 importing them, and an application's command need not be on its `PATH`.
-An icon is a PNG image in base64; one that is not, or is over 256 KB, is dropped and its shortcut kept.
+An icon is a PNG image in base64; one that is not, or is over 256 KB, is dropped and its shortcut kept. A group width
+this version does not know is read as the full width.
 
 ## Requirements
 

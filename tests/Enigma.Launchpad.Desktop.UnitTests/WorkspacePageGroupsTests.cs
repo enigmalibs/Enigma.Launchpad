@@ -182,6 +182,28 @@ public sealed class WorkspacePageGroupsTests
     }
 
     [Fact]
+    public async Task Saving_KeepsEachGroupsWidth()
+    {
+        LaunchpadData data = PageHarness.Data().With(
+            ShortcutKind.Application,
+            [
+                new ShortcutGroup(System.Guid.NewGuid(), "A", ShortcutKind.Application, [], Width: GroupWidth.OneThird),
+                new ShortcutGroup(System.Guid.NewGuid(), "B", ShortcutKind.Application, [], Width: GroupWidth.TwoThirds),
+                new ShortcutGroup(System.Guid.NewGuid(), "C", ShortcutKind.Application, []),
+            ]);
+        PageHarness harness = new(data);
+        WorkspacePageViewModel page = await harness.LoadAsync();
+
+        Assert.Equal([GroupWidth.OneThird, GroupWidth.TwoThirds, GroupWidth.Full], page.Groups.Select(group => group.Width));
+
+        page.MoveGroup(page.Groups[2], -2);
+
+        ShortcutGroup[] saved = await harness.SavedGroupsAsync();
+        Assert.Equal(["C", "A", "B"], saved.Select(group => group.Name));
+        Assert.Equal([GroupWidth.Full, GroupWidth.OneThird, GroupWidth.TwoThirds], saved.Select(group => group.Width));
+    }
+
+    [Fact]
     public async Task MoveUpAndDown_AreOnlyAvailableWhereTheGroupCanGo()
     {
         PageHarness harness = new(PageHarness.Data("A", "B", "C"));

@@ -135,8 +135,8 @@ public sealed class ProfileTests
                     Guid.NewGuid(),
                     " DEV ",
                     [
-                        new ShortcutGroup(Guid.NewGuid(), "DEV TOOLS", ShortcutKind.Application, [new Shortcut(Guid.NewGuid(), "Shell", @"C:\Tools\sh.exe")]),
-                        Group("Office", ShortcutKind.Application),
+                        new ShortcutGroup(Guid.NewGuid(), "DEV TOOLS", ShortcutKind.Application, [new Shortcut(Guid.NewGuid(), "Shell", @"C:\Tools\sh.exe")], Width: GroupWidth.OneThird),
+                        Group("Office", ShortcutKind.Application) with { Width = GroupWidth.TwoThirds },
                     ],
                     "Theirs",
                     "Globe"),
@@ -151,6 +151,7 @@ public sealed class ProfileTests
         Assert.Equal(["Dev tools", "Games", "Office"], merged.Groups.Select(group => group.Name));
         Assert.Equal(tools.Id, merged.Groups[0].Id);
         Assert.True(merged.Groups[0].IsCollapsed);
+        Assert.Equal([GroupWidth.Full, GroupWidth.Full, GroupWidth.TwoThirds], merged.Groups.Select(group => group.Width));
         Assert.Equal(["Code", "Shell"], merged.Groups[0].Shortcuts.Select(shortcut => shortcut.Name));
         Assert.Same(code, merged.Groups[0].Shortcuts[0]);
         Assert.Equal(("Words", "PencilSimple"), (result.Workspaces[1].Description, result.Workspaces[1].Icon));
@@ -208,7 +209,7 @@ public sealed class ProfileTests
     private static string[] Describe(Profile profile)
         => profile.Workspaces
             .SelectMany(workspace => workspace.Groups
-                .Select(group => $"{workspace.Title} ({workspace.Description}, {workspace.Icon}) / {group.Kind} {group.Name}: "
+                .Select(group => $"{workspace.Title} ({workspace.Description}, {workspace.Icon}) / {group.Kind} {group.Name} [{group.Width}]: "
                     + string.Join(", ", group.Shortcuts.Select(shortcut => $"{shortcut.Name} → {shortcut.Target} {shortcut.Arguments} ({shortcut.Description}) {shortcut.Icon?.Png.Length}")))
                 .DefaultIfEmpty($"{workspace.Title} ({workspace.Description}, {workspace.Icon})"))
             .ToArray();
@@ -234,8 +235,9 @@ public sealed class ProfileTests
                             "Dev tools",
                             ShortcutKind.Application,
                             [new Shortcut(Guid.NewGuid(), "Code", @"C:\Tools\Code.exe", "-n", "The editor", ShortcutIcon.FromBytes(SamplePng.Bytes, isCustom: true)), new Shortcut(Guid.NewGuid(), "Shell", @"C:\Tools\sh.exe")],
-                            IsCollapsed: true),
-                        new ShortcutGroup(Guid.NewGuid(), "Work", ShortcutKind.Directory, []),
+                            IsCollapsed: true,
+                            Width: GroupWidth.OneThird),
+                        new ShortcutGroup(Guid.NewGuid(), "Work", ShortcutKind.Directory, [], Width: GroupWidth.TwoThirds),
                     ],
                     "Coding",
                     "Code"),
