@@ -164,9 +164,38 @@ public sealed class GroupViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsDropBefore));
                 OnPropertyChanged(nameof(IsDropAfter));
                 OnPropertyChanged(nameof(IsDropInside));
+                OnPropertyChanged(nameof(GapBefore));
+                OnPropertyChanged(nameof(GapAfter));
             }
         }
     }
+
+    /// <summary>
+    /// Gets or sets how many columns the group dragged next to this one spans: the width of the gap that opens beside
+    /// this group while it would land there.
+    /// </summary>
+    public int DropColumns
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(GapBefore));
+                OnPropertyChanged(nameof(GapAfter));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets how many columns the gap open in front of the group spans; 0 when there is none.
+    /// </summary>
+    public int GapBefore => IsDropBefore ? DropColumns : 0;
+
+    /// <summary>
+    /// Gets how many columns the gap open behind the group spans; 0 when there is none.
+    /// </summary>
+    public int GapAfter => IsDropAfter ? DropColumns : 0;
 
     /// <summary>
     /// Gets a value indicating whether a drop would land in front of the group.

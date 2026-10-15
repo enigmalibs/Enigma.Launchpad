@@ -35,29 +35,6 @@ public sealed class DropPlacementTests
     }
 
     [Fact]
-    public void Stack_LaysTheRowsOneAfterTheOther()
-    {
-        Assert.Equal(new (double Top, double Height)[] { (10, 30), (40, 50), (90, 20) }, DropPlacement.Stack(10, [30, 50, 20]));
-        Assert.Empty(DropPlacement.Stack(0, []));
-    }
-
-    // Three rows of 40 from 0: their middles are at 20, 60 and 100.
-    [Theory]
-    [InlineData(-5, 0)]
-    [InlineData(19.9, 0)]
-    [InlineData(20, 1)]
-    [InlineData(59, 1)]
-    [InlineData(60, 2)]
-    [InlineData(100, 3)]
-    [InlineData(500, 3)]
-    public void SlotFor_IsTheGapBeforeTheFirstRowWhoseMiddleIsBelowThePointer(double y, int expected)
-        => Assert.Equal(expected, DropPlacement.SlotFor(y, DropPlacement.Stack(0, [40, 40, 40])));
-
-    [Fact]
-    public void SlotFor_WithoutRows_IsTheOnlyGap()
-        => Assert.Equal(0, DropPlacement.SlotFor(10, []));
-
-    [Fact]
     public void Flow_StartsANewLineWithTheItemThatDoesNotFit()
         => Assert.Equal(
             [new Rect(0, 0, 256, 70), new Rect(256, 0, 256, 70), new Rect(0, 70, 256, 70), new Rect(256, 70, 256, 70), new Rect(0, 140, 256, 70)],
@@ -103,6 +80,42 @@ public sealed class DropPlacementTests
     [Fact]
     public void FlowSlot_RefusesNoItems()
         => Assert.Throws<ArgumentOutOfRangeException>(() => DropPlacement.FlowSlot(default, []));
+
+    // Cells in lines 924 wide: A and B, a third each, at 0 and 312; C alone over the whole line; D alone in a third.
+    private static readonly Rect[] Cells =
+    [
+        new Rect(0, 0, 300, 62),
+        new Rect(312, 0, 300, 62),
+        new Rect(0, 62, 924, 62),
+        new Rect(0, 124, 300, 62),
+    ];
+
+    [Theory]
+    [InlineData(10, 10, 0, DropPosition.Before)]   // A's left half
+    [InlineData(200, 10, 1, DropPosition.Before)]  // A's right half: the gap between A and B
+    [InlineData(700, 10, 1, DropPosition.After)]   // the line's empty end
+    [InlineData(10, -50, 0, DropPosition.Before)]  // above every line
+    [InlineData(900, 70, 2, DropPosition.Before)]  // C's upper half, whatever the side
+    [InlineData(10, 100, 2, DropPosition.After)]   // C's lower half
+    [InlineData(10, 130, 3, DropPosition.Before)]  // D, alone but a third: its sides
+    [InlineData(500, 130, 3, DropPosition.After)]
+    [InlineData(500, 900, 3, DropPosition.After)]  // below every line
+    public void ColumnSlot_GoesAcrossALine_ButAboveOrBelowACardTakingTheWholeLine(double x, double y, int index, DropPosition position)
+        => Assert.Equal((index, position), DropPlacement.ColumnSlot(new Point(x, y), Cells, 924));
+
+    [Fact]
+    public void ColumnSlot_InOneColumn_IsAboveOrBelowEveryCard()
+    {
+        Rect[] column = [new Rect(0, 0, 500, 60), new Rect(0, 60, 500, 60)];
+
+        Assert.Equal((0, DropPosition.Before), DropPlacement.ColumnSlot(new Point(490, 10), column, 500));
+        Assert.Equal((0, DropPosition.After), DropPlacement.ColumnSlot(new Point(10, 50), column, 500));
+        Assert.Equal((1, DropPosition.Before), DropPlacement.ColumnSlot(new Point(10, 61), column, 500));
+    }
+
+    [Fact]
+    public void ColumnSlot_RefusesNoCells()
+        => Assert.Throws<ArgumentOutOfRangeException>(() => DropPlacement.ColumnSlot(default, [], 924));
 
     // A copy 60 high, held 20 below its top, on a layer 300 high.
     [Theory]
