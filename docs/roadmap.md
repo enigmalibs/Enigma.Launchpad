@@ -58,3 +58,4 @@
 | - PHASE01    | Group width in model & files        | DONE   | (in FEATURE-0BB1.md)      |
 | - PHASE02    | Columns layout & width menu         | DONE   | (in FEATURE-0BB1.md)      |
 | - PHASE03    | Drag groups into columns            | DONE   | (in FEATURE-0BB1.md)      |
+| FEATURE-6D49 | Release 1.2.0                       | TODO   | docs/plan/FEATURE-6D49.md |
