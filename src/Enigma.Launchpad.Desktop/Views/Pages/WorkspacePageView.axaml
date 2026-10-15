@@ -3,6 +3,7 @@
              xmlns:ei="https://github.com/josueclement/Enigma.Icons"
              xmlns:pages="using:Enigma.Launchpad.Desktop.ViewModels.Pages"
              xmlns:core="using:Enigma.Launchpad.Core.Shortcuts"
+             xmlns:controls="using:Enigma.Launchpad.Desktop.Controls"
              x:Class="Enigma.Launchpad.Desktop.Views.Pages.WorkspacePageView"
              x:DataType="pages:WorkspacePageViewModel"
              DragDrop.AllowDrop="True">
@@ -221,11 +222,22 @@
         <ItemsControl x:Name="GroupList"
                       ItemsSource="{Binding Groups}"
                       Margin="32,4,32,32">
+          <!-- Lines of three columns, in order: groups whose widths fit together share a line. Below a third wide
+               enough for a tile's card, every group takes a whole line. -->
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <StackPanel Spacing="12" />
+              <controls:ColumnFlowPanel Columns="3"
+                                        ColumnSpacing="12"
+                                        RowSpacing="12"
+                                        MinColumnWidth="276" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
+
+          <ItemsControl.ItemContainerTheme>
+            <ControlTheme TargetType="ContentPresenter" x:DataType="pages:GroupViewModel">
+              <Setter Property="controls:ColumnFlowPanel.Span" Value="{Binding Columns}" />
+            </ControlTheme>
+          </ItemsControl.ItemContainerTheme>
 
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="pages:GroupViewModel">
@@ -255,20 +267,23 @@
                                   IsChecked="{Binding IsExpanded, Mode=TwoWay}"
                                   ToolTip.Tip="Show or hide the group's shortcuts"
                                   AutomationProperties.Name="{Binding Name}">
-                      <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Panel Width="16" VerticalAlignment="Center">
+                      <!-- Left-aligned, with the name in a star column: the name is trimmed when the card is narrow,
+                           and the count stays right after it. -->
+                      <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" HorizontalAlignment="Left">
+                        <Panel Grid.Column="0" Width="16" VerticalAlignment="Center">
                           <ei:Icon Kind="CaretDown" Classes="row" IsVisible="{Binding IsExpanded}" />
                           <ei:Icon Kind="CaretRight" Classes="row" IsVisible="{Binding !IsExpanded}" />
                         </Panel>
-                        <ei:Icon Kind="{Binding KindGlyph}"
+                        <ei:Icon Grid.Column="1"
+                                 Kind="{Binding KindGlyph}"
                                  Classes="row groupKind"
                                  VerticalAlignment="Center"
                                  ToolTip.Tip="{Binding KindTitle}" />
-                        <TextBlock Text="{Binding Name}" Classes="groupName" VerticalAlignment="Center" />
-                        <Border Classes="countBadge" VerticalAlignment="Center">
+                        <TextBlock Grid.Column="2" Text="{Binding Name}" Classes="groupName" VerticalAlignment="Center" />
+                        <Border Grid.Column="3" Classes="countBadge" VerticalAlignment="Center">
                           <TextBlock Text="{Binding Count}" />
                         </Border>
-                      </StackPanel>
+                      </Grid>
                     </ToggleButton>
 
                     <Button Grid.Column="2"
@@ -293,14 +308,36 @@
                               <ei:Icon Kind="PencilSimple" Classes="menu" />
                             </MenuItem.Icon>
                           </MenuItem>
-                          <MenuItem Header="Move up" Command="{Binding MoveUpCommand}">
+                          <!-- How much of a line the group takes: one choice of three, the current one checked. -->
+                          <MenuItem Header="Width">
                             <MenuItem.Icon>
-                              <ei:Icon Kind="ArrowUp" Classes="menu" />
+                              <ei:Icon Kind="Columns" Classes="menu" />
+                            </MenuItem.Icon>
+                            <MenuItem Header="Full width"
+                                      ToggleType="Radio"
+                                      IsChecked="{Binding IsFullWidth, Mode=OneWay}"
+                                      Command="{Binding SetWidthCommand}"
+                                      CommandParameter="{x:Static core:GroupWidth.Full}" />
+                            <MenuItem Header="Two thirds"
+                                      ToggleType="Radio"
+                                      IsChecked="{Binding IsTwoThirds, Mode=OneWay}"
+                                      Command="{Binding SetWidthCommand}"
+                                      CommandParameter="{x:Static core:GroupWidth.TwoThirds}" />
+                            <MenuItem Header="One third"
+                                      ToggleType="Radio"
+                                      IsChecked="{Binding IsOneThird, Mode=OneWay}"
+                                      Command="{Binding SetWidthCommand}"
+                                      CommandParameter="{x:Static core:GroupWidth.OneThird}" />
+                          </MenuItem>
+                          <!-- In columns, the next group in order may be beside this one rather than below it. -->
+                          <MenuItem Header="Move earlier" Command="{Binding MoveUpCommand}">
+                            <MenuItem.Icon>
+                              <ei:Icon Kind="ArrowLeft" Classes="menu" />
                             </MenuItem.Icon>
                           </MenuItem>
-                          <MenuItem Header="Move down" Command="{Binding MoveDownCommand}">
+                          <MenuItem Header="Move later" Command="{Binding MoveDownCommand}">
                             <MenuItem.Icon>
-                              <ei:Icon Kind="ArrowDown" Classes="menu" />
+                              <ei:Icon Kind="ArrowRight" Classes="menu" />
                             </MenuItem.Icon>
                           </MenuItem>
                           <MenuItem Header="Move to workspace…" Command="{Binding MoveToWorkspaceCommand}">
@@ -363,16 +400,16 @@
           <ContentControl.ContentTemplate>
             <DataTemplate x:DataType="pages:GroupViewModel">
               <Border Classes="groupCard">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <Border Classes="grip">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" HorizontalAlignment="Left">
+                  <Border Grid.Column="0" Classes="grip">
                     <ei:Icon Kind="DotsSixVertical" Classes="row" />
                   </Border>
-                  <ei:Icon Kind="{Binding KindGlyph}" Classes="row groupKind" VerticalAlignment="Center" />
-                  <TextBlock Text="{Binding Name}" Classes="groupName" VerticalAlignment="Center" />
-                  <Border Classes="countBadge" VerticalAlignment="Center">
+                  <ei:Icon Grid.Column="1" Kind="{Binding KindGlyph}" Classes="row groupKind" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="{Binding Name}" Classes="groupName" VerticalAlignment="Center" />
+                  <Border Grid.Column="3" Classes="countBadge" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Count}" />
                   </Border>
-                </StackPanel>
+                </Grid>
               </Border>
             </DataTemplate>
           </ContentControl.ContentTemplate>

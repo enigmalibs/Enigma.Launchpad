@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Enigma.Launchpad.Core.Shortcuts;
@@ -201,6 +202,43 @@ public sealed class WorkspacePageGroupsTests
         ShortcutGroup[] saved = await harness.SavedGroupsAsync();
         Assert.Equal(["C", "A", "B"], saved.Select(group => group.Name));
         Assert.Equal([GroupWidth.Full, GroupWidth.OneThird, GroupWidth.TwoThirds], saved.Select(group => group.Width));
+    }
+
+    [Fact]
+    public async Task SetWidth_ChangesTheGroupsWidth_AndSaves()
+    {
+        PageHarness harness = new(PageHarness.Data("A", "B"));
+        WorkspacePageViewModel page = await harness.LoadAsync();
+        GroupViewModel a = page.Groups[0];
+
+        Assert.Equal((GroupWidth.Full, 3, true, false, false), (a.Width, a.Columns, a.IsFullWidth, a.IsTwoThirds, a.IsOneThird));
+
+        a.SetWidthCommand.Execute(GroupWidth.OneThird);
+
+        Assert.Equal((GroupWidth.OneThird, 1, false, false, true), (a.Width, a.Columns, a.IsFullWidth, a.IsTwoThirds, a.IsOneThird));
+        Assert.Equal([GroupWidth.OneThird, GroupWidth.Full], (await harness.SavedGroupsAsync()).Select(group => group.Width));
+
+        a.SetWidthCommand.Execute(GroupWidth.TwoThirds);
+
+        Assert.Equal((GroupWidth.TwoThirds, 2, false, true, false), (a.Width, a.Columns, a.IsFullWidth, a.IsTwoThirds, a.IsOneThird));
+        Assert.Equal([GroupWidth.TwoThirds, GroupWidth.Full], (await harness.SavedGroupsAsync()).Select(group => group.Width));
+    }
+
+    [Fact]
+    public async Task SetWidth_ToTheWidthItAlreadyHas_SavesNothing()
+    {
+        PageHarness harness = new(PageHarness.Data("A"));
+        WorkspacePageViewModel page = await harness.LoadAsync();
+        List<string?> changes = [];
+        page.Groups[0].PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+
+        page.Groups[0].SetWidthCommand.Execute(GroupWidth.Full);
+        page.Groups[0].SetWidthCommand.Execute((GroupWidth)42);
+        await harness.Session.FlushAsync();
+
+        Assert.Equal(GroupWidth.Full, page.Groups[0].Width);
+        Assert.Empty(changes);
+        Assert.Empty(harness.Store.Saved);
     }
 
     [Fact]
