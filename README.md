@@ -4,9 +4,9 @@ A cross-platform desktop launcher for your **applications**, **folders**, **link
 [Avalonia 12](https://avaloniaui.net/), [Enigma.Avalonia.Desktop](https://www.nuget.org/packages/Enigma.Avalonia.Desktop)
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
-> **What's new in 1.1** — workspaces in place of the three category pages, documents as a fourth kind of shortcut,
-> commands found on the `PATH` as applications, and drag and drop that shows where an item will land. Your shortcuts
-> move into a workspace on their own. See [RELEASENOTES.md](RELEASENOTES.md).
+> **What's new in 1.2** — group columns: a group takes the full line, two thirds or one third of it, groups whose
+> widths fit share a line, and a group can be dragged beside another one. Your groups keep the full line until you
+> change them. See [RELEASENOTES.md](RELEASENOTES.md).
 
 **Workspaces**, the main page of the navigation rail and where the launchpad opens, are a profile's own collections
 of shortcuts: each has a title, a line saying what it is for and a glyph, and holds groups of applications, folders,
@@ -17,8 +17,10 @@ had before workspaces are in one called *Shortcuts*.
 Click a card, or press Enter on it, to open its workspace in place of the list; the arrow at the top left (or
 Alt+Left) goes back. In a workspace, your shortcuts are arranged in groups you create, rename, fold, reorder and
 delete. Every group holds one kind of shortcut, chosen when it is created from **New group**: applications, folders,
-links or documents — any file, opened with the application your system opens it with. A group's menu can also move
-it, with its shortcuts, to another workspace — unless that one already has a group of the same name and kind. Add a
+links or documents — any file, opened with the application your system opens it with. A group's menu sets its
+**Width** — the full line, two thirds or one third — and groups whose widths fit together share a line, in order; in
+a window too narrow for a tile in a third of the line, every group takes the whole line. The menu can also move a
+group, with its shortcuts, to another workspace — unless that one already has a group of the same name and kind. Add a
 shortcut with a group's **+** (Browse… picks a program, a folder or a document); click its tile, or press Enter, to
 open it; right-click it to edit it, try to get its icon again, copy its target, show it in its folder, move it or
 delete it. Hover a tile, or give it the keyboard focus, for its own buttons: *Run with arguments…* on an application,
@@ -82,9 +84,9 @@ cannot be reached keeps the icon it had. The folder is only a cache: deleting it
 ### Export files
 
 An export is a small, readable JSON document of its own — not a copy of `launchpad.json` — holding workspaces
-(titles, descriptions and glyphs), their groups (names and kinds: `application`, `directory`, `url`, `document`) and the
-groups' shortcuts (names, targets, arguments, descriptions and icons), but no internal identities and no folded
-state:
+(titles, descriptions and glyphs), their groups (names; kinds: `application`, `directory`, `url`, `document`; and
+widths other than the full one: `twoThirds`, `oneThird`) and the groups' shortcuts (names, targets, arguments,
+descriptions and icons), but no internal identities and no folded state:
 
 ```json
 {
@@ -106,7 +108,8 @@ refused with the reason. Inside one, an entry the forms would refuse — a blank
 address other than http or https, a description over 200 characters, a group of a kind this version does not know —
 is left out with everything in it, and the import says how many entries were. Paths need not exist on the machine
 importing them, and an application's command need not be on its `PATH`.
-An icon is a PNG image in base64; one that is not, or is over 256 KB, is dropped and its shortcut kept.
+An icon is a PNG image in base64; one that is not, or is over 256 KB, is dropped and its shortcut kept. A group width
+this version does not know is read as the full width.
 
 ## Requirements
 

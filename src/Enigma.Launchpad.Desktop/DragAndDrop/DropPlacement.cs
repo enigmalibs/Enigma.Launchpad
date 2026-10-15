@@ -46,6 +46,11 @@ public static class DropPlacement
     private const double MachineEpsilon = 2.220446049250313E-16;
 
     /// <summary>
+    /// How far apart two layout positions may be and still be the same: well under a pixel.
+    /// </summary>
+    private const double LayoutRounding = 0.5;
+
+    /// <summary>
     /// Where an item moved within one list ends up, as the index to pass to
     /// <see cref="System.Collections.ObjectModel.ObservableCollection{T}.Move"/>.
     /// </summary>
@@ -89,54 +94,6 @@ public static class DropPlacement
         => Math.Clamp(pointer - grab, 0, Math.Max(0, layer - size));
 
     /// <summary>
-    /// Lays rows out one after the other from a top, as they stand with no gap opened among them.
-    /// </summary>
-    /// <param name="top">Where the first row starts.</param>
-    /// <param name="heights">Each row's height without an open gap: its card and the space below it.</param>
-    /// <returns>Each row's top and height, in list order.</returns>
-    /// <remarks>
-    /// The slot is found in this geometry rather than in the rows as drawn: the dashed placeholder that marks the slot
-    /// pushes the rows below it down, and reading their new places would move the slot, which would move the
-    /// placeholder, and so on.
-    /// </remarks>
-    public static IReadOnlyList<(double Top, double Height)> Stack(double top, IReadOnlyList<double> heights)
-    {
-        ArgumentNullException.ThrowIfNull(heights);
-
-        List<(double Top, double Height)> rows = new(heights.Count);
-
-        foreach (double height in heights)
-        {
-            rows.Add((top, height));
-            top += height;
-        }
-
-        return rows;
-    }
-
-    /// <summary>
-    /// The gap a pointer is over among rows laid out top to bottom: the gap before the first row whose middle is below
-    /// it.
-    /// </summary>
-    /// <param name="y">The pointer's position, in the rows' coordinates.</param>
-    /// <param name="rows">The rows, in order (see <see cref="Stack"/>).</param>
-    /// <returns>The gap's index: 0 before the first row, the row count after the last one.</returns>
-    public static int SlotFor(double y, IReadOnlyList<(double Top, double Height)> rows)
-    {
-        ArgumentNullException.ThrowIfNull(rows);
-
-        for (int index = 0; index < rows.Count; index++)
-        {
-            if (y < rows[index].Top + (rows[index].Height / 2))
-            {
-                return index;
-            }
-        }
-
-        return rows.Count;
-    }
-
-    /// <summary>
     /// Where a horizontal wrap panel puts items of these sizes in a width, as they stand with no gap opened among them:
     /// left to right, an item that does not fit after another starting a new line.
     /// </summary>
@@ -144,9 +101,11 @@ public static class DropPlacement
     /// <param name="sizes">Each item's size, margins included, in order.</param>
     /// <returns>Each item's rectangle in the panel, in order; its height is its line's.</returns>
     /// <remarks>
-    /// The same reason as <see cref="Stack"/>, and a stronger one: a dashed tile opened after the last tile of a line
-    /// takes that tile to the next line with it, away from the pointer that put it there. The line break follows
-    /// <see cref="Avalonia.Controls.WrapPanel"/>'s own test.
+    /// The slot is found in this geometry rather than in the items as drawn: the dashed placeholder that marks the slot
+    /// moves the items after it, and reading their new places would move the slot, which would move the placeholder,
+    /// and so on. Worse, a dashed tile opened after the last tile of a line takes that tile to the next line with it,
+    /// away from the pointer that put it there. The line break follows <see cref="Avalonia.Controls.WrapPanel"/>'s own
+    /// test.
     /// </remarks>
     public static IReadOnlyList<Rect> Flow(double width, IReadOnlyList<Size> sizes)
     {
@@ -210,6 +169,45 @@ public static class DropPlacement
         ArgumentNullException.ThrowIfNull(items);
         ArgumentOutOfRangeException.ThrowIfZero(items.Count);
 
+        (int lineStart, int lineEnd) = LineAt(point.Y, items);
+        return SlotAcross(point.X, items, lineStart, lineEnd);
+    }
+
+    /// <summary>
+    /// The gap a pointer is over among cards laid out in lines of columns: on the line under it — the first line when it
+    /// is above them all, the last one when below — the gap across the line as <see cref="FlowSlot"/> finds it; but for
+    /// a card alone on its line and as wide as the line, before it in its upper half and after it in its lower half.
+    /// </summary>
+    /// <param name="point">The pointer's position, in the panel's coordinates.</param>
+    /// <param name="cells">Each card's cell, in order: its columns over its line's height and the spacing below it (see
+    /// <see cref="Enigma.Launchpad.Desktop.Controls.ColumnFlowPlacement.Cell"/>); at least one.</param>
+    /// <param name="lineWidth">The width of a line.</param>
+    /// <returns>The card next to the gap, and which side of it.</returns>
+    /// <remarks>
+    /// A card spanning the whole line has no side to drop beside — anything dropped next to it goes above or below — so
+    /// its halves are the upper and the lower one, as in a single column of cards.
+    /// </remarks>
+    public static (int Index, DropPosition Position) ColumnSlot(Point point, IReadOnlyList<Rect> cells, double lineWidth)
+    {
+        ArgumentNullException.ThrowIfNull(cells);
+        ArgumentOutOfRangeException.ThrowIfZero(cells.Count);
+
+        (int lineStart, int lineEnd) = LineAt(point.Y, cells);
+
+        if ((lineStart == lineEnd) && (cells[lineStart].Width >= lineWidth - LayoutRounding))
+        {
+            return (lineStart, point.Y < cells[lineStart].Center.Y ? DropPosition.Before : DropPosition.After);
+        }
+
+        return SlotAcross(point.X, cells, lineStart, lineEnd);
+    }
+
+    /// <summary>
+    /// The line under a height among items laid out in lines — items of one line share their top: the first line above
+    /// them all, the last one below.
+    /// </summary>
+    private static (int Start, int End) LineAt(double y, IReadOnlyList<Rect> items)
+    {
         int lineStart = 0;
 
         while (true)
@@ -221,22 +219,28 @@ public static class DropPlacement
                 lineEnd++;
             }
 
-            bool lastLine = lineEnd + 1 == items.Count;
-
-            if (lastLine || (point.Y < items[lineStart].Bottom))
+            if ((lineEnd + 1 == items.Count) || (y < items[lineStart].Bottom))
             {
-                for (int index = lineStart; index <= lineEnd; index++)
-                {
-                    if (point.X < items[index].Center.X)
-                    {
-                        return (index, DropPosition.Before);
-                    }
-                }
-
-                return (lineEnd, DropPosition.After);
+                return (lineStart, lineEnd);
             }
 
             lineStart = lineEnd + 1;
         }
+    }
+
+    /// <summary>
+    /// The gap across one line: before the first item whose middle is right of the pointer, else after the line's last.
+    /// </summary>
+    private static (int Index, DropPosition Position) SlotAcross(double x, IReadOnlyList<Rect> items, int lineStart, int lineEnd)
+    {
+        for (int index = lineStart; index <= lineEnd; index++)
+        {
+            if (x < items[index].Center.X)
+            {
+                return (index, DropPosition.Before);
+            }
+        }
+
+        return (lineEnd, DropPosition.After);
     }
 }

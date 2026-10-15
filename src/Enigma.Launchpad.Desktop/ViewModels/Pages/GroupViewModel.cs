@@ -36,6 +36,7 @@ public sealed class GroupViewModel : ObservableObject
         Id = group.Id;
         Kind = group.Kind;
         Name = group.Name;
+        Width = group.Width;
         IsExpanded = !group.IsCollapsed;
         Shortcuts = new ObservableCollection<ShortcutViewModel>(group.Shortcuts.Select(shortcut => new ShortcutViewModel(page, this, shortcut)));
         Shortcuts.CollectionChanged += OnShortcutsChanged;
@@ -44,6 +45,7 @@ public sealed class GroupViewModel : ObservableObject
 
         RenameCommand = new AsyncRelayCommand(() => _page.RenameGroupAsync(this));
         MoveToWorkspaceCommand = new AsyncRelayCommand(() => _page.MoveGroupToWorkspaceAsync(this));
+        SetWidthCommand = new RelayCommand<GroupWidth>(width => _page.SetGroupWidth(this, width));
         DeleteCommand = new AsyncRelayCommand(() => _page.DeleteGroupAsync(this));
         MoveUpCommand = new RelayCommand(() => _page.MoveGroup(this, -1), () => _page.CanMoveGroup(this, -1));
         MoveDownCommand = new RelayCommand(() => _page.MoveGroup(this, 1), () => _page.CanMoveGroup(this, 1));
@@ -80,6 +82,44 @@ public sealed class GroupViewModel : ObservableObject
     /// Gets or sets the group's name.
     /// </summary>
     public string Name { get; set => SetProperty(ref field, value); } = string.Empty;
+
+    /// <summary>
+    /// Gets how much of a line of the workspace the group takes.
+    /// </summary>
+    public GroupWidth Width
+    {
+        get;
+        internal set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(Columns));
+                OnPropertyChanged(nameof(IsFullWidth));
+                OnPropertyChanged(nameof(IsTwoThirds));
+                OnPropertyChanged(nameof(IsOneThird));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets how many of a line's columns the group spans.
+    /// </summary>
+    public int Columns => Width.Columns;
+
+    /// <summary>
+    /// Gets a value indicating whether the group takes the whole line.
+    /// </summary>
+    public bool IsFullWidth => Width == GroupWidth.Full;
+
+    /// <summary>
+    /// Gets a value indicating whether the group takes two thirds of the line.
+    /// </summary>
+    public bool IsTwoThirds => Width == GroupWidth.TwoThirds;
+
+    /// <summary>
+    /// Gets a value indicating whether the group takes one third of the line.
+    /// </summary>
+    public bool IsOneThird => Width == GroupWidth.OneThird;
 
     /// <summary>
     /// Gets or sets a value indicating whether the group shows its shortcuts. A change is saved.
@@ -124,9 +164,38 @@ public sealed class GroupViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsDropBefore));
                 OnPropertyChanged(nameof(IsDropAfter));
                 OnPropertyChanged(nameof(IsDropInside));
+                OnPropertyChanged(nameof(GapBefore));
+                OnPropertyChanged(nameof(GapAfter));
             }
         }
     }
+
+    /// <summary>
+    /// Gets or sets how many columns the group dragged next to this one spans: the width of the gap that opens beside
+    /// this group while it would land there.
+    /// </summary>
+    public int DropColumns
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(GapBefore));
+                OnPropertyChanged(nameof(GapAfter));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets how many columns the gap open in front of the group spans; 0 when there is none.
+    /// </summary>
+    public int GapBefore => IsDropBefore ? DropColumns : 0;
+
+    /// <summary>
+    /// Gets how many columns the gap open behind the group spans; 0 when there is none.
+    /// </summary>
+    public int GapAfter => IsDropAfter ? DropColumns : 0;
 
     /// <summary>
     /// Gets a value indicating whether a drop would land in front of the group.
@@ -164,17 +233,22 @@ public sealed class GroupViewModel : ObservableObject
     public AsyncRelayCommand MoveToWorkspaceCommand { get; }
 
     /// <summary>
+    /// Gets the command setting how much of a line the group takes; a change is saved.
+    /// </summary>
+    public RelayCommand<GroupWidth> SetWidthCommand { get; }
+
+    /// <summary>
     /// Gets the command deleting the group, after confirmation.
     /// </summary>
     public AsyncRelayCommand DeleteCommand { get; }
 
     /// <summary>
-    /// Gets the command moving the group one place up.
+    /// Gets the command moving the group one place earlier.
     /// </summary>
     public RelayCommand MoveUpCommand { get; }
 
     /// <summary>
-    /// Gets the command moving the group one place down.
+    /// Gets the command moving the group one place later.
     /// </summary>
     public RelayCommand MoveDownCommand { get; }
 
@@ -182,7 +256,7 @@ public sealed class GroupViewModel : ObservableObject
     /// Gets the group as it should be stored.
     /// </summary>
     /// <returns>The group.</returns>
-    public ShortcutGroup ToModel() => new(Id, Name, Kind, Shortcuts.Select(shortcut => shortcut.Model).ToArray(), !IsExpanded);
+    public ShortcutGroup ToModel() => new(Id, Name, Kind, Shortcuts.Select(shortcut => shortcut.Model).ToArray(), !IsExpanded, Width);
 
     /// <summary>
     /// Re-evaluates the commands that depend on the group's position on the page.

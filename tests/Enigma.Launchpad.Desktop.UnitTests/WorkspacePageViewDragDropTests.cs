@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.VisualTree;
 using Enigma.Launchpad.Core.Shortcuts;
+using Enigma.Launchpad.Desktop.Controls;
 using Enigma.Launchpad.Desktop.DragAndDrop;
 using Enigma.Launchpad.Desktop.Services;
 using Enigma.Launchpad.Desktop.UnitTests.Infrastructure;
@@ -106,7 +107,7 @@ public sealed class WorkspacePageViewDragDropTests
         });
 
     [Fact]
-    public void AGroupDragged_OpensADashedBarThatMakesRoom_AndTheGapStaysPutUnderThePointer()
+    public void AGroupDragged_OpensADashedGapThatMakesRoom_AndTheGapStaysPutUnderThePointer()
         => _fixture.RunAsync(async () =>
         {
             using WindowHarness harness = new(Data(("A", []), ("B", []), ("C", []), ("D", [])));
@@ -122,10 +123,12 @@ public sealed class WorkspacePageViewDragDropTests
             Raise(harness, topOfB, RawDragEventType.DragOver, data);
             harness.Window.UpdateLayout();
 
-            Panel bar = Placeholder(view, b, "before");
+            // D takes the whole line: so does its gap, 48 pixels high, on a line of its own above B.
+            ColumnFlowPanel panel = Cards(view);
+            Rect gap = Assert.NotNull(panel.GapBounds);
             Assert.True(b.IsDropBefore);
-            Assert.True(bar.IsVisible);
-            Assert.True(At(harness, card, 0, 0).Y >= top + bar.Bounds.Height);
+            Assert.Equal((3, 0, panel.Bounds.Width, 48), (b.GapBefore, gap.Left, gap.Width, gap.Height));
+            Assert.True(At(harness, card, 0, 0).Y >= top + gap.Height);
 
             // B has moved down out from under the pointer, which is now over the dashed bar: the gap stays.
             Raise(harness, topOfB, RawDragEventType.DragOver, data);
@@ -137,7 +140,144 @@ public sealed class WorkspacePageViewDragDropTests
             Raise(harness, topOfB, RawDragEventType.Drop, data);
 
             Assert.Equal(["A", "D", "B", "C"], page.Groups.Select(group => group.Name));
-            Assert.False(bar.IsVisible);
+            harness.Window.UpdateLayout();
+            Assert.Null(panel.GapBounds);
+        });
+
+    [Fact]
+    public void AOneThirdGroup_DraggedOverTheRightHalfOfAnother_OpensAThirdWideGapBesideIt_AndLandsThereOnItsLine()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Widths(("A", GroupWidth.OneThird), ("B", GroupWidth.OneThird), ("C", GroupWidth.Full), ("D", GroupWidth.OneThird)));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            ColumnFlowPanel panel = Cards(view);
+            GroupViewModel b = page.Groups[1];
+            Control cardA = Card(view, page.Groups[0]);
+            Point rightOfA = At(harness, cardA, cardA.Bounds.Width - 10, cardA.Bounds.Height / 2);
+            Rect bBefore = In(panel, Card(view, b));
+            DataTransfer data = Carrying(WorkspacePageView.GroupFormat, ShortcutKind.Application, page.Groups[3].Id);
+
+            Raise(harness, rightOfA, RawDragEventType.DragEnter, data);
+            Raise(harness, rightOfA, RawDragEventType.DragOver, data);
+            harness.Window.UpdateLayout();
+
+            // The gap between A and B is B's, a third wide: B moves on to the line's last column.
+            Rect gap = Assert.NotNull(panel.GapBounds);
+            Assert.True(b.IsDropBefore);
+            Assert.Equal(1, b.GapBefore);
+            Assert.Equal((bBefore.Left, bBefore.Top, bBefore.Width), (gap.Left, gap.Top, gap.Width));
+            Rect bOpen = In(panel, Card(view, b));
+            Assert.Equal(bBefore.Top, bOpen.Top);
+            Assert.True(bOpen.Left > gap.Right);
+
+            // B has moved from under its old place: the pointer, still over A's right half, keeps the gap.
+            Raise(harness, rightOfA, RawDragEventType.DragOver, data);
+            harness.Window.UpdateLayout();
+
+            Assert.True(b.IsDropBefore);
+            Assert.Single(page.Groups, group => group.DropHint != DropHint.None);
+
+            Raise(harness, rightOfA, RawDragEventType.Drop, data);
+            harness.Window.UpdateLayout();
+
+            Assert.Equal(["A", "D", "B", "C"], page.Groups.Select(group => group.Name));
+            Assert.Equal(In(panel, cardA).Top, In(panel, Card(view, page.Groups[1])).Top);
+            Assert.Null(panel.GapBounds);
+        });
+
+    [Theory]
+    [InlineData("left of A", new[] { "D", "A", "B", "C" })]
+    [InlineData("end of the line", new[] { "A", "B", "D", "C" })]
+    [InlineData("above the cards", new[] { "D", "A", "B", "C" })]
+    public void AOneThirdGroup_LandsInTheGapUnderThePointer(string where, string[] expected)
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Widths(("A", GroupWidth.OneThird), ("B", GroupWidth.OneThird), ("C", GroupWidth.Full), ("D", GroupWidth.OneThird)));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            ColumnFlowPanel panel = Cards(view);
+            Rect cardA = In(panel, Card(view, page.Groups[0]));
+            Point point = where switch
+            {
+                "left of A" => new Point(cardA.Left + 10, cardA.Center.Y),
+                "end of the line" => new Point(panel.Bounds.Width - 10, cardA.Center.Y),
+                _ => new Point(cardA.Left + 10, -40),
+            };
+            DataTransfer data = Carrying(WorkspacePageView.GroupFormat, ShortcutKind.Application, page.Groups[3].Id);
+
+            // Resolved where the page would resolve it, whatever is under that point: above the cards is the page's header.
+            Assert.True(view.Resolve(data, panel, visual => panel.TranslatePoint(point, visual) ?? default, drop: false));
+            Assert.Single(page.Groups, group => group.DropHint != DropHint.None);
+
+            Assert.True(view.Resolve(data, panel, visual => panel.TranslatePoint(point, visual) ?? default, drop: true));
+
+            Assert.Equal(expected, page.Groups.Select(group => group.Name));
+        });
+
+    [Fact]
+    public void AFullWidthGroup_DraggedBetweenTwoOfALine_OpensAFullWidthGapOnALineOfItsOwn_AndLandsBetweenThem()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Widths(("A", GroupWidth.OneThird), ("B", GroupWidth.OneThird), ("C", GroupWidth.OneThird), ("D", GroupWidth.Full)));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            ColumnFlowPanel panel = Cards(view);
+            Control cardA = Card(view, page.Groups[0]);
+            Point rightOfA = At(harness, cardA, cardA.Bounds.Width - 10, cardA.Bounds.Height / 2);
+            DataTransfer data = Carrying(WorkspacePageView.GroupFormat, ShortcutKind.Application, page.Groups[3].Id);
+
+            Raise(harness, rightOfA, RawDragEventType.DragEnter, data);
+            Raise(harness, rightOfA, RawDragEventType.DragOver, data);
+            harness.Window.UpdateLayout();
+
+            Rect gap = Assert.NotNull(panel.GapBounds);
+            Assert.Equal(3, page.Groups[1].GapBefore);
+            Assert.Equal((0, panel.Bounds.Width), (gap.Left, gap.Width));
+            Assert.True(gap.Top > In(panel, cardA).Bottom);
+            Assert.True(In(panel, Card(view, page.Groups[1])).Top > gap.Bottom);
+
+            Raise(harness, rightOfA, RawDragEventType.Drop, data);
+
+            Assert.Equal(["A", "D", "B", "C"], page.Groups.Select(group => group.Name));
+        });
+
+    [Fact]
+    public void ADraggedOneThirdGroupsCopy_IsAsWideAsItsCard_AndFollowsThePointerBothWays_InsideTheCards()
+        => _fixture.RunAsync(async () =>
+        {
+            using WindowHarness harness = new(Widths(("A", GroupWidth.Full), ("B", GroupWidth.OneThird)));
+            WorkspacePageView view = await harness.LoadedPageAsync();
+            WorkspacePageViewModel page = Assert.IsAssignableFrom<WorkspacePageViewModel>(view.DataContext);
+            ColumnFlowPanel panel = Cards(view);
+            Canvas layer = Layer(view);
+            ContentControl copy = Copy(view, "GroupGhost");
+            Control cardA = Card(view, page.Groups[0]);
+            double widthOfB = Card(view, page.Groups[1]).Bounds.Width;
+            Point middle = At(harness, cardA, cardA.Bounds.Width / 2, cardA.Bounds.Height / 2);
+            DataTransfer data = Carrying(WorkspacePageView.GroupFormat, ShortcutKind.Application, page.Groups[1].Id);
+
+            Raise(harness, middle, RawDragEventType.DragEnter, data);
+            Raise(harness, middle, RawDragEventType.DragOver, data);
+            harness.Window.UpdateLayout();
+
+            Assert.True(copy.IsVisible);
+            Assert.Equal(widthOfB, copy.Bounds.Width, 3);
+            Assert.True(copy.Bounds.Width < panel.Bounds.Width / 2);
+
+            double left = Canvas.GetLeft(copy);
+            double top = Canvas.GetTop(copy);
+
+            Raise(harness, new Point(middle.X + 50, middle.Y + 30), RawDragEventType.DragOver, data);
+
+            Assert.Equal(left + 50, Canvas.GetLeft(copy), 3);
+            Assert.Equal(top + 30, Canvas.GetTop(copy), 3);
+
+            // Far to the right, it stops at the cards' right edge.
+            Raise(harness, At(harness, layer, layer.Bounds.Width - 1, middle.Y), RawDragEventType.DragOver, data);
+
+            double cardsRight = panel.TranslatePoint(new Point(panel.Bounds.Width, 0), layer)!.Value.X;
+            Assert.Equal(cardsRight - copy.Bounds.Width, Canvas.GetLeft(copy), 3);
         });
 
     [Fact]
@@ -440,6 +580,17 @@ public sealed class WorkspacePageViewDragDropTests
             Assert.Equal(2, view.GetVisualDescendants().OfType<Border>().Count(border => border.Classes.Contains("grip")));
             Assert.True(DragDrop.GetAllowDrop(view));
         });
+
+    private static ColumnFlowPanel Cards(WorkspacePageView view)
+        => view.GetVisualDescendants().OfType<ColumnFlowPanel>().Single();
+
+    private static Rect In(Visual panel, Control card)
+        => new(card.TranslatePoint(default, panel) ?? throw new InvalidOperationException("Not on the panel."), card.Bounds.Size);
+
+    private static LaunchpadData Widths(params (string Name, GroupWidth Width)[] groups)
+        => PageHarness.Data().With(
+            ShortcutKind.Application,
+            groups.Select(group => new ShortcutGroup(Guid.NewGuid(), group.Name, ShortcutKind.Application, [], Width: group.Width)).ToArray());
 
     private static Canvas Layer(WorkspacePageView view)
         => view.FindControl<Canvas>("DragLayer") ?? throw new InvalidOperationException("No drag layer.");

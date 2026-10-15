@@ -388,6 +388,38 @@ public sealed class ShortcutExchangeTests : IDisposable
     }
 
     [Fact]
+    public void Serialize_WritesAGroupsWidth_OnlyWhenItIsNotTheFullWidth()
+    {
+        using JsonDocument json = JsonDocument.Parse(ShortcutExchange.Serialize(Sample()));
+        JsonElement[] groups = [.. json.RootElement.GetProperty("workspaces")[0].GetProperty("groups").EnumerateArray()];
+
+        Assert.False(groups[0].TryGetProperty("width", out _));
+        Assert.Equal("oneThird", groups[1].GetProperty("width").GetString());
+        Assert.Equal("twoThirds", groups[2].GetProperty("width").GetString());
+    }
+
+    [Theory]
+    [InlineData(""" "width": "OneThird", """, GroupWidth.OneThird)]
+    [InlineData(""" "width": " twothirds ", """, GroupWidth.TwoThirds)]
+    [InlineData(""" "width": "full", """, GroupWidth.Full)]
+    [InlineData(""" "width": "half", """, GroupWidth.Full)]
+    [InlineData(""" "width": "", """, GroupWidth.Full)]
+    [InlineData(""" "width": null, """, GroupWidth.Full)]
+    [InlineData("", GroupWidth.Full)]
+    public void TryParse_ReadsAGroupsWidth_IgnoringCase_AndAnyOtherAsTheFullWidth(string width, GroupWidth expected)
+    {
+        string json = $$"""
+            { "format": "enigma-launchpad-shortcuts", "version": 2,
+              "workspaces": [ { "title": "Dev", "groups": [ { "name": "Tools", "kind": "application", {{width}} "shortcuts": [] } ] } ] }
+            """;
+
+        Assert.True(_exchange.TryParse(json, out ShortcutImport? import, out _));
+
+        Assert.Equal(0, import.SkippedEntries);
+        Assert.Equal(expected, Assert.Single(Groups(import)).Width);
+    }
+
+    [Fact]
     public void TryParse_GivesEveryWorkspaceGroupAndShortcutANewIdentity()
     {
         string json = ShortcutExchange.Serialize(Sample());
@@ -419,8 +451,8 @@ public sealed class ShortcutExchangeTests : IDisposable
                                 new Shortcut(Guid.NewGuid(), "Terminal", Absolute("Terminal", "wt.exe")),
                             ],
                             IsCollapsed: true),
-                        new ShortcutGroup(Guid.NewGuid(), "Empty", ShortcutKind.Application, []),
-                        new ShortcutGroup(Guid.NewGuid(), "Repos", ShortcutKind.Directory, [new Shortcut(Guid.NewGuid(), "Launchpad", Absolute("Repos", "Launchpad"))]),
+                        new ShortcutGroup(Guid.NewGuid(), "Empty", ShortcutKind.Application, [], Width: GroupWidth.OneThird),
+                        new ShortcutGroup(Guid.NewGuid(), "Repos", ShortcutKind.Directory, [new Shortcut(Guid.NewGuid(), "Launchpad", Absolute("Repos", "Launchpad"))], Width: GroupWidth.TwoThirds),
                     ],
                     "Everything for coding",
                     "Code"),
@@ -435,7 +467,7 @@ public sealed class ShortcutExchangeTests : IDisposable
     private static string[] Describe(Profile profile)
         => profile.Workspaces
             .SelectMany(workspace => workspace.Groups
-                .Select(group => $"{workspace.Title} ({workspace.Description}, {workspace.Icon}) / {group.Kind} {group.Name}: "
+                .Select(group => $"{workspace.Title} ({workspace.Description}, {workspace.Icon}) / {group.Kind} {group.Name} [{group.Width}]: "
                     + string.Join(", ", group.Shortcuts.Select(shortcut => $"{shortcut.Name} → {shortcut.Target} {shortcut.Arguments} ({shortcut.Description}) [{shortcut.Icon}]")))
                 .DefaultIfEmpty($"{workspace.Title} ({workspace.Description}, {workspace.Icon})"))
             .ToArray();

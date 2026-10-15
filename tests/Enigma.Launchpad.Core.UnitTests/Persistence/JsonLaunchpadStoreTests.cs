@@ -87,6 +87,9 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
         Assert.DoesNotContain("\"applications\":", json, StringComparison.Ordinal);
         Assert.Contains("\"isCollapsed\": true", json, StringComparison.Ordinal);
         Assert.Contains("\"arguments\": \"--new-window\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"width\": \"full\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"width\": \"twoThirds\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"width\": \"oneThird\"", json, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -147,6 +150,8 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
     [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"kind\": \"spreadsheet\", \"shortcuts\": [] } ] } ] } ] }")]
     [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"shortcuts\": [] } ] } ] } ] }")]
     [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"kind\": 0, \"shortcuts\": [] } ] } ] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"kind\": \"application\", \"width\": \"half\", \"shortcuts\": [] } ] } ] } ] }")]
+    [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"title\": \"Dev\", \"groups\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Tools\", \"kind\": \"application\", \"width\": 2, \"shortcuts\": [] } ] } ] } ] }")]
     [InlineData("{ \"version\": 3, \"activeProfileId\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"profiles\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"name\": \"Work\", \"workspaces\": [ { \"id\": \"8c0e0f6e-55b7-4c4b-9a43-0f0c8a1b2c3d\", \"groups\": [] } ] } ] }")]
     public async Task LoadAsync_MovesAnUnreadableFileAsideAndStartsEmpty(string contents)
     {
@@ -285,6 +290,33 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
         Assert.Equal(("Dev", null, null), (workspace.Title, workspace.Description, workspace.Icon));
     }
 
+    [Fact]
+    public async Task LoadAsync_ReadsAGroupWithoutAWidth_AsFullWidth()
+    {
+        const string json = """
+            { "version": 3, "activeProfileId": "44444444-4444-4444-4444-444444444444",
+              "profiles": [ { "id": "44444444-4444-4444-4444-444444444444", "name": "Work",
+                "workspaces": [ { "id": "11111111-1111-1111-1111-111111111111", "title": "Dev",
+                  "groups": [ { "id": "22222222-2222-2222-2222-222222222222", "name": "Tools", "kind": "application", "shortcuts": [] } ] } ] } ] }
+            """;
+        await File.WriteAllTextAsync(_store.FilePath, json, TestContext.Current.CancellationToken);
+
+        LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Null(result.UnreadableFileMovedTo);
+        Assert.Equal(GroupWidth.Full, Assert.Single(Assert.Single(result.Data.ActiveProfile.Workspaces).Groups).Width);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ReadsAVersion2FilesGroups_AsFullWidth()
+    {
+        await File.WriteAllTextAsync(_store.FilePath, Version2File, TestContext.Current.CancellationToken);
+
+        LaunchpadLoadResult result = await _store.LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.All(result.Data.ActiveProfile.Workspaces[0].Groups, group => Assert.Equal(GroupWidth.Full, group.Width));
+    }
+
     [Theory]
     [InlineData(1, """{ "version": 1, "applications": [], "directories": [], "urls": [ { "id": "44444444-4444-4444-4444-444444444444", "name": "Docs", "shortcuts": [] } ] }""")]
     [InlineData(2, Version2File)]
@@ -371,8 +403,8 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
                                 new Shortcut(Guid.NewGuid(), "Terminal", @"C:\Tools\wt.exe"),
                             ],
                             IsCollapsed: true),
-                        new ShortcutGroup(Guid.NewGuid(), "Work", ShortcutKind.Directory, [new Shortcut(Guid.NewGuid(), "Projects", @"C:\Projects")]),
-                        new ShortcutGroup(Guid.NewGuid(), "Papers", ShortcutKind.Document, [new Shortcut(Guid.NewGuid(), "Report", @"C:\Docs\report.pdf")]),
+                        new ShortcutGroup(Guid.NewGuid(), "Work", ShortcutKind.Directory, [new Shortcut(Guid.NewGuid(), "Projects", @"C:\Projects")], Width: GroupWidth.TwoThirds),
+                        new ShortcutGroup(Guid.NewGuid(), "Papers", ShortcutKind.Document, [new Shortcut(Guid.NewGuid(), "Report", @"C:\Docs\report.pdf")], Width: GroupWidth.OneThird),
                         new ShortcutGroup(
                             Guid.NewGuid(),
                             "Docs",
@@ -413,8 +445,8 @@ public sealed class JsonLaunchpadStoreTests : IDisposable
                 foreach ((ShortcutGroup leftGroup, ShortcutGroup rightGroup) in leftWorkspace.Groups.Zip(rightWorkspace.Groups))
                 {
                     Assert.Equal(
-                        (leftGroup.Id, leftGroup.Name, leftGroup.Kind, leftGroup.IsCollapsed),
-                        (rightGroup.Id, rightGroup.Name, rightGroup.Kind, rightGroup.IsCollapsed));
+                        (leftGroup.Id, leftGroup.Name, leftGroup.Kind, leftGroup.IsCollapsed, leftGroup.Width),
+                        (rightGroup.Id, rightGroup.Name, rightGroup.Kind, rightGroup.IsCollapsed, rightGroup.Width));
                     Assert.Equal(leftGroup.Shortcuts, rightGroup.Shortcuts);
                 }
             }
