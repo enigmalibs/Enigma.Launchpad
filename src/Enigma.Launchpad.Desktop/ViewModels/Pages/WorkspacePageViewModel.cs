@@ -222,7 +222,7 @@ public sealed class WorkspacePageViewModel : ObservableObject
     /// Whether a group can move by an offset without leaving the page.
     /// </summary>
     /// <param name="group">The group.</param>
-    /// <param name="offset">How many places, negative for up.</param>
+    /// <param name="offset">How many places, negative for earlier.</param>
     /// <returns><see langword="true"/> when the move stays on the page.</returns>
     internal bool CanMoveGroup(GroupViewModel group, int offset)
     {
@@ -236,7 +236,7 @@ public sealed class WorkspacePageViewModel : ObservableObject
     /// Moves a group by an offset, and saves the new order.
     /// </summary>
     /// <param name="group">The group.</param>
-    /// <param name="offset">How many places, negative for up.</param>
+    /// <param name="offset">How many places, negative for earlier.</param>
     internal void MoveGroup(GroupViewModel group, int offset)
     {
         if (!CanMoveGroup(group, offset))
@@ -246,6 +246,22 @@ public sealed class WorkspacePageViewModel : ObservableObject
 
         int index = Groups.IndexOf(group);
         Groups.Move(index, index + offset);
+        Persist();
+    }
+
+    /// <summary>
+    /// Sets how much of a line a group takes, and saves it when it changed.
+    /// </summary>
+    /// <param name="group">The group.</param>
+    /// <param name="width">Its new width.</param>
+    internal void SetGroupWidth(GroupViewModel group, GroupWidth width)
+    {
+        if (!Enum.IsDefined(width) || (group.Width == width))
+        {
+            return;
+        }
+
+        group.Width = width;
         Persist();
     }
 

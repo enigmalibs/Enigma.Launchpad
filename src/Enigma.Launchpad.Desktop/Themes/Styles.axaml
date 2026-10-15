@@ -189,13 +189,16 @@
     <Setter Property="Padding" Value="10,8,10,10" />
   </Style>
 
+  <!-- A group's name is trimmed rather than pushed under its buttons when the card is a narrow column. -->
   <Style Selector="TextBlock.groupName">
     <Setter Property="FontSize" Value="15" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
 
   <Style Selector="TextBlock.groupEmpty">
     <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="32,0,0,4" />
     <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundTertiaryBrush}" />
   </Style>

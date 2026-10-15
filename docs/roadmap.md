@@ -56,5 +56,5 @@
 | FEATURE-5FAA | Release 1.1.0                       | DONE        | docs/plan/FEATURE-5FAA.md |
 | FEATURE-0BB1 | Group columns                       | IN PROGRESS | docs/plan/FEATURE-0BB1.md |
 | - PHASE01    | Group width in model & files        | DONE        | (in FEATURE-0BB1.md)      |
-| - PHASE02    | Columns layout & width menu         | TODO        | (in FEATURE-0BB1.md)      |
+| - PHASE02    | Columns layout & width menu         | DONE        | (in FEATURE-0BB1.md)      |
 | - PHASE03    | Drag groups into columns            | TODO        | (in FEATURE-0BB1.md)      |

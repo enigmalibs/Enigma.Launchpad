@@ -17,8 +17,10 @@ had before workspaces are in one called *Shortcuts*.
 Click a card, or press Enter on it, to open its workspace in place of the list; the arrow at the top left (or
 Alt+Left) goes back. In a workspace, your shortcuts are arranged in groups you create, rename, fold, reorder and
 delete. Every group holds one kind of shortcut, chosen when it is created from **New group**: applications, folders,
-links or documents — any file, opened with the application your system opens it with. A group's menu can also move
-it, with its shortcuts, to another workspace — unless that one already has a group of the same name and kind. Add a
+links or documents — any file, opened with the application your system opens it with. A group's menu sets its
+**Width** — the full line, two thirds or one third — and groups whose widths fit together share a line, in order; in
+a window too narrow for a tile in a third of the line, every group takes the whole line. The menu can also move a
+group, with its shortcuts, to another workspace — unless that one already has a group of the same name and kind. Add a
 shortcut with a group's **+** (Browse… picks a program, a folder or a document); click its tile, or press Enter, to
 open it; right-click it to edit it, try to get its icon again, copy its target, show it in its folder, move it or
 delete it. Hover a tile, or give it the keyboard focus, for its own buttons: *Run with arguments…* on an application,

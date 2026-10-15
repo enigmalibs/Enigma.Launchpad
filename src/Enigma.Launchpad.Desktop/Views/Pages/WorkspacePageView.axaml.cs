@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using Enigma.Launchpad.Desktop.Controls;
 using Enigma.Launchpad.Desktop.DragAndDrop;
 using Enigma.Launchpad.Desktop.ViewModels.Pages;
 
@@ -188,7 +189,7 @@ public partial class WorkspacePageView : UserControl
             return null;
         }
 
-        double spacing = (GroupList.ItemsPanelRoot as StackPanel)?.Spacing ?? 0;
+        double spacing = (GroupList.ItemsPanelRoot as ColumnFlowPanel)?.RowSpacing ?? 0;
         List<double> heights = new(count);
 
         for (int index = 0; index < count; index++)

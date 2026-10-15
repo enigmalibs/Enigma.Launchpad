@@ -45,6 +45,7 @@ public sealed class GroupViewModel : ObservableObject
 
         RenameCommand = new AsyncRelayCommand(() => _page.RenameGroupAsync(this));
         MoveToWorkspaceCommand = new AsyncRelayCommand(() => _page.MoveGroupToWorkspaceAsync(this));
+        SetWidthCommand = new RelayCommand<GroupWidth>(width => _page.SetGroupWidth(this, width));
         DeleteCommand = new AsyncRelayCommand(() => _page.DeleteGroupAsync(this));
         MoveUpCommand = new RelayCommand(() => _page.MoveGroup(this, -1), () => _page.CanMoveGroup(this, -1));
         MoveDownCommand = new RelayCommand(() => _page.MoveGroup(this, 1), () => _page.CanMoveGroup(this, 1));
@@ -85,7 +86,40 @@ public sealed class GroupViewModel : ObservableObject
     /// <summary>
     /// Gets how much of a line of the workspace the group takes.
     /// </summary>
-    public GroupWidth Width { get; }
+    public GroupWidth Width
+    {
+        get;
+        internal set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(Columns));
+                OnPropertyChanged(nameof(IsFullWidth));
+                OnPropertyChanged(nameof(IsTwoThirds));
+                OnPropertyChanged(nameof(IsOneThird));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets how many of a line's columns the group spans.
+    /// </summary>
+    public int Columns => Width.Columns;
+
+    /// <summary>
+    /// Gets a value indicating whether the group takes the whole line.
+    /// </summary>
+    public bool IsFullWidth => Width == GroupWidth.Full;
+
+    /// <summary>
+    /// Gets a value indicating whether the group takes two thirds of the line.
+    /// </summary>
+    public bool IsTwoThirds => Width == GroupWidth.TwoThirds;
+
+    /// <summary>
+    /// Gets a value indicating whether the group takes one third of the line.
+    /// </summary>
+    public bool IsOneThird => Width == GroupWidth.OneThird;
 
     /// <summary>
     /// Gets or sets a value indicating whether the group shows its shortcuts. A change is saved.
@@ -170,17 +204,22 @@ public sealed class GroupViewModel : ObservableObject
     public AsyncRelayCommand MoveToWorkspaceCommand { get; }
 
     /// <summary>
+    /// Gets the command setting how much of a line the group takes; a change is saved.
+    /// </summary>
+    public RelayCommand<GroupWidth> SetWidthCommand { get; }
+
+    /// <summary>
     /// Gets the command deleting the group, after confirmation.
     /// </summary>
     public AsyncRelayCommand DeleteCommand { get; }
 
     /// <summary>
-    /// Gets the command moving the group one place up.
+    /// Gets the command moving the group one place earlier.
     /// </summary>
     public RelayCommand MoveUpCommand { get; }
 
     /// <summary>
-    /// Gets the command moving the group one place down.
+    /// Gets the command moving the group one place later.
     /// </summary>
     public RelayCommand MoveDownCommand { get; }
 

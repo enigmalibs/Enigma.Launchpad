@@ -94,7 +94,7 @@ beside another one on the same line.
 
 ## PHASE02 — Columns layout & width menu
 
-**Status:** TODO
+**Status:** DONE
 **Branch:** `feature/feature-0bb1-phase02-columns-layout`
 
 ### Steps
