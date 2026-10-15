@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using Enigma.Launchpad.Desktop.Controls;
 using Enigma.Launchpad.Desktop.DragAndDrop;
 using Enigma.Launchpad.Desktop.ViewModels.Pages;
 
@@ -29,7 +30,7 @@ namespace Enigma.Launchpad.Desktop.Views.Pages;
 /// <para>
 /// Where a drop would land, a dashed placeholder opens in the gap and the cards or tiles after it make room.
 /// The gap is therefore found among the cards and tiles as they stand with no placeholder open
-/// (<see cref="DropPlacement.Stack"/>, <see cref="DropPlacement.Flow"/>): read from the moved items, it would
+/// (<see cref="ColumnFlowPanel.Place"/>, <see cref="DropPlacement.Flow"/>): read from the moved items, it would
 /// move with them.
 /// </para>
 /// <para>
@@ -140,20 +141,21 @@ public partial class WorkspacePageView : UserControl
         => root.GetVisualDescendants().OfType<T>().FirstOrDefault(control => control.Classes.Contains(styleClass));
 
     /// <summary>
-    /// A dragged group: it lands in the gap between two cards the pointer is nearest to, wherever the pointer is on the
-    /// page.
+    /// A dragged group: it lands in the gap among the cards the pointer is nearest to, wherever the pointer is on the
+    /// page — beside a card of the line under the pointer, or above or below a card that takes the whole line — and the
+    /// gap that opens there is as wide as the group.
     /// </summary>
     private bool ResolveGroup(WorkspacePageViewModel page, DragPayload payload, Func<Visual, Point> pointer, bool drop)
     {
-        if ((page.FindGroup(payload.Id) is null) || (GroupRows(page.Groups.Count) is not { } rows))
+        if ((page.FindGroup(payload.Id) is not { } source)
+            || (GroupList.ItemsPanelRoot is not ColumnFlowPanel panel)
+            || (GroupCells(panel, page.Groups.Count) is not { } cells))
         {
             return false;
         }
 
-        int slot = DropPlacement.SlotFor(pointer(GroupList).Y, rows);
-        (GroupViewModel target, DropPosition position) = slot < page.Groups.Count
-            ? (page.Groups[slot], DropPosition.Before)
-            : (page.Groups[^1], DropPosition.After);
+        (int index, DropPosition position) = DropPlacement.ColumnSlot(pointer(panel), cells, panel.Bounds.Width);
+        GroupViewModel target = page.Groups[index];
 
         if (!page.MovesGroup(payload, target, position))
         {
@@ -167,6 +169,7 @@ public partial class WorkspacePageView : UserControl
         }
         else
         {
+            target.DropColumns = source.Columns;
             target.DropHint = position == DropPosition.Before ? DropHint.Before : DropHint.After;
         }
 
@@ -174,34 +177,17 @@ public partial class WorkspacePageView : UserControl
     }
 
     /// <summary>
-    /// The group rows as they stand with no dashed bar open among them: from the first row's top, each card's height
-    /// and the spacing below it.
+    /// The group cards' cells as they stand with no gap open among them: each card's columns over its line's height and
+    /// the spacing below it, so a pointer between two lines is over the upper one.
     /// </summary>
-    /// <remarks>
-    /// The first row's top is where the rows start whatever is open: a dashed bar is laid out inside a row, never above
-    /// the first one.
-    /// </remarks>
-    private IReadOnlyList<(double Top, double Height)>? GroupRows(int count)
+    private static List<Rect>? GroupCells(ColumnFlowPanel panel, int count)
     {
-        if ((count == 0) || (GroupList.ContainerFromIndex(0) is not { } first))
+        if ((count == 0) || (panel.Children.Count != count))
         {
             return null;
         }
 
-        double spacing = (GroupList.ItemsPanelRoot as StackPanel)?.Spacing ?? 0;
-        List<double> heights = new(count);
-
-        for (int index = 0; index < count; index++)
-        {
-            if ((GroupList.ContainerFromIndex(index) is not { } row) || (FindDescendant<Border>(row, "groupCard") is not { } card))
-            {
-                return null;
-            }
-
-            heights.Add(card.Bounds.Height + spacing);
-        }
-
-        return DropPlacement.Stack(first.TranslatePoint(default, GroupList)?.Y ?? 0, heights);
+        return [.. panel.Place(panel.Bounds.Width).Select(placement => placement.Cell.WithHeight(placement.Cell.Height + panel.RowSpacing))];
     }
 
     /// <summary>
@@ -420,8 +406,9 @@ public partial class WorkspacePageView : UserControl
         => (FindAncestor(source, styleClass) is { } item) && (this.TranslatePoint(_dragOrigin, item) is { } grab) ? grab : default;
 
     /// <summary>
-    /// Shows the copy of what a drag carries under the pointer: a tile, where it is held, in both directions; a group's
-    /// header up and down only, at the cards' left and width. A drag carrying nothing of this page shows none.
+    /// Shows the copy of what a drag carries under the pointer, where it is held: a tile in both directions; a group's
+    /// header as wide as its card, in both directions but inside the cards' width — so a group that takes the whole
+    /// line moves up and down only. A drag carrying nothing of this page shows none.
     /// </summary>
     private void CarryTheCopy(IDataTransfer data, Func<Visual, Point> pointer)
     {
@@ -431,10 +418,15 @@ public partial class WorkspacePageView : UserControl
         if (DragPayload.TryParse(data.TryGetValue(GroupFormat), out DragPayload? groupPayload)
             && (Page?.FindGroup(groupPayload.Id) is { } group))
         {
-            Size size = ShowTheCopy(GroupGhost, group, GroupList.Bounds.Width);
+            Visual cards = (Visual?)GroupList.ItemsPanelRoot ?? GroupList;
+            double cardsLeft = cards.TranslatePoint(default, DragLayer)?.X ?? 0;
+            double width = (GroupList.ContainerFromItem(group) is { } container) && (FindDescendant<Border>(container, "groupCard") is { } card)
+                ? card.Bounds.Width
+                : cards.Bounds.Width;
+            Size size = ShowTheCopy(GroupGhost, group, width);
             Point grab = GrabFor(group.Id, size);
 
-            Canvas.SetLeft(GroupGhost, GroupList.TranslatePoint(default, DragLayer)?.X ?? 0);
+            Canvas.SetLeft(GroupGhost, cardsLeft + DropPlacement.GhostOffset(at.X - cardsLeft, grab.X, size.Width, cards.Bounds.Width));
             Canvas.SetTop(GroupGhost, DropPlacement.GhostOffset(at.Y, grab.Y, size.Height, layer.Height));
             TileGhost.IsVisible = false;
         }

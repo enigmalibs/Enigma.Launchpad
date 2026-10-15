@@ -54,3 +54,7 @@
 | - PHASE02    | Dragged item follows the pointer    | DONE   | (in FEATURE-23F9.md)      |
 | BUG-10AB     | Tests that fail on Linux            | DONE   | docs/plan/BUG-10AB.md     |
 | FEATURE-5FAA | Release 1.1.0                       | DONE   | docs/plan/FEATURE-5FAA.md |
+| FEATURE-0BB1 | Group columns                       | DONE   | docs/plan/FEATURE-0BB1.md |
+| - PHASE01    | Group width in model & files        | DONE   | (in FEATURE-0BB1.md)      |
+| - PHASE02    | Columns layout & width menu         | DONE   | (in FEATURE-0BB1.md)      |
+| - PHASE03    | Drag groups into columns            | DONE   | (in FEATURE-0BB1.md)      |

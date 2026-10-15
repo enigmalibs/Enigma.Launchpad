@@ -189,13 +189,16 @@
     <Setter Property="Padding" Value="10,8,10,10" />
   </Style>
 
+  <!-- A group's name is trimmed rather than pushed under its buttons when the card is a narrow column. -->
   <Style Selector="TextBlock.groupName">
     <Setter Property="FontSize" Value="15" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
 
   <Style Selector="TextBlock.groupEmpty">
     <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="32,0,0,4" />
     <Setter Property="Foreground" Value="{DynamicResource EnigmaForegroundTertiaryBrush}" />
   </Style>
@@ -399,9 +402,10 @@
 
   <!--
     Drag and drop. The item being dragged fades; where it would land, a dashed placeholder opens in the
-    gap — a small bar between two cards, a dashed tile among the tiles — and the cards or tiles after it
-    make room. A group receiving a tile at its end while it shows none is framed in dashes. The grip is
-    the handle groups are dragged by.
+    gap — a dashed tile among the tiles here; between group cards, a gap as wide as the dragged group,
+    drawn by the group panel (ColumnFlowPanel) in the same look — and the cards or tiles after it make
+    room. A group receiving a tile at its end while it shows none is framed in dashes. The grip is the
+    handle groups are dragged by.
   -->
   <Style Selector="Border.grip">
     <Setter Property="Background" Value="Transparent" />
@@ -439,24 +443,8 @@
     <Setter Property="StrokeDashArray" Value="4,3" />
   </Style>
 
-  <!-- Between two group cards: a small bar, whatever the size of the card it stands for. -->
-  <Style Selector="Panel.placeholder.group">
-    <Setter Property="Height" Value="48" />
-  </Style>
-
-  <Style Selector="Panel.placeholder.group.before">
-    <Setter Property="Margin" Value="0,0,0,12" />
-  </Style>
-
-  <Style Selector="Panel.placeholder.group.after">
-    <Setter Property="Margin" Value="0,12,0,0" />
-  </Style>
-
-  <Style Selector="Panel.placeholder.group > Border">
-    <Setter Property="CornerRadius" Value="10" />
-  </Style>
-
-  <Style Selector="Panel.placeholder.group > Rectangle, Rectangle.dropFrame">
+  <!-- Over a group card: the card's corners. -->
+  <Style Selector="Rectangle.dropFrame">
     <Setter Property="RadiusX" Value="10" />
     <Setter Property="RadiusY" Value="10" />
   </Style>
