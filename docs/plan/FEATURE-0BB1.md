@@ -1,6 +1,6 @@
 # FEATURE-0BB1 — Group columns
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-0bb1-phaseNN-<slug>` (one per phase)
 **Run:** vibe/2026-10-15-group-columns
@@ -157,7 +157,7 @@ beside another one on the same line.
 
 ## PHASE03 — Drag groups into columns
 
-**Status:** TODO
+**Status:** DONE
 **Branch:** `feature/feature-0bb1-phase03-column-drag`
 
 ### Steps
