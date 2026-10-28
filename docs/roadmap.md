@@ -59,3 +59,5 @@
 | - PHASE02    | Columns layout & width menu         | DONE   | (in FEATURE-0BB1.md)      |
 | - PHASE03    | Drag groups into columns            | DONE   | (in FEATURE-0BB1.md)      |
 | FEATURE-6D49 | Release 1.2.0                       | DONE   | docs/plan/FEATURE-6D49.md |
+| FEATURE-44CA | New application icon                | DONE   | docs/plan/FEATURE-44CA.md |
+| FEATURE-EB8F | Release 1.3.0                       | DONE   | docs/plan/FEATURE-EB8F.md |

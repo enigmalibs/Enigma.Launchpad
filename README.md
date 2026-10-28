@@ -4,9 +4,8 @@ A cross-platform desktop launcher for your **applications**, **folders**, **link
 [Avalonia 12](https://avaloniaui.net/), [Enigma.Avalonia.Desktop](https://www.nuget.org/packages/Enigma.Avalonia.Desktop)
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
-> **What's new in 1.2** — group columns: a group takes the full line, two thirds or one third of it, groups whose
-> widths fit share a line, and a group can be dragged beside another one. Your groups keep the full line until you
-> change them. See [RELEASENOTES.md](RELEASENOTES.md).
+> **What's new in 1.3** — a new application icon: a rocket on a dark rounded square, in the window, the taskbar and
+> the launcher. On Linux the installer adds a 96 px size and a scalable one. See [RELEASENOTES.md](RELEASENOTES.md).
 
 **Workspaces**, the main page of the navigation rail and where the launchpad opens, are a profile's own collections
 of shortcuts: each has a title, a line saying what it is for and a glyph, and holds groups of applications, folders,
@@ -140,12 +139,13 @@ dotnet test --solution Enigma.Launchpad.slnx
 | The application                          | `~/.local/share/enigma-launchpad`                                     |
 | A launcher command, `enigma-launchpad`   | `~/.local/bin/enigma-launchpad`                                       |
 | The desktop entry                        | `~/.local/share/applications/enigma-launchpad.desktop`                |
-| The icon, in seven sizes                 | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`      |
+| The icon, in eight sizes                 | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`      |
+| The icon, scalable                       | `~/.local/share/icons/hicolor/scalable/apps/enigma-launchpad.svg`     |
 
 By default the .NET runtime is bundled with the application (about 115 MB), so it runs whatever is installed on the
 machine. `--framework-dependent` builds against an installed .NET 10 runtime instead (about 35 MB); `--from DIR`
 installs a directory you published yourself, and `--rid` picks another runtime identifier. Run the installer again
-to upgrade in place. `./packaging/linux/uninstall.sh` removes those four things and nothing else: your shortcuts,
+to upgrade in place. `./packaging/linux/uninstall.sh` removes those things and nothing else: your shortcuts,
 profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
 
 ## Solution layout
