@@ -1,6 +1,6 @@
 # FEATURE-EB8F — Release 1.3.0
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-eb8f-release-1-3-0`
 **Run:** feature/2026-10-28-new-icons-release

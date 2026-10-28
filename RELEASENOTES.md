@@ -1,5 +1,51 @@
 # Release notes
 
+## 1.3.0 — 2026-10-28
+
+A minor release:
+
+- a **new application icon**: a rocket on a dark rounded square;
+- on Linux, the installer adds a **96 px size and a scalable icon**.
+
+### Application icon
+
+- **The icon is a rocket in soft blues and green on a dark rounded square.** It replaces the launch glyph on a blue
+  square, everywhere the application shows one:
+  - the window and the taskbar, on every platform;
+  - the `.exe` in Explorer, on Windows;
+  - the application launcher, on Linux.
+- **The `.ico` holds ten sizes**, from 16 to 256 pixels, against seven before. The 20, 40 and 96 pixel sizes
+  give a scaled display a sharp frame.
+
+### Install on Linux
+
+- **Eight sizes and a scalable one.** `install.sh` puts the icon under `~/.local/share/icons/hicolor`:
+  - 16, 24, 32, 48, 64, 96, 128 and 256 pixels as PNGs (96 is new);
+  - an SVG under `scalable/apps`, also new, for any size the PNGs do not have.
+- **`uninstall.sh` removes all nine.**
+
+### Upgrading from 1.2
+
+- **Nothing is converted.** `launchpad.json`, `settings.json` and export files are as 1.2 left them, and 1.2 still
+  opens them.
+- **On Linux, run `packaging/linux/install.sh` again.** It replaces the application and the icons in place. A desktop
+  that cached the old icon may show it until its next refresh, or until you log in again.
+
+### Dependencies
+
+- **Microsoft.Extensions**, 10.0.13 → **10.0.14**, a .NET servicing update:
+  - DependencyInjection.Abstractions;
+  - Logging.Abstractions;
+  - Hosting;
+  - DependencyInjection, in the tests.
+- **The Avalonia set is held back at 12.1.1**, with Enigma.Avalonia.Desktop **1.2.0**. Avalonia 12.1.4 and
+  Enigma.Avalonia.Desktop 1.3.0 are out, but the set moves as a whole and in a release of its own.
+
+### Version
+
+- **1.3.0** is a minor release under Semantic Versioning. It changes the application's look and the Linux install,
+  not its data: 1.2 and 1.3 read each other's files.
+
 ## 1.2.0 — 2026-10-15
 
 A minor release:
