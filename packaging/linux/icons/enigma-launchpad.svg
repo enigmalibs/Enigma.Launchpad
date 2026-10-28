@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Enigma.Launchpad application icon: LP-A2 in Branding/Apps/preview.html, Rocket in the Soft palette.
+  The master for every frame, 16 to 256 px.
+  Regenerate the SVGs, the PNG frames and the .ico with: python3 Branding/Apps/export.py
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect x="8" y="8" width="240" height="240" rx="48" fill="#1E1F22"/>
+  <g transform="translate(6 -6) rotate(45 128 128)">
+  <path d="M94 126L66 156V190L94 170Z" fill="#4F7FDB"/>
+  <path d="M162 126L190 156V190L162 170Z" fill="#4F7FDB"/>
+  <path d="M128 34C153 52 164 84 164 120V170H92V120C92 84 103 52 128 34Z" fill="#6A9BF4"/>
+  <circle cx="128" cy="100" r="16" fill="#1E1F22"/>
+  <path d="M106 180H150C150 198 142 210 128 226C114 210 106 198 106 180Z" fill="#63C77D"/>
+  </g>
+</svg>
