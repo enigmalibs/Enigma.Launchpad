@@ -140,12 +140,13 @@ dotnet test --solution Enigma.Launchpad.slnx
 | The application                          | `~/.local/share/enigma-launchpad`                                     |
 | A launcher command, `enigma-launchpad`   | `~/.local/bin/enigma-launchpad`                                       |
 | The desktop entry                        | `~/.local/share/applications/enigma-launchpad.desktop`                |
-| The icon, in seven sizes                 | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`      |
+| The icon, in eight sizes                 | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`      |
+| The icon, scalable                       | `~/.local/share/icons/hicolor/scalable/apps/enigma-launchpad.svg`     |
 
 By default the .NET runtime is bundled with the application (about 115 MB), so it runs whatever is installed on the
 machine. `--framework-dependent` builds against an installed .NET 10 runtime instead (about 35 MB); `--from DIR`
 installs a directory you published yourself, and `--rid` picks another runtime identifier. Run the installer again
-to upgrade in place. `./packaging/linux/uninstall.sh` removes those four things and nothing else: your shortcuts,
+to upgrade in place. `./packaging/linux/uninstall.sh` removes those things and nothing else: your shortcuts,
 profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
 
 ## Solution layout
