@@ -1,6 +1,6 @@
 # FEATURE-4757 — Safety net for unhandled errors
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-4757-phase01-error-dialog`, `feature/feature-4757-phase02-exception-hooks`
 **Run:** feature/2026-10-29-uniform-enigma-apps
@@ -67,7 +67,7 @@ Acceptance criteria:
 
 ## PHASE02 — Process-wide exception hooks
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Services/UnhandledExceptionHooks.cs`, ported:
