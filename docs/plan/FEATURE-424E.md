@@ -1,6 +1,6 @@
 # FEATURE-424E — Update NuGet packages
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-424e-update-packages`
 **Run:** feature/2026-10-29-uniform-enigma-apps
