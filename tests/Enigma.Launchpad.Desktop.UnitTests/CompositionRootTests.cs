@@ -78,6 +78,7 @@ public sealed class CompositionRootTests
     [Theory]
     [InlineData(typeof(ILaunchpadSession))]
     [InlineData(typeof(ILaunchpadDialogs))]
+    [InlineData(typeof(IAboutDialogService))]
     [InlineData(typeof(IUserNotifications))]
     [InlineData(typeof(IPathPicker))]
     [InlineData(typeof(IClipboardService))]

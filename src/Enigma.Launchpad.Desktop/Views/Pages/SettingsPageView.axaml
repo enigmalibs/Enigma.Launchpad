@@ -76,10 +76,17 @@
           <controls:SettingsCard Header="Enigma Launchpad"
                                  Description="Released under the MIT license."
                                  IconData="{ei:IconGeometry Info}">
-            <TextBlock x:Name="VersionText"
-                       Text="{Binding Version, StringFormat='Version {0}'}"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <TextBlock x:Name="VersionText"
+                         Text="{Binding Version, StringFormat='Version {0}'}"
+                         VerticalAlignment="Center"
+                         Foreground="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+              <!-- The About dialog every Enigma app shows: the icon, the build and the copyright. -->
+              <Button x:Name="OpenAboutButton"
+                      Command="{Binding OpenAboutCommand}"
+                      Content="About Enigma Launchpad"
+                      AutomationProperties.Name="About Enigma Launchpad" />
+            </StackPanel>
           </controls:SettingsCard>
         </StackPanel>
       </Grid>

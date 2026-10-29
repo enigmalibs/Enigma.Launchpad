@@ -26,8 +26,8 @@ Run from the repository root, on the branch that will be merged:
       ```bash
       dotnet test --solution Enigma.Launchpad.slnx -c Release
       ```
-- [ ] The build carries the version. The application does not show it, so read it off the build: the version and
-      the commit the build was cut from, `X.Y.Z+<sha>`.
+- [ ] The build carries the version. The About dialog (Settings → *About Enigma Launchpad*) shows it, with the
+      first seven characters of the commit the build was cut from. To read the full `X.Y.Z+<sha>` off the build:
       - On Linux (`strings` is in binutils):
         ```bash
         strings src/Enigma.Launchpad.Desktop/bin/Release/net10.0/Enigma.Launchpad.Core.dll | grep -m1 -o 'X\.Y\.Z+[0-9a-f]*'
