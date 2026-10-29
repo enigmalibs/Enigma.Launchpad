@@ -29,7 +29,7 @@ usage() {
 Usage: uninstall.sh [-h|--help]
 
 Removes Enigma Launchpad from the XDG directories install.sh wrote to:
-the application, the launcher symlink, the desktop entry and the icons.
+the application, the launcher symlink, the desktop entry and the eight icons.
 
 Your shortcuts, profiles and settings in ~/.config/Enigma.Launchpad are left exactly as they are.
 USAGE
@@ -91,13 +91,10 @@ if [[ -f ${desktop_file} ]]; then
     removed=$((removed + 1))
 fi
 
-icons=("${icon_root}/scalable/apps/${APP_ID}.svg")
-for size in "${ICON_SIZES[@]}"; do
-    icons+=("${icon_root}/${size}x${size}/apps/${APP_ID}.png")
-done
-
 icons_removed=0
-for icon in "${icons[@]}"; do
+for size in "${ICON_SIZES[@]}"; do
+    icon="${icon_root}/${size}x${size}/apps/${APP_ID}.png"
+
     if [[ -f ${icon} ]]; then
         rm -f -- "${icon}"
         icons_removed=$((icons_removed + 1))

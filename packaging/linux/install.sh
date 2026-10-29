@@ -6,7 +6,6 @@
 #   $XDG_BIN_HOME/enigma-launchpad                          a symlink to its launcher
 #   $XDG_DATA_HOME/applications/enigma-launchpad.desktop    the launcher entry
 #   $XDG_DATA_HOME/icons/hicolor/<N>x<N>/apps/…png          the icon, eight sizes
-#   $XDG_DATA_HOME/icons/hicolor/scalable/apps/…svg         the icon, scalable
 #
 # No root, no sudo, nothing outside $HOME. Run it again to upgrade in place.
 
@@ -56,7 +55,7 @@ Where things go (XDG_DATA_HOME and XDG_BIN_HOME are honoured):
   ~/.local/share/enigma-launchpad                         the application
   ~/.local/bin/enigma-launchpad                           a symlink to its launcher
   ~/.local/share/applications/enigma-launchpad.desktop    the launcher entry
-  ~/.local/share/icons/hicolor/.../enigma-launchpad.*     the icon, eight sizes and an SVG
+  ~/.local/share/icons/hicolor/.../enigma-launchpad.png   the icon
 
 Your shortcuts, profiles, settings and icon cache live in ~/.config/Enigma.Launchpad
 and are never touched. Remove everything again with uninstall.sh, in this same directory.
@@ -194,14 +193,7 @@ for size in "${ICON_SIZES[@]}"; do
 
     install -D -m 0644 -- "${source_icon}" "${icon_root}/${size}x${size}/apps/${APP_ID}.png"
 done
-
-# The SVG serves the sizes the PNGs do not have: a launcher asking for 40 or 192 pixels gets it
-# drawn sharp rather than the nearest PNG scaled.
-source_icon="${script_dir}/icons/${APP_ID}.svg"
-[[ -f ${source_icon} ]] || die "missing icon '${source_icon}'."
-
-install -D -m 0644 -- "${source_icon}" "${icon_root}/scalable/apps/${APP_ID}.svg"
-step "Installed ${#ICON_SIZES[@]} icons and a scalable one under ${icon_root}"
+step "Installed ${#ICON_SIZES[@]} icons under ${icon_root}"
 
 # ---------------------------------------------------------------- 5. the desktop entry
 

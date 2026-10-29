@@ -62,7 +62,7 @@
 | FEATURE-44CA | New application icon                  | DONE   | docs/plan/FEATURE-44CA.md |
 | FEATURE-EB8F | Release 1.3.0                         | DONE   | docs/plan/FEATURE-EB8F.md |
 | FEATURE-424E | Update NuGet packages                 | DONE   | docs/plan/FEATURE-424E.md |
-| FEATURE-7298 | New application icon                  | TODO   | docs/plan/FEATURE-7298.md |
+| FEATURE-7298 | New application icon                  | DONE   | docs/plan/FEATURE-7298.md |
 | FEATURE-7F4A | App icon in the output directory      | TODO   | docs/plan/FEATURE-7F4A.md |
 | FEATURE-B7DD | Publish scripts for Windows and Linux | TODO   | docs/plan/FEATURE-B7DD.md |
 | FEATURE-2961 | Uniform About dialog                  | TODO   | docs/plan/FEATURE-2961.md |
