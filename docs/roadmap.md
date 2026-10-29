@@ -69,4 +69,4 @@
 | FEATURE-4757 | Safety net for unhandled errors       | DONE   | docs/plan/FEATURE-4757.md |
 | - PHASE01    | Error policy and dialog               | DONE   | (in FEATURE-4757.md)      |
 | - PHASE02    | Process-wide exception hooks          | DONE   | (in FEATURE-4757.md)      |
-| FEATURE-D4F5 | Release 1.4.0                         | TODO   | docs/plan/FEATURE-D4F5.md |
+| FEATURE-D4F5 | Release 1.4.0                         | DONE   | docs/plan/FEATURE-D4F5.md |

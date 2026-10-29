@@ -12,7 +12,8 @@ Security fixes are provided for the latest released version. Enigma.Launchpad fo
 
 | Version | Supported          |
 |---------|--------------------|
-| 1.3.x   | :white_check_mark: |
+| 1.4.x   | :white_check_mark: |
+| 1.3.x   | :x:                |
 | 1.2.x   | :x:                |
 | 1.1.x   | :x:                |
 | 1.0.x   | :x:                |
@@ -47,6 +48,6 @@ The following are in scope:
 - the way it finds and fetches website icons;
 - the way it reads imported export files and the images they carry;
 - the way it reads and writes the files in its data directory;
-- the Linux installer in `packaging/linux/`.
+- the Linux installer and the publish scripts in `packaging/`.
 
 Issues rooted in Avalonia, SkiaSharp or the .NET runtime should also be reported to those projects.
