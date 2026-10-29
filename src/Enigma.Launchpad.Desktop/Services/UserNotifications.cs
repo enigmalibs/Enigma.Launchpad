@@ -60,10 +60,10 @@ public sealed class InfoBarNotifications : IUserNotifications
 
     // Posted, never invoked: a save fails on a thread-pool thread, and the info bar is a control.
     private void Show(string title, string message, InfoBarSeverity severity)
-        => Dispatcher.UIThread.Post(() => _ = _infoBar.ShowAsync(bar =>
+        => Dispatcher.UIThread.Post(() => _infoBar.ShowAsync(bar =>
         {
             bar.Title = title;
             bar.Message = message;
             bar.Severity = severity;
-        }));
+        }).Forget());
 }
