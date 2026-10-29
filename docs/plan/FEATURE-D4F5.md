@@ -1,6 +1,6 @@
 # FEATURE-D4F5 — Release 1.4.0
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-d4f5-release-1-4-0`
 **Run:** feature/2026-10-29-uniform-enigma-apps
