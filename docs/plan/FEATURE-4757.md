@@ -1,6 +1,6 @@
 # FEATURE-4757 — Safety net for unhandled errors
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** `feature/feature-4757-phase01-error-dialog`, `feature/feature-4757-phase02-exception-hooks`
 **Run:** feature/2026-10-29-uniform-enigma-apps
@@ -35,7 +35,7 @@ button. This is the uniform safety net of the Enigma apps, ported from Enigma.Gi
 
 ## PHASE01 — Error policy and dialog
 
-**Status:** TODO
+**Status:** DONE
 
 Steps:
 1. `Services/UnhandledErrorPolicy.cs`: `UnhandledErrorSource`, `UnhandledErrorDecision`,

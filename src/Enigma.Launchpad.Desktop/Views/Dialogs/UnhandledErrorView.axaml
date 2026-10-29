@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Enigma.Launchpad.Desktop.ViewModels.Dialogs"
+             x:Class="Enigma.Launchpad.Desktop.Views.Dialogs.UnhandledErrorView"
+             x:DataType="vm:UnhandledErrorViewModel"
+             MinWidth="480">
+
+  <!-- The safety net's dialog every Enigma app shows: Enigma.GitClient's, in the same layout. -->
+
+  <StackPanel Spacing="12">
+
+    <TextBlock x:Name="LeadText"
+               Text="{Binding Lead}"
+               TextWrapping="Wrap"
+               MaxWidth="560"
+               HorizontalAlignment="Left"
+               Foreground="{DynamicResource EnigmaForegroundBrush}" />
+
+    <TextBlock x:Name="MessageText"
+               Text="{Binding Message}"
+               TextWrapping="Wrap"
+               MaxWidth="560"
+               HorizontalAlignment="Left"
+               FontWeight="SemiBold"
+               Foreground="{DynamicResource EnigmaForegroundBrush}" />
+
+    <TextBlock x:Name="MoreText"
+               Text="{Binding MoreText}"
+               IsVisible="{Binding HasMore}"
+               TextWrapping="Wrap"
+               MaxWidth="560"
+               HorizontalAlignment="Left"
+               Foreground="{DynamicResource EnigmaForegroundSecondaryBrush}" />
+
+    <!-- Collapsed: the details are for a bug report, not for reading. Selectable, so a part of them
+         can be copied too, and bounded, so a long stack scrolls inside the dialog. -->
+    <Expander x:Name="DetailsExpander"
+              Header="Details"
+              IsExpanded="False"
+              HorizontalAlignment="Stretch"
+              AutomationProperties.Name="Details of the error">
+      <StackPanel Spacing="8">
+        <TextBox x:Name="DetailsText"
+                 Text="{Binding Details, Mode=OneWay}"
+                 IsReadOnly="True"
+                 TextWrapping="NoWrap"
+                 AcceptsReturn="True"
+                 MaxHeight="220"
+                 MaxWidth="560"
+                 FontSize="12"
+                 FontFamily="Cascadia Mono, JetBrains Mono, DejaVu Sans Mono, Consolas, Menlo, monospace"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 AutomationProperties.Name="The details of the error" />
+        <Button x:Name="CopyDetailsButton"
+                HorizontalAlignment="Left"
+                Command="{Binding CopyDetailsCommand}"
+                Content="Copy details"
+                ToolTip.Tip="Copy the details, to paste them into a bug report"
+                AutomationProperties.Name="Copy details" />
+      </StackPanel>
+    </Expander>
+  </StackPanel>
+</UserControl>
