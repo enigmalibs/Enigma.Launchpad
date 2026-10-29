@@ -125,6 +125,17 @@ dotnet run --project src/Enigma.Launchpad.Desktop
 dotnet test --solution Enigma.Launchpad.slnx
 ```
 
+## Publish
+
+The publish scripts run `dotnet publish` from any directory. The result is a Release build compiled
+ReadyToRun, which runs on an installed .NET 10 runtime, with the application icon beside the executable as
+`app.ico`.
+
+| Platform | Script                                             | Result                                                                |
+|----------|----------------------------------------------------|-----------------------------------------------------------------------|
+| Windows  | `packaging\windows\publish.ps1` or `publish.bat`   | `src\Enigma.Launchpad.Desktop\bin\Release\net10.0\win-x64\publish\`   |
+| Linux    | `packaging/linux/publish.sh`                       | `src/Enigma.Launchpad.Desktop/bin/Release/net10.0/linux-x64/publish/` |
+
 ## Install on Linux
 
 `packaging/linux/install.sh` builds the application from this repository and installs it for you — no root, no
@@ -156,7 +167,8 @@ profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
 | `tests/Enigma.Launchpad.Core.UnitTests`    | xUnit v3 tests for the core library                                |
 | `tests/Enigma.Launchpad.Desktop.UnitTests` | xUnit v3 tests for the app, including headless Avalonia tests      |
 | `packaging/icon`                           | The application icon's SVG master                                  |
-| `packaging/linux`                          | The Linux installer and uninstaller, the desktop entry, the icons  |
+| `packaging/linux`                          | The Linux publish, install and uninstall scripts, entry and icons  |
+| `packaging/windows`                        | The Windows publish scripts                                        |
 | `docs/`                                    | Roadmap, plans, completion records and the release runbook         |
 
 ## License
