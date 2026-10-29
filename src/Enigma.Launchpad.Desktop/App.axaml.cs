@@ -144,6 +144,9 @@ public partial class App : Application
         services.GetRequiredService<IInfoBarService>().RegisterHost(window.HostInfoBar);
         services.GetRequiredService<IFileDialogService>().SetStorageProvider(window.StorageProvider);
         services.GetRequiredService<IFolderDialogService>().SetStorageProvider(window.StorageProvider);
+
+        // The safety net shows its dialog on the same host as every question.
+        services.GetRequiredService<IUnhandledErrorReporter>().RegisterHost(window.HostDialog);
     }
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
