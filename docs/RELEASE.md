@@ -96,7 +96,6 @@ It writes only under `$HOME`:
 | the launcher symlink                    | `~/.local/bin/enigma-launchpad`                                    |
 | the desktop entry, "Enigma Launchpad"   | `~/.local/share/applications/enigma-launchpad.desktop`             |
 | the icon, eight sizes                   | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`   |
-| the icon, scalable                      | `~/.local/share/icons/hicolor/scalable/apps/enigma-launchpad.svg`  |
 
 `packaging/linux/uninstall.sh` removes exactly those, and leaves `~/.config/Enigma.Launchpad` alone: the shortcuts,
 the profiles, the settings and the icon cache.
