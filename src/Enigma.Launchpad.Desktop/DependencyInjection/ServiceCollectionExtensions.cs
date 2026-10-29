@@ -52,6 +52,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ContainerPageFactory>();
             services.AddSingleton<IUserNotifications, InfoBarNotifications>();
             services.AddSingleton<ILaunchpadDialogs, LaunchpadDialogs>();
+            services.AddSingleton<IAboutDialogService, AboutDialogService>();
+            services.AddSingleton<IUnhandledErrorReporter, UnhandledErrorReporter>();
             services.AddSingleton<IPathPicker, PathPicker>();
             services.AddSingleton<IClipboardService, ClipboardService>();
             services.AddSingleton<IMainWindowService, MainWindowService>();

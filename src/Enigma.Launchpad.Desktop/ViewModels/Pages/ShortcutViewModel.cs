@@ -51,7 +51,7 @@ public sealed class ShortcutViewModel : ObservableObject
         MoveDownCommand = new RelayCommand(() => _page.MoveShortcut(this, 1), () => _page.CanMoveShortcut(this, 1));
 
         // The tile shows the icon its shortcut keeps straight away; one still to be found replaces the glyph once it is.
-        _ = LoadTargetIconAsync();
+        LoadTargetIconAsync().Forget();
     }
 
     /// <summary>
@@ -292,7 +292,7 @@ public sealed class ShortcutViewModel : ObservableObject
         {
             // The old icon would be wrong while the new one is shown or found.
             TargetIcon = null;
-            _ = LoadTargetIconAsync();
+            LoadTargetIconAsync().Forget();
         }
     }
 

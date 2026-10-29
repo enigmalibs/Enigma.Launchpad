@@ -31,6 +31,11 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
   </ItemGroup>
+  <!-- The icon as a file too, beside the executable in the build output and the publish folder, for
+       shortcuts, launchers and installers to point at (FEATURE-7F4A). -->
+  <ItemGroup>
+    <None Update="Assets/app.ico" CopyToOutputDirectory="PreserveNewest" TargetPath="app.ico" />
+  </ItemGroup>
   <!-- The app's composition root stays internal; the unit-test project drives it. -->
   <ItemGroup>
     <InternalsVisibleTo Include="Enigma.Launchpad.Desktop.UnitTests" />

@@ -1,5 +1,77 @@
 # Release notes
 
+## 1.4.0 — 2026-10-29
+
+A minor release that brings Enigma Launchpad in line with the other Enigma applications:
+
+- an **About dialog**, the same in every Enigma app;
+- a **safety net**: an error nothing else handles is shown in a dialog, and the application keeps running;
+- **publish scripts** for Windows and Linux, and the icon as a file beside the executable;
+- on Linux, **eight icon sizes and no scalable icon**, as the other Enigma apps install.
+
+### About
+
+- **Settings → About Enigma Launchpad** opens the About dialog every Enigma app shows. It holds:
+  - the icon and the name;
+  - the version;
+  - the build, the first seven characters of the commit it was made from, which you can select and copy for a bug
+    report;
+  - the copyright.
+- The Settings page's About card still shows the version beside the new button.
+
+### When something goes wrong
+
+- **An error nothing else handles no longer closes the application.** A command, a click or background work that
+  fails unexpectedly opens a **Something went wrong** dialog, which says:
+  - that the application is still running;
+  - what went wrong;
+  - how many more errors came while it was open;
+  - the details, with **Copy details**, for a bug report.
+- **One dialog at a time.** Errors that come while it waits or is open are counted into it, and an error you have just
+  closed is not shown again for a minute.
+- **The dialog never interrupts a question.** It waits for the one on screen to be answered.
+- **A cancellation you asked for is not an error**, and shows nothing.
+- **Every such error is logged**, the ones not shown included.
+- An error that escapes on a thread with nothing above it still ends the process, as .NET requires. It is logged
+  first.
+- Failures the application already explains in its own words, such as a file it could not read or write, are told
+  as before.
+
+### Publishing and installing
+
+- **Publish scripts.** Each publishes from any directory, compiled ReadyToRun, for an installed .NET 10 runtime:
+
+  | Platform | Script                                           | Result                                                                |
+  |----------|--------------------------------------------------|-----------------------------------------------------------------------|
+  | Windows  | `packaging\windows\publish.ps1` or `publish.bat` | `src\Enigma.Launchpad.Desktop\bin\Release\net10.0\win-x64\publish\`   |
+  | Linux    | `packaging/linux/publish.sh`                     | `src/Enigma.Launchpad.Desktop/bin/Release/net10.0/linux-x64/publish/` |
+
+- **`app.ico` beside the executable** in the build output and the publish folder, for shortcuts, launchers and
+  installers to point at.
+- **The icon's SVG master** is in `packaging/icon/`.
+- **On Linux, eight icon sizes and no scalable one.** `install.sh` installs the 16 to 256 pixel PNGs, as the other
+  Enigma apps do. The scalable SVG that 1.3 added under `hicolor/scalable/apps` is no longer installed.
+
+### Upgrading from 1.3
+
+- **Nothing is converted.** `launchpad.json`, `settings.json` and export files are unchanged, and 1.3 still opens what
+  1.4 writes.
+- **On Linux**, run `packaging/linux/install.sh` again to upgrade in place. It replaces the eight icons. Neither it
+  nor `uninstall.sh` touches the scalable icon 1.3 installed any more: delete
+  `~/.local/share/icons/hicolor/scalable/apps/enigma-launchpad.svg` yourself if you want it gone.
+
+### Dependencies
+
+- **Avalonia** 12.1.1 → **12.1.4**: Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent, Avalonia.Fonts.Inter, and,
+  in the tests, Avalonia.Headless and Avalonia.Skia. The set moves as a whole.
+- **Enigma.Avalonia.Desktop** 1.2.0 → **1.3.0**, the release built on Avalonia 12.1.4. No API or theme key changed.
+- Nothing is outdated after these.
+
+### Version
+
+- **1.4.0** is a minor release under Semantic Versioning: new features, and no change to any file the application
+  reads or writes.
+
 ## 1.3.0 — 2026-10-28
 
 A minor release:
