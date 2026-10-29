@@ -4,8 +4,9 @@ A cross-platform desktop launcher for your **applications**, **folders**, **link
 [Avalonia 12](https://avaloniaui.net/), [Enigma.Avalonia.Desktop](https://www.nuget.org/packages/Enigma.Avalonia.Desktop)
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
-> **What's new in 1.3** — a new application icon: a rocket on a dark rounded square, in the window, the taskbar and
-> the launcher. On Linux the installer adds a 96 px size and a scalable one. See [RELEASENOTES.md](RELEASENOTES.md).
+> **What's new in 1.4** — an About dialog (Settings → About), and a safety net: an error nothing else handles is
+> shown in a dialog instead of closing the application. Publish scripts for Windows and Linux. See
+> [RELEASENOTES.md](RELEASENOTES.md).
 
 **Workspaces**, the main page of the navigation rail and where the launchpad opens, are a profile's own collections
 of shortcuts: each has a title, a line saying what it is for and a glyph, and holds groups of applications, folders,
@@ -125,6 +126,17 @@ dotnet run --project src/Enigma.Launchpad.Desktop
 dotnet test --solution Enigma.Launchpad.slnx
 ```
 
+## Publish
+
+The publish scripts run `dotnet publish` from any directory. The result is a Release build compiled
+ReadyToRun, which runs on an installed .NET 10 runtime, with the application icon beside the executable as
+`app.ico`.
+
+| Platform | Script                                             | Result                                                                |
+|----------|----------------------------------------------------|-----------------------------------------------------------------------|
+| Windows  | `packaging\windows\publish.ps1` or `publish.bat`   | `src\Enigma.Launchpad.Desktop\bin\Release\net10.0\win-x64\publish\`   |
+| Linux    | `packaging/linux/publish.sh`                       | `src/Enigma.Launchpad.Desktop/bin/Release/net10.0/linux-x64/publish/` |
+
 ## Install on Linux
 
 `packaging/linux/install.sh` builds the application from this repository and installs it for you — no root, no
@@ -140,12 +152,11 @@ dotnet test --solution Enigma.Launchpad.slnx
 | A launcher command, `enigma-launchpad`   | `~/.local/bin/enigma-launchpad`                                       |
 | The desktop entry                        | `~/.local/share/applications/enigma-launchpad.desktop`                |
 | The icon, in eight sizes                 | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`      |
-| The icon, scalable                       | `~/.local/share/icons/hicolor/scalable/apps/enigma-launchpad.svg`     |
 
 By default the .NET runtime is bundled with the application (about 115 MB), so it runs whatever is installed on the
 machine. `--framework-dependent` builds against an installed .NET 10 runtime instead (about 35 MB); `--from DIR`
 installs a directory you published yourself, and `--rid` picks another runtime identifier. Run the installer again
-to upgrade in place. `./packaging/linux/uninstall.sh` removes those things and nothing else: your shortcuts,
+to upgrade in place. `./packaging/linux/uninstall.sh` removes those four things and nothing else: your shortcuts,
 profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
 
 ## Solution layout
@@ -156,7 +167,9 @@ profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
 | `src/Enigma.Launchpad.Desktop`             | The Avalonia application: composition root, ViewModels, Views      |
 | `tests/Enigma.Launchpad.Core.UnitTests`    | xUnit v3 tests for the core library                                |
 | `tests/Enigma.Launchpad.Desktop.UnitTests` | xUnit v3 tests for the app, including headless Avalonia tests      |
-| `packaging/linux`                          | The Linux installer and uninstaller, the desktop entry, the icons  |
+| `packaging/icon`                           | The application icon's SVG master                                  |
+| `packaging/linux`                          | The Linux publish, install and uninstall scripts, entry and icons  |
+| `packaging/windows`                        | The Windows publish scripts                                        |
 | `docs/`                                    | Roadmap, plans, completion records and the release runbook         |
 
 ## License

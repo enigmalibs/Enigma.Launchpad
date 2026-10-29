@@ -41,11 +41,22 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // First: a command or a posted callback that throws from here on is caught and shown, not the end of the
+            // process. The dispatcher is safe to touch now that the platform is set up; the headless tests never come
+            // this way.
+            UnhandledExceptionHooks.InstallDispatcher();
+
             IHost host = BuildHost();
             host.Start();
             _host = host;
 
             IServiceProvider services = host.Services;
+
+            // The safety net, as soon as it can be built: anything caught before it was is handed over. Its dialog
+            // waits for the window's host (RegisterHosts).
+            IUnhandledErrorReporter errors = services.GetRequiredService<IUnhandledErrorReporter>();
+            UnhandledExceptionHooks.Attach(errors);
+            desktop.ShutdownRequested += (_, _) => errors.ShutdownStarted();
 
             // Before the window: a window that paints dark and then flips to light is a worse first
             // impression than one that starts in the theme the user chose.
@@ -144,6 +155,9 @@ public partial class App : Application
         services.GetRequiredService<IInfoBarService>().RegisterHost(window.HostInfoBar);
         services.GetRequiredService<IFileDialogService>().SetStorageProvider(window.StorageProvider);
         services.GetRequiredService<IFolderDialogService>().SetStorageProvider(window.StorageProvider);
+
+        // The safety net shows its dialog on the same host as every question.
+        services.GetRequiredService<IUnhandledErrorReporter>().RegisterHost(window.HostDialog);
     }
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
@@ -156,6 +170,11 @@ public partial class App : Application
         }
 
         _host = null;
+
+        // Closing: no cancellation is worth a word now, and a late report must not log through the container disposed
+        // below.
+        host.Services.GetRequiredService<IUnhandledErrorReporter>().ShutdownStarted();
+        UnhandledExceptionHooks.Detach();
 
         // The process is tearing down and no message pump remains, so blocking here is correct. The session and
         // the settings save on the thread pool, never on the UI thread, so waiting for their last saves cannot

@@ -26,8 +26,8 @@ Run from the repository root, on the branch that will be merged:
       ```bash
       dotnet test --solution Enigma.Launchpad.slnx -c Release
       ```
-- [ ] The build carries the version. The application does not show it, so read it off the build: the version and
-      the commit the build was cut from, `X.Y.Z+<sha>`.
+- [ ] The build carries the version. The About dialog (Settings → *About Enigma Launchpad*) shows it, with the
+      first seven characters of the commit the build was cut from. To read the full `X.Y.Z+<sha>` off the build:
       - On Linux (`strings` is in binutils):
         ```bash
         strings src/Enigma.Launchpad.Desktop/bin/Release/net10.0/Enigma.Launchpad.Core.dll | grep -m1 -o 'X\.Y\.Z+[0-9a-f]*'
@@ -79,6 +79,24 @@ Substitute the runtime identifier for the target platform — `linux-arm64`, `wi
 platform in a `runtimes/` tree. With one, the natives sit beside the assemblies, and the result is about 115 MB
 self-contained, or 35 MB against an installed runtime (`--self-contained false`).
 
+The publish scripts run the publish from any directory, compiled ReadyToRun, against an installed .NET 10 runtime:
+`packaging/windows/publish.ps1` and `publish.bat` for `win-x64`, `packaging/linux/publish.sh` for `linux-x64`.
+
+```powershell
+packaging\windows\publish.ps1
+# Under Windows PowerShell's default execution policy, which refuses local scripts:
+powershell -ExecutionPolicy Bypass -File packaging\windows\publish.ps1
+# Or, from a cmd prompt, with no execution policy involved:
+packaging\windows\publish.bat
+```
+
+```bash
+packaging/linux/publish.sh
+```
+
+The result is in `src/Enigma.Launchpad.Desktop/bin/Release/net10.0/<rid>/publish/`, with the application icon beside
+the executable as `app.ico`.
+
 ## 6. Install it
 
 On Linux, the installer does the publish and the installation in one step, and is what puts the application in the
@@ -96,12 +114,12 @@ It writes only under `$HOME`:
 | the launcher symlink                    | `~/.local/bin/enigma-launchpad`                                    |
 | the desktop entry, "Enigma Launchpad"   | `~/.local/share/applications/enigma-launchpad.desktop`             |
 | the icon, eight sizes                   | `~/.local/share/icons/hicolor/<N>x<N>/apps/enigma-launchpad.png`   |
-| the icon, scalable                      | `~/.local/share/icons/hicolor/scalable/apps/enigma-launchpad.svg`  |
 
 `packaging/linux/uninstall.sh` removes exactly those, and leaves `~/.config/Enigma.Launchpad` alone: the shortcuts,
 the profiles, the settings and the icon cache.
 
-Windows and macOS have no installer: publish as in step 5 and run the result.
+Windows and macOS have no installer: publish as in step 5 (on Windows, with `packaging/windows/publish.ps1` or
+`publish.bat`) and run the result.
 
 ## 7. Post-release verification
 

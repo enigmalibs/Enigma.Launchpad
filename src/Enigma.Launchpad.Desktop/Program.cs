@@ -1,5 +1,6 @@
 using System;
 using Avalonia;
+using Enigma.Launchpad.Desktop.Services;
 
 namespace Enigma.Launchpad.Desktop;
 
@@ -14,7 +15,12 @@ internal static class Program
     /// <param name="args">Command line arguments.</param>
     [STAThread]
     public static void Main(string[] args)
-        => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    {
+        // First, so nothing that fails from here on goes unlogged; the dispatcher is hooked once it exists (App).
+        UnhandledExceptionHooks.Install();
+
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     /// <summary>
     /// Builds the Avalonia application. Also used by the XAML previewer.
