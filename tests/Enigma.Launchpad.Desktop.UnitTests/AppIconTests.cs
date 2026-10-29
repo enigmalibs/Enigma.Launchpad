@@ -75,7 +75,7 @@ public sealed class AppIconTests(HeadlessAvaloniaFixture fixture)
             foreach (int size in sizes)
             {
                 IconFrame frame = Assert.Single(frames, candidate => candidate.Size == size);
-                byte[] png = File.ReadAllBytes(Path.Combine(FindRepositoryRoot(), "packaging", "linux", "icons", $"enigma-launchpad-{size}.png"));
+                byte[] png = File.ReadAllBytes(Path.Combine(RepositoryRoot.Find(), "packaging", "linux", "icons", $"enigma-launchpad-{size}.png"));
 
                 Assert.Equal(frame.Png, png);
             }
@@ -139,28 +139,12 @@ public sealed class AppIconTests(HeadlessAvaloniaFixture fixture)
         const string declaration = "readonly ICON_SIZES=(";
 
         string line = Assert.Single(
-            File.ReadAllLines(Path.Combine(FindRepositoryRoot(), "packaging", "linux", script)),
+            File.ReadAllLines(Path.Combine(RepositoryRoot.Find(), "packaging", "linux", script)),
             text => text.StartsWith(declaration, StringComparison.Ordinal));
 
         return [.. line[declaration.Length..line.IndexOf(')', StringComparison.Ordinal)]
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(size => int.Parse(size, CultureInfo.InvariantCulture))];
-    }
-
-    /// <summary>
-    /// Finds the first directory above the test's output that holds the solution.
-    /// </summary>
-    private static string FindRepositoryRoot()
-    {
-        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Enigma.Launchpad.slnx")))
-            {
-                return directory.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("The repository root was not found above " + AppContext.BaseDirectory);
     }
 
     private sealed record IconFrame(int Size, int BitCount, byte[] Png);

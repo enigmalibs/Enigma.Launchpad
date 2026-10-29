@@ -79,6 +79,24 @@ Substitute the runtime identifier for the target platform — `linux-arm64`, `wi
 platform in a `runtimes/` tree. With one, the natives sit beside the assemblies, and the result is about 115 MB
 self-contained, or 35 MB against an installed runtime (`--self-contained false`).
 
+The publish scripts run the publish from any directory, compiled ReadyToRun, against an installed .NET 10 runtime:
+`packaging/windows/publish.ps1` and `publish.bat` for `win-x64`, `packaging/linux/publish.sh` for `linux-x64`.
+
+```powershell
+packaging\windows\publish.ps1
+# Under Windows PowerShell's default execution policy, which refuses local scripts:
+powershell -ExecutionPolicy Bypass -File packaging\windows\publish.ps1
+# Or, from a cmd prompt, with no execution policy involved:
+packaging\windows\publish.bat
+```
+
+```bash
+packaging/linux/publish.sh
+```
+
+The result is in `src/Enigma.Launchpad.Desktop/bin/Release/net10.0/<rid>/publish/`, with the application icon beside
+the executable as `app.ico`.
+
 ## 6. Install it
 
 On Linux, the installer does the publish and the installation in one step, and is what puts the application in the
@@ -100,7 +118,8 @@ It writes only under `$HOME`:
 `packaging/linux/uninstall.sh` removes exactly those, and leaves `~/.config/Enigma.Launchpad` alone: the shortcuts,
 the profiles, the settings and the icon cache.
 
-Windows and macOS have no installer: publish as in step 5 and run the result.
+Windows and macOS have no installer: publish as in step 5 (on Windows, with `packaging/windows/publish.ps1` or
+`publish.bat`) and run the result.
 
 ## 7. Post-release verification
 

@@ -1,6 +1,6 @@
 # FEATURE-B7DD — Publish scripts for Windows and Linux
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-b7dd-publish-scripts`
 **Run:** feature/2026-10-29-uniform-enigma-apps
