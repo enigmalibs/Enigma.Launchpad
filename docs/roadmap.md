@@ -65,7 +65,7 @@
 | FEATURE-7298 | New application icon                  | DONE   | docs/plan/FEATURE-7298.md |
 | FEATURE-7F4A | App icon in the output directory      | DONE   | docs/plan/FEATURE-7F4A.md |
 | FEATURE-B7DD | Publish scripts for Windows and Linux | DONE   | docs/plan/FEATURE-B7DD.md |
-| FEATURE-2961 | Uniform About dialog                  | TODO   | docs/plan/FEATURE-2961.md |
+| FEATURE-2961 | Uniform About dialog                  | DONE   | docs/plan/FEATURE-2961.md |
 | FEATURE-4757 | Safety net for unhandled errors       | TODO   | docs/plan/FEATURE-4757.md |
 | - PHASE01    | Error policy and dialog               | TODO   | (in FEATURE-4757.md)      |
 | - PHASE02    | Process-wide exception hooks          | TODO   | (in FEATURE-4757.md)      |

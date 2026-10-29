@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Enigma.Launchpad.Core.Diagnostics;
 using Enigma.Launchpad.Core.Persistence;
 using Enigma.Launchpad.Core.Settings;
 using Enigma.Launchpad.Desktop.Services;
@@ -35,19 +35,21 @@ public sealed class SettingsPageViewModel : ObservableObject
     /// <param name="settings">The preferences.</param>
     /// <param name="paths">Where the user's data lives.</param>
     /// <param name="actions">Opens the data folder.</param>
-    public SettingsPageViewModel(ISettingsService settings, IAppPaths paths, IShortcutActions actions)
+    /// <param name="about">Shows the About dialog from the About card.</param>
+    public SettingsPageViewModel(ISettingsService settings, IAppPaths paths, IShortcutActions actions, IAboutDialogService about)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(actions);
+        ArgumentNullException.ThrowIfNull(about);
 
         _settings = settings;
         _actions = actions;
         DataDirectory = paths.DataDirectory;
-        Version = FormatVersion(typeof(SettingsPageViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
 
         _settings.Changed += OnSettingsChanged;
         OpenDataFolderCommand = new RelayCommand(OnOpenDataFolder);
+        OpenAboutCommand = new AsyncRelayCommand(about.ShowAsync);
     }
 
     /// <summary>
@@ -91,9 +93,9 @@ public sealed class SettingsPageViewModel : ObservableObject
     public string DataDirectory { get; }
 
     /// <summary>
-    /// Gets the version of the running application.
+    /// Gets the version of the running application, without the source revision the SDK appends.
     /// </summary>
-    public string Version { get; }
+    public string Version => ProductInformation.Version;
 
     /// <summary>
     /// Gets the command opening the data folder in the file manager.
@@ -101,22 +103,9 @@ public sealed class SettingsPageViewModel : ObservableObject
     public RelayCommand OpenDataFolderCommand { get; }
 
     /// <summary>
-    /// Turns an informational version into the one to show: the build metadata after a <c>+</c> (the source
-    /// revision the SDK appends) is for diagnostics, not for the user.
+    /// Gets the command opening the About dialog.
     /// </summary>
-    /// <param name="informationalVersion">The assembly's informational version, if it has one.</param>
-    /// <returns>The version to show.</returns>
-    internal static string FormatVersion(string? informationalVersion)
-    {
-        if (string.IsNullOrWhiteSpace(informationalVersion))
-        {
-            return "unknown";
-        }
-
-        int metadata = informationalVersion.IndexOf('+', StringComparison.Ordinal);
-
-        return metadata < 0 ? informationalVersion : informationalVersion[..metadata];
-    }
+    public AsyncRelayCommand OpenAboutCommand { get; }
 
     private void OnOpenDataFolder() => _actions.OpenFolder(DataDirectory);
 

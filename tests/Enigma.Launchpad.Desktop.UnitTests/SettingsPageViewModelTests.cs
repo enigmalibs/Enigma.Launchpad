@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Enigma.Launchpad.Core.Diagnostics;
 using Enigma.Launchpad.Core.Persistence;
 using Enigma.Launchpad.Core.Settings;
 using Enigma.Launchpad.Desktop.UnitTests.Infrastructure;
@@ -14,9 +16,10 @@ public sealed class SettingsPageViewModelTests : IDisposable
     private readonly TempDirectory _data = new();
     private readonly FakeSettingsService _settings = new();
     private readonly RecordingShortcutActions _actions = new();
+    private readonly RecordingAboutDialog _about = new();
     private readonly SettingsPageViewModel _page;
 
-    public SettingsPageViewModelTests() => _page = new SettingsPageViewModel(_settings, new AppPaths(_data.Path), _actions);
+    public SettingsPageViewModelTests() => _page = new SettingsPageViewModel(_settings, new AppPaths(_data.Path), _actions, _about);
 
     public void Dispose() => _data.Dispose();
 
@@ -83,15 +86,15 @@ public sealed class SettingsPageViewModelTests : IDisposable
     [Fact]
     public void Version_IsTheRunningVersion_WithoutBuildMetadata()
     {
-        Assert.False(string.IsNullOrWhiteSpace(_page.Version));
+        Assert.Equal(ProductInformation.Version, _page.Version);
         Assert.DoesNotContain("+", _page.Version, StringComparison.Ordinal);
     }
 
-    [Theory]
-    [InlineData("0.1.0+e8705d3c0ffee", "0.1.0")]
-    [InlineData("1.2.3-beta.4", "1.2.3-beta.4")]
-    [InlineData("", "unknown")]
-    [InlineData(null, "unknown")]
-    public void FormatVersion_DropsTheBuildMetadata(string? informational, string expected)
-        => Assert.Equal(expected, SettingsPageViewModel.FormatVersion(informational));
+    [Fact]
+    public async Task OpenAbout_ShowsTheAboutDialog()
+    {
+        await _page.OpenAboutCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, _about.Shown);
+    }
 }

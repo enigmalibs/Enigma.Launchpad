@@ -1,6 +1,6 @@
 # FEATURE-2961 — Uniform About dialog
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-2961-about-dialog`
 **Run:** feature/2026-10-29-uniform-enigma-apps
