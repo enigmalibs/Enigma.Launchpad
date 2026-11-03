@@ -1,6 +1,6 @@
 # FEATURE-E90D — Windows MSI build script
 
-**Status:** TODO
+**Status:** IN PROGRESS
 **Type:** FEATURE
 **Branch:** one per phase, see below
 **Run:** feature/2026-11-03-icons-msi-release
@@ -65,7 +65,7 @@ the product named "Enigma Launchpad", its own upgrade code and its own version.
 ## PHASE01 — Vendor the Enigma.Msi worker
 
 **Branch:** `feature/feature-e90d-phase01-vendor-msi-worker`
-**Status:** TODO
+**Status:** DONE
 
 ### Steps
 
