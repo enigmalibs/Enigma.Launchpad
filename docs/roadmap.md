@@ -70,7 +70,7 @@
 | - PHASE01    | Error policy and dialog               | DONE   | (in FEATURE-4757.md)      |
 | - PHASE02    | Process-wide exception hooks          | DONE   | (in FEATURE-4757.md)      |
 | FEATURE-D4F5 | Release 1.4.0                         | DONE   | docs/plan/FEATURE-D4F5.md |
-| FEATURE-BF01 | New icon set without the tile         | TODO   | docs/plan/FEATURE-BF01.md |
+| FEATURE-BF01 | New icon set without the tile         | DONE   | docs/plan/FEATURE-BF01.md |
 | FEATURE-E90D | Windows MSI build script              | TODO   | docs/plan/FEATURE-E90D.md |
 | - PHASE01    | Vendor the Enigma.Msi worker          | TODO   | (in FEATURE-E90D.md)      |
 | - PHASE02    | The buildmsi script                   | TODO   | (in FEATURE-E90D.md)      |
