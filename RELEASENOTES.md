@@ -1,5 +1,65 @@
 # Release notes
 
+## 1.5.0 — 2026-11-03
+
+A minor release:
+
+- the **application icon drops its dark tile**: the rocket stands on a transparent background in the taskbar, the
+  window, the About dialog and the Linux launcher;
+- a **Windows installer in one command**: `packaging\windows\buildmsi.ps1`, or `buildmsi.bat`, cleans the
+  repository, publishes, and builds `artifacts\Enigma.Launchpad.1.5.0.msi`, which upgrades an installed 1.4.
+
+### The icon without its tile
+
+- **The same rocket, without the dark rounded square.** Its body keeps its blues and its flame its green, and its
+  window, a dark disc before, is now a hole: the background shows through it. It stands on whatever is behind it.
+- **The same files and sizes.** `app.ico` still holds ten frames, from 16 to 256 pixels. It is in the executable, on
+  the window, and beside the executable as `app.ico`. The About dialog shows its 256-pixel frame, and the Linux
+  installer installs eight sizes from `packaging/linux/icons`. The SVG master in `packaging/icon/` is the new one.
+
+### The Windows installer
+
+- **One command, from any directory**: `packaging\windows\buildmsi.ps1`, or `buildmsi.bat` from a `cmd` prompt.
+
+  | Step                | What it does                                                                                                   |
+  |---------------------|----------------------------------------------------------------------------------------------------------------|
+  | 1. `git clean -dxf` | Deletes every file git does not track: build output, `artifacts\`, IDE folders, and any new file not yet added |
+  | 2. `publish.ps1`    | The usual publish: `-c Release -r win-x64 -p:PublishReadyToRun=true`                                           |
+  | 3. Enigma.Msi       | Packages the publish folder, uncompressed so it builds fast, into `artifacts\Enigma.Launchpad.X.Y.Z.msi`       |
+
+- **What the MSI installs**: **Enigma Launchpad** for all users, in `%ProgramFiles%\Enigma Launchpad`, with a shortcut
+  on the desktop and one in the program menu, both with the application's icon. In *Installed apps* it shows as
+  Enigma Launchpad by Josué Clément. The installed application runs on the .NET 10 runtime.
+- **It replaces the installed version.** Every MSI carries the upgrade code of the one that installed 1.4.0. The code
+  is written once in the script, and `WindowsInstallerScriptTests` pins it.
+- **The version is the one in `Directory.Build.props`.** The profile the MSI was built from is kept beside it, as
+  `Enigma.Launchpad.X.Y.Z.msipkg.json`. Nothing about the installer is edited for a release.
+- **What it needs:** Windows, git, the .NET 10 SDK and the WiX CLI (`dotnet tool install --global wix`). The script
+  checks them before it cleans anything. A copy of Enigma.Msi's worker (1.7.0) is in
+  `packaging\windows\Enigma.Msi.Worker\`, so there is nothing else to install.
+- **Commit or move new files first:** `git clean -dxf` deletes them.
+
+### Upgrading from 1.4
+
+- **On Windows, install the 1.5.0 MSI**: it replaces 1.4.0, which keeps a single *Enigma Launchpad* in *Installed
+  apps*. Your shortcuts, profiles and settings in `%APPDATA%\Enigma.Launchpad` are not touched.
+- **On Linux, run `packaging/linux/install.sh` again** to get the new icon in the launcher.
+- **Nothing is converted.** `launchpad.json`, `settings.json` and export files are unchanged, and 1.4 still opens what
+  1.5 writes.
+
+### Dependencies
+
+- **The Avalonia set stays at 12.1.4**, with Enigma.Avalonia.Desktop **1.3.0**. Avalonia 12.1.5 is out, but
+  Enigma.Avalonia.Desktop 1.3.0, still the latest, is built against 12.1.4, and the set moves only with it. Nothing
+  else is outdated (`dotnet list package --outdated`, 2026-11-03).
+- The installer build uses Enigma.Msi 1.7.0's worker, on WixSharp_wix4 2.14.2. It is a build tool and is not part of
+  the application.
+
+### Version
+
+- **1.5.0** is a minor release under Semantic Versioning. It changes the icon's artwork and adds the Windows installer
+  build. It changes no file the application reads or writes, and moves no dependency of the application.
+
 ## 1.4.0 — 2026-10-29
 
 A minor release that brings Enigma Launchpad in line with the other Enigma applications:
