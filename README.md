@@ -4,8 +4,10 @@ A cross-platform desktop launcher for your **applications**, **folders**, **link
 [Avalonia 12](https://avaloniaui.net/), [Enigma.Avalonia.Desktop](https://www.nuget.org/packages/Enigma.Avalonia.Desktop)
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
-> **What's new in 1.4** — an About dialog (Settings → About), and a safety net: an error nothing else handles is
-> shown in a dialog instead of closing the application. Publish scripts for Windows and Linux. See
+> **What's new in 1.5** — the application icon drops its dark tile (on Linux, run the installer again to get it); and
+> `buildmsi.ps1` or `buildmsi.bat` builds the Windows installer in one command, and that installer upgrades an
+> installed 1.4. 1.4 before it: an About dialog (Settings → About), a safety net that shows an error nothing else
+> handles in a dialog instead of closing the application, and publish scripts for Windows and Linux. See
 > [RELEASENOTES.md](RELEASENOTES.md).
 
 **Workspaces**, the main page of the navigation rail and where the launchpad opens, are a profile's own collections
@@ -137,6 +139,28 @@ ReadyToRun, which runs on an installed .NET 10 runtime, with the application ico
 | Windows  | `packaging\windows\publish.ps1` or `publish.bat`   | `src\Enigma.Launchpad.Desktop\bin\Release\net10.0\win-x64\publish\`   |
 | Linux    | `packaging/linux/publish.sh`                       | `src/Enigma.Launchpad.Desktop/bin/Release/net10.0/linux-x64/publish/` |
 
+## Windows installer
+
+`packaging\windows\buildmsi.ps1` (or `buildmsi.bat`, from a `cmd` prompt) builds
+`artifacts\Enigma.Launchpad.X.Y.Z.msi` in one step:
+
+1. it runs `git clean -dxf`, which deletes **every file git does not track**: build output, `artifacts\`, IDE
+   folders, and any new file you have not added yet;
+2. it publishes with `publish.ps1`;
+3. it packages the result, uncompressed, with Enigma.Msi. A copy of Enigma.Msi's worker is in
+   `packaging\windows\Enigma.Msi.Worker\`.
+
+The MSI installs **Enigma Launchpad** for all users in `%ProgramFiles%\Enigma Launchpad`, with a shortcut on the
+desktop and one in the program menu. It replaces an earlier version installed from an MSI. The version is the one in
+`Directory.Build.props`. Building it needs Windows and the WiX CLI (`dotnet tool install --global wix`) as well as
+the .NET 10 SDK; the installed application needs the .NET 10 runtime.
+
+```powershell
+.\packaging\windows\buildmsi.ps1
+# Under Windows PowerShell's default execution policy, which refuses local scripts:
+powershell -ExecutionPolicy Bypass -File packaging\windows\buildmsi.ps1
+```
+
 ## Install on Linux
 
 `packaging/linux/install.sh` builds the application from this repository and installs it for you — no root, no
@@ -169,7 +193,7 @@ profiles and settings in `~/.config/Enigma.Launchpad` are left as they are.
 | `tests/Enigma.Launchpad.Desktop.UnitTests` | xUnit v3 tests for the app, including headless Avalonia tests      |
 | `packaging/icon`                           | The application icon's SVG master                                  |
 | `packaging/linux`                          | The Linux publish, install and uninstall scripts, entry and icons  |
-| `packaging/windows`                        | The Windows publish scripts                                        |
+| `packaging/windows`                        | The Windows publish and MSI scripts, and Enigma.Msi's worker       |
 | `docs/`                                    | Roadmap, plans, completion records and the release runbook         |
 
 ## License
