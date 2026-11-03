@@ -118,21 +118,48 @@ It writes only under `$HOME`:
 `packaging/linux/uninstall.sh` removes exactly those, and leaves `~/.config/Enigma.Launchpad` alone: the shortcuts,
 the profiles, the settings and the icon cache.
 
-Windows and macOS have no installer: publish as in step 5 (on Windows, with `packaging/windows/publish.ps1` or
-`publish.bat`) and run the result.
+On Windows, build the MSI and install it:
+
+```powershell
+packaging\windows\buildmsi.ps1          # or buildmsi.bat from a cmd prompt
+```
+
+It runs `git clean -dxf` first, which deletes every file git does not track. Commit or move anything new before
+running it. Then it publishes (step 5) and packages the result with Enigma.Msi into
+`artifacts\Enigma.Launchpad.X.Y.Z.msi`, beside the `.msipkg.json` profile it was built from.
+
+| What                              | Where                                                                                       |
+|-----------------------------------|---------------------------------------------------------------------------------------------|
+| the application, for all users    | `%ProgramFiles%\Enigma Launchpad` (32-bit package: `Program Files (x86)` on 64-bit Windows) |
+| the shortcuts, "Enigma Launchpad" | the desktop and the program menu                                                            |
+| the entry in *Installed apps*     | "Enigma Launchpad", publisher "Josué Clément"                                               |
+
+Installing it replaces an earlier version installed from an MSI, and uninstalling it from *Installed apps* leaves
+`%APPDATA%\Enigma.Launchpad` (the shortcuts, the profiles, the settings and the icon cache) alone.
+
+macOS has no installer: publish as in step 5 and run the result.
 
 ## 7. Post-release verification
 
 - [ ] **Enigma Launchpad** appears in the application launcher, with its icon, and starts when clicked. A launcher
       starts a process from a bare environment, so this is not the same test as starting it from a terminal — check
       the launcher, not just the shell.
+- [ ] On Windows, after installing the MSI, *Installed apps* lists one **Enigma Launchpad**, at `X.Y.Z`, and the
+      desktop and program-menu shortcuts start it.
 - [ ] The installed build carries `X.Y.Z+<sha>` naming the tagged commit (the step 1 recipe, pointed at
       `~/.local/share/enigma-launchpad/Enigma.Launchpad.Core.dll`).
 - [ ] Your shortcuts are all there after the upgrade, and a shortcut of each kind opens.
 - [ ] `git tag` lists `X.Y.Z` on the merge commit on `main`, and the tag is on the remote.
 
-## Why there is no MSI profile
+## The Windows installer's identity
 
-`dotnet-release` offers a WixSharp MSI profile for an app release. It was declined for 1.0.0: the release's
-packaging is the Linux installer. When a Windows installer is wanted, generate the **first** profile then. Its
-`upgradeCode` is created once and reused verbatim in every later version; its `productId` is new each time.
+There is no committed MSI profile per version. `buildmsi.ps1` writes the profile on every build from
+`Directory.Build.props` (the version) and its own constants, so a release changes nothing for the installer.
+
+- **`upgradeCode`** is `b4c2d5a2-9182-4c17-b570-c6019eb5ec92`, written once in `buildmsi.ps1`. It is the code the MSI
+  that installed 1.4.0 carries. It must never change: an MSI with another code installs beside the old version instead
+  of replacing it. `WindowsInstallerScriptTests` pins it.
+- **`productId`** is new for every build.
+
+The MSI that installed 1.4.0 was built outside this repository with Enigma.Msi. The script keeps its upgrade code.
+The `dotnet-release` skill's committed `msiProfiles/` was declined at 1.0.0, and is not needed now.
