@@ -4,8 +4,10 @@ A cross-platform desktop launcher for your **applications**, **folders**, **link
 [Avalonia 12](https://avaloniaui.net/), [Enigma.Avalonia.Desktop](https://www.nuget.org/packages/Enigma.Avalonia.Desktop)
 and [Enigma.Icons.Avalonia](https://www.nuget.org/packages/Enigma.Icons.Avalonia).
 
-> **What's new in 1.4** — an About dialog (Settings → About), and a safety net: an error nothing else handles is
-> shown in a dialog instead of closing the application. Publish scripts for Windows and Linux. See
+> **What's new in 1.5** — the application icon drops its dark tile (on Linux, run the installer again to get it); and
+> `buildmsi.ps1` or `buildmsi.bat` builds the Windows installer in one command, and that installer upgrades an
+> installed 1.4. 1.4 before it: an About dialog (Settings → About), a safety net that shows an error nothing else
+> handles in a dialog instead of closing the application, and publish scripts for Windows and Linux. See
 > [RELEASENOTES.md](RELEASENOTES.md).
 
 **Workspaces**, the main page of the navigation rail and where the launchpad opens, are a profile's own collections

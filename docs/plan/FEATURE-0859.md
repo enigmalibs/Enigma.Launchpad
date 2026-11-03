@@ -1,6 +1,6 @@
 # FEATURE-0859 — Release 1.5.0
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-0859-release-1-5-0`
 **Run:** feature/2026-11-03-icons-msi-release
