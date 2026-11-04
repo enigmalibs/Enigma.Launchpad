@@ -1,5 +1,45 @@
 # Release notes
 
+## 1.6.0 — 2026-11-04
+
+A minor release:
+
+- the **application icon fills its frame**: the same rocket, larger, in the taskbar, the window, the About dialog, the
+  Windows installer's shortcuts and the Linux launcher.
+
+### The icon fills its frame
+
+- **The same rocket, larger.** 1.5.0's drawing is kept as it was: its blues, its green flame, its window a hole in the
+  body, on a transparent background. It is scaled by about 1.45 and centred, so its longest side now spans 224 of the
+  256 units of the frame, where it spanned 155.
+- **The same files and sizes.** `app.ico` still holds ten frames, from 16 to 256 pixels. It is in the executable (so
+  the taskbar), on the window, and beside the executable as `app.ico`, which the Windows installer gives to its
+  desktop and program-menu shortcuts and to *Installed apps*. The About dialog shows its 256-pixel frame, and the
+  Linux installer installs eight sizes from `packaging/linux/icons`. The SVG master in `packaging/icon/` is the new
+  one.
+
+### Upgrading from 1.5
+
+- **On Windows, install the 1.6.0 MSI**: it replaces 1.5.0, which keeps a single *Enigma Launchpad* in *Installed
+  apps*. Your shortcuts, profiles and settings in `%APPDATA%\Enigma.Launchpad` are not touched. Windows caches icons,
+  so a shortcut pinned to the taskbar may show the previous icon until you sign out and in again.
+- **On Linux, run `packaging/linux/install.sh` again** to get the new icon in the launcher.
+- **Nothing is converted.** `launchpad.json`, `settings.json` and export files are unchanged, and 1.5 still opens what
+  1.6 writes.
+
+### Dependencies
+
+- **The Avalonia set stays at 12.1.4**, with Enigma.Avalonia.Desktop **1.3.0**. Avalonia 12.1.5 is out, but
+  Enigma.Avalonia.Desktop 1.3.0, still the latest, is built against 12.1.4, and the set moves only with it. Nothing
+  else is outdated (`dotnet list package --outdated`, 2026-11-04).
+
+### Version
+
+- **1.6.0** is a minor release under Semantic Versioning. It changes the icon's artwork. It changes no file the
+  application reads or writes, and moves no dependency of the application. The Windows installer's script is
+  unchanged: it takes the version from `Directory.Build.props`, so `buildmsi.ps1` builds
+  `artifacts\Enigma.Launchpad.1.6.0.msi`.
+
 ## 1.5.0 — 2026-11-03
 
 A minor release:

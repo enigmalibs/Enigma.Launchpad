@@ -1,6 +1,6 @@
 # FEATURE-8698 — Release 1.6.0
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-8698-release-1-6-0`
 **Run:** feature/2026-11-04-icons-release
