@@ -1,6 +1,6 @@
 # FEATURE-003B — Icon set that fills the frame
 
-**Status:** TODO
+**Status:** DONE
 **Type:** FEATURE
 **Branch:** `feature/feature-003b-icon-fills-frame`
 **Run:** feature/2026-11-04-icons-release
