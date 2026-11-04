@@ -75,3 +75,5 @@
 | - PHASE01    | Vendor the Enigma.Msi worker          | DONE   | (in FEATURE-E90D.md)      |
 | - PHASE02    | The buildmsi script                   | DONE   | (in FEATURE-E90D.md)      |
 | FEATURE-0859 | Release 1.5.0                         | DONE   | docs/plan/FEATURE-0859.md |
+| FEATURE-003B | Icon set that fills the frame         | TODO   | docs/plan/FEATURE-003B.md |
+| FEATURE-8698 | Release 1.6.0                         | TODO   | docs/plan/FEATURE-8698.md |
